@@ -15,7 +15,10 @@ type Invoice = {
   vendor: { name: string } | null;
   customer: { name: string } | null;
   aiExtraction: { confidence: number } | null;
+  payments: { amount: number }[];
 };
+
+const SETTLEABLE_STATUSES = new Set(["CONFIRMED", "SENT", "PARTIALLY_PAID", "OVERDUE"]);
 
 const TABS: { key: Invoice["direction"]; label: string; hint: string }[] = [
   { key: "RECEIVED", label: "受領請求書(支払)", hint: "取引先から届いた請求書をアップロードすると、AIが金額・税額・勘定科目を読み取り買掛金として仕訳します。" },
@@ -28,6 +31,8 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentAmounts, setPaymentAmounts] = useState<Record<string, string>>({});
+  const [payingId, setPayingId] = useState<string | null>(null);
 
   async function load(dir: Invoice["direction"]) {
     setLoading(true);
@@ -57,6 +62,31 @@ export default function InvoicesPage() {
       setError(e instanceof Error ? e.message : "エラーが発生しました");
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function recordPayment(invoiceId: string) {
+    const amount = Number(paymentAmounts[invoiceId]);
+    if (!amount || amount <= 0) {
+      setError("金額を入力してください");
+      return;
+    }
+    setPayingId(invoiceId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/invoices/${invoiceId}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "記録に失敗しました");
+      setPaymentAmounts((prev) => ({ ...prev, [invoiceId]: "" }));
+      await load(direction);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "エラーが発生しました");
+    } finally {
+      setPayingId(null);
     }
   }
 
@@ -111,29 +141,61 @@ export default function InvoicesPage() {
                 <th className="px-4 py-2">発行日</th>
                 <th className="px-4 py-2">期日</th>
                 <th className="px-4 py-2">金額</th>
+                <th className="px-4 py-2">残高</th>
                 <th className="px-4 py-2">AI信頼度</th>
                 <th className="px-4 py-2">ステータス</th>
+                <th className="px-4 py-2">{direction === "RECEIVED" ? "支払記録" : "入金記録"}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {invoices.map((invoice) => (
-                <tr key={invoice.id}>
-                  <td className="px-4 py-2 whitespace-nowrap">{invoice.invoiceNumber ?? "-"}</td>
-                  <td className="px-4 py-2">{invoice.vendor?.name ?? invoice.customer?.name ?? "-"}</td>
-                  <td className="px-4 py-2 whitespace-nowrap">{formatDate(invoice.issueDate)}</td>
-                  <td className="px-4 py-2 whitespace-nowrap">{formatDate(invoice.dueDate)}</td>
-                  <td className="px-4 py-2 whitespace-nowrap">{formatYen(invoice.totalAmount)}</td>
-                  <td className="px-4 py-2">
-                    {invoice.aiExtraction ? `${(invoice.aiExtraction.confidence * 100).toFixed(0)}%` : "-"}
-                  </td>
-                  <td className="px-4 py-2">
-                    <StatusBadge status={invoice.status} />
-                  </td>
-                </tr>
-              ))}
+              {invoices.map((invoice) => {
+                const paid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
+                const remaining = invoice.totalAmount - paid;
+                const canSettle = SETTLEABLE_STATUSES.has(invoice.status) && remaining > 0;
+                return (
+                  <tr key={invoice.id}>
+                    <td className="px-4 py-2 whitespace-nowrap">{invoice.invoiceNumber ?? "-"}</td>
+                    <td className="px-4 py-2">{invoice.vendor?.name ?? invoice.customer?.name ?? "-"}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{formatDate(invoice.issueDate)}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{formatDate(invoice.dueDate)}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{formatYen(invoice.totalAmount)}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{formatYen(remaining)}</td>
+                    <td className="px-4 py-2">
+                      {invoice.aiExtraction ? `${(invoice.aiExtraction.confidence * 100).toFixed(0)}%` : "-"}
+                    </td>
+                    <td className="px-4 py-2">
+                      <StatusBadge status={invoice.status} />
+                    </td>
+                    <td className="px-4 py-2">
+                      {canSettle ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            placeholder={String(remaining)}
+                            value={paymentAmounts[invoice.id] ?? ""}
+                            onChange={(e) =>
+                              setPaymentAmounts((prev) => ({ ...prev, [invoice.id]: e.target.value }))
+                            }
+                            className="w-24 rounded border px-2 py-1 text-sm"
+                          />
+                          <button
+                            onClick={() => recordPayment(invoice.id)}
+                            disabled={payingId === invoice.id}
+                            className="rounded-md bg-slate-700 px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
+                          >
+                            記録
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">-</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               {invoices.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
+                  <td colSpan={9} className="px-4 py-6 text-center text-slate-400">
                     まだ請求書がありません。
                   </td>
                 </tr>
