@@ -1,0 +1,37 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "AI経理オートメーション",
+  description: "経費精算・請求書処理をAIが半自動化する統合SaaS基盤",
+};
+
+const NAV_ITEMS = [
+  { href: "/", label: "ダッシュボード" },
+  { href: "/expenses", label: "経費精算" },
+  { href: "/invoices", label: "請求書" },
+  { href: "/review", label: "レビューキュー" },
+];
+
+export default function RootLayout({ children }: LayoutProps<"/">) {
+  return (
+    <html lang="ja" className="h-full antialiased">
+      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
+        <header className="border-b bg-white">
+          <div className="mx-auto max-w-5xl flex items-center gap-6 px-4 py-3">
+            <span className="font-semibold text-lg">AI経理オートメーション</span>
+            <nav className="flex gap-4 text-sm">
+              {NAV_ITEMS.map((item) => (
+                <Link key={item.href} href={item.href} className="text-slate-600 hover:text-slate-900">
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </header>
+        <main className="flex-1 mx-auto w-full max-w-5xl px-4 py-6">{children}</main>
+      </body>
+    </html>
+  );
+}
