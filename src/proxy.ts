@@ -3,8 +3,9 @@ import { SESSION_COOKIE } from "@/lib/auth";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/api/auth");
-  if (isAuthRoute) return NextResponse.next();
+  const isPublicRoute =
+    pathname.startsWith("/login") || pathname.startsWith("/api/auth") || pathname.startsWith("/api/seed");
+  if (isPublicRoute) return NextResponse.next();
 
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
   if (hasSession) return NextResponse.next();
