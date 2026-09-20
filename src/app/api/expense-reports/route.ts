@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getDefaultCompanyId, getDefaultEmployeeId } from "@/lib/demo";
+import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCurrentUserId } from "@/lib/auth";
 
 export async function GET() {
   const companyId = await getDefaultCompanyId();
@@ -14,9 +15,13 @@ export async function GET() {
 
 export async function POST() {
   const companyId = await getDefaultCompanyId();
-  const employeeId = await getDefaultEmployeeId();
-  const report = await prisma.expenseReport.create({
-    data: { companyId, employeeId, status: "DRAFT" },
-  });
-  return NextResponse.json(report, { status: 201 });
+  try {
+    const employeeId = await requireCurrentUserId();
+    const report = await prisma.expenseReport.create({
+      data: { companyId, employeeId, status: "DRAFT" },
+    });
+    return NextResponse.json(report, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
+  }
 }
