@@ -35,13 +35,16 @@ export default function InvoicesPage() {
   const [payingId, setPayingId] = useState<string | null>(null);
 
   async function load(dir: Invoice["direction"]) {
-    setLoading(true);
     const res = await fetch(`/api/invoices?direction=${dir}`);
     setInvoices(await res.json());
     setLoading(false);
   }
 
   useEffect(() => {
+    // Fetch-on-mount/tab-switch: the resulting setState always lands after
+    // the fetch's await, so the extra render this rule warns about never
+    // happens here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load(direction);
   }, [direction]);
 
@@ -133,6 +136,7 @@ export default function InvoicesPage() {
         <p className="text-sm text-slate-500">読み込み中...</p>
       ) : (
         <div className="overflow-hidden rounded-lg border bg-white">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
               <tr>
@@ -155,7 +159,7 @@ export default function InvoicesPage() {
                 return (
                   <tr key={invoice.id}>
                     <td className="px-4 py-2 whitespace-nowrap">{invoice.invoiceNumber ?? "-"}</td>
-                    <td className="px-4 py-2">{invoice.vendor?.name ?? invoice.customer?.name ?? "-"}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{invoice.vendor?.name ?? invoice.customer?.name ?? "-"}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{formatDate(invoice.issueDate)}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{formatDate(invoice.dueDate)}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{formatYen(invoice.totalAmount)}</td>
@@ -202,6 +206,7 @@ export default function InvoicesPage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

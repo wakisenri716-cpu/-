@@ -25,22 +25,28 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="ja" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <header className="border-b bg-white">
-          <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3">
-            <span className="font-semibold text-lg">AI経理オートメーション</span>
+          <div className="mx-auto max-w-5xl px-4 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <span className="font-semibold text-lg whitespace-nowrap">AI経理オートメーション</span>
+              {user && (
+                <div className="flex shrink-0 items-center gap-3 text-sm">
+                  <span className="hidden text-slate-500 sm:inline">{user.name} さんとしてログイン中</span>
+                  <LogoutButton />
+                </div>
+              )}
+            </div>
             {user && (
-              <nav className="flex gap-4 text-sm">
+              <nav className="-mx-4 mt-2 flex gap-4 overflow-x-auto px-4 text-sm sm:mx-0 sm:mt-1 sm:px-0">
                 {NAV_ITEMS.map((item) => (
-                  <Link key={item.href} href={item.href} className="text-slate-600 hover:text-slate-900">
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="shrink-0 whitespace-nowrap text-slate-600 hover:text-slate-900"
+                  >
                     {item.label}
                   </Link>
                 ))}
               </nav>
-            )}
-            {user && (
-              <div className="ml-auto flex items-center gap-3 text-sm">
-                <span className="text-slate-500">{user.name} さんとしてログイン中</span>
-                <LogoutButton />
-              </div>
             )}
           </div>
         </header>

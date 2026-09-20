@@ -23,13 +23,13 @@ export default async function LedgerPage({
         <p className="mt-1 text-sm text-slate-600">勘定科目を選ぶと、記帳済みの仕訳明細と残高推移が確認できます。</p>
       </div>
 
-      <div className="flex gap-6">
-        <aside className="w-56 shrink-0 space-y-1">
+      <div className="flex flex-col gap-6 sm:flex-row">
+        <aside className="flex gap-1 overflow-x-auto sm:w-56 sm:shrink-0 sm:flex-col sm:space-y-1 sm:overflow-visible">
           {accounts.map((row) => (
             <Link
               key={row.account.id}
               href={`/ledger?accountId=${row.account.id}`}
-              className={`block rounded px-2 py-1 text-sm ${
+              className={`shrink-0 rounded px-2 py-1 text-sm whitespace-nowrap sm:block ${
                 row.account.id === selectedAccountId ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
               }`}
             >
@@ -52,6 +52,7 @@ export default async function LedgerPage({
                   <span className="text-xs text-slate-400">({ledger.normalSide === "DEBIT" ? "借方" : "貸方"})</span>
                 </span>
               </div>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
                   <tr>
@@ -81,6 +82,7 @@ export default async function LedgerPage({
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>

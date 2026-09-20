@@ -30,7 +30,7 @@ export default async function TrialBalancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">試算表</h1>
           <p className="mt-1 text-sm text-slate-600">
@@ -38,7 +38,7 @@ export default async function TrialBalancePage() {
           </p>
         </div>
         <span
-          className={`rounded-full px-3 py-1 text-xs font-medium ${
+          className={`self-start rounded-full px-3 py-1 text-xs font-medium ${
             balanced ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
           }`}
         >
@@ -47,6 +47,7 @@ export default async function TrialBalancePage() {
       </div>
 
       <div className="overflow-hidden rounded-lg border bg-white">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
             <tr>
@@ -100,6 +101,7 @@ export default async function TrialBalancePage() {
             </tr>
           </tfoot>
         </table>
+        </div>
       </div>
     </div>
   );

@@ -31,13 +31,15 @@ export default function ExpensesPage() {
   const [error, setError] = useState<string | null>(null);
 
   async function loadReports() {
-    setLoading(true);
     const res = await fetch("/api/expense-reports");
     setReports(await res.json());
     setLoading(false);
   }
 
   useEffect(() => {
+    // Fetch-on-mount: the resulting setState always lands after the fetch's
+    // await, so the extra render this rule warns about never happens here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadReports();
   }, []);
 
@@ -111,7 +113,8 @@ export default function ExpensesPage() {
             </div>
 
             {report.items.length > 0 && (
-              <table className="mt-3 w-full text-sm">
+              <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-sm">
                 <thead className="text-left text-xs uppercase text-slate-400">
                   <tr>
                     <th className="py-1">日付</th>
@@ -127,7 +130,7 @@ export default function ExpensesPage() {
                     <tr key={item.id}>
                       <td className="py-1 whitespace-nowrap">{formatDate(item.expenseDate)}</td>
                       <td className="py-1">{item.description}</td>
-                      <td className="py-1">{item.vendor?.name ?? "-"}</td>
+                      <td className="py-1 whitespace-nowrap">{item.vendor?.name ?? "-"}</td>
                       <td className="py-1 whitespace-nowrap">
                         {item.account ? `${item.account.code} ${item.account.name}` : "-"}
                       </td>
@@ -139,6 +142,7 @@ export default function ExpensesPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
 
             <form onSubmit={(e) => addItem(report.id, e)} className="mt-4 flex flex-wrap items-end gap-3 border-t pt-3">
