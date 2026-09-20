@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  ACCOUNTANT
+  EMPLOYEE
+}
+
+enum AccountCategory {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum ExpenseReportStatus {
+  DRAFT
+  SUBMITTED
+  AUTO_APPROVED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum InvoiceDirection {
+  ISSUED
+  RECEIVED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING_REVIEW
+  CONFIRMED
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum SourceType {
+  EXPENSE_ITEM
+  INVOICE
+}
+
+enum AiExtractionStatus {
+  AUTO_APPLIED
+  NEEDS_REVIEW
+  REJECTED
+  CORRECTED
+}
+
+enum JournalEntryStatus {
+  AUTO_POSTED
+  PENDING_REVIEW
+  POSTED_MANUALLY
+  VOID
+}
+
+model Company {
+  id               String   @id @default(cuid())
+  name             String
+  fiscalYearStartMonth Int  @default(4)
+  createdAt        DateTime @default(now())
+
+  users            User[]
+  accounts         Account[]
+  vendors          Vendor[]
+  customers        Customer[]
+  expenseReports   ExpenseReport[]
+  invoices         Invoice[]
+  journalEntries   JournalEntry[]
+  aiExtractions    AiExtraction[]
+  automationRules  AutomationRule[]
+}
+
+model User {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id])
+  name          String
+  email         String   @unique
+  role          UserRole @default(EMPLOYEE)
+  createdAt     DateTime @default(now())
+
+  expenseReports ExpenseReport[]
+}
+
+model Account {
+  id            String          @id @default(cuid())
+  companyId     String
+  company       Company         @relation(fields: [companyId], references: [id])
+  code          String
+  name          String
+  category      AccountCategory
+  isTaxable     Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+
+  expenseItems       ExpenseItem[]
+  journalLines       JournalLine[]
+  vendorsAsDefault   Vendor[]        @relation("VendorDefaultAccount")
+
+  @@unique([companyId, code])
+}
+
+model Vendor {
+  id                    String   @id @default(cuid())
+  companyId             String
+  company               Company  @relation(fields: [companyId], references: [id])
+  name                  String
+  defaultExpenseAccountId String?
+  defaultExpenseAccount  Account? @relation("VendorDefaultAccount", fields: [defaultExpenseAccountId], references: [id])
+  createdAt             DateTime @default(now())
+
+  expenseItems  ExpenseItem[]
+  invoices      Invoice[]
+}
+
+model Customer {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id])
+  name       String
+  createdAt  DateTime @default(now())
+
+  invoices   Invoice[]
+}
+
+model ExpenseReport {
+  id            String              @id @default(cuid())
+  companyId     String
+  company       Company             @relation(fields: [companyId], references: [id])
+  employeeId    String
+  employee      User                @relation(fields: [employeeId], references: [id])
+  status        ExpenseReportStatus @default(DRAFT)
+  totalAmount   Int                 @default(0)
+  submittedAt   DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  items         ExpenseItem[]
+}
+
+model ExpenseItem {
+  id               String        @id @default(cuid())
+  expenseReportId  String
+  expenseReport    ExpenseReport @relation(fields: [expenseReportId], references: [id])
+  description      String
+  amount           Int
+  expenseDate      DateTime
+  vendorId         String?
+  vendor           Vendor?       @relation(fields: [vendorId], references: [id])
+  accountId        String?
+  account          Account?      @relation(fields: [accountId], references: [id])
+  receiptImageUrl  String?
+  aiExtractionId   String?       @unique
+  aiExtraction     AiExtraction? @relation(fields: [aiExtractionId], references: [id])
+  journalEntryId   String?       @unique
+  journalEntry     JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  createdAt        DateTime      @default(now())
+}
+
+model Invoice {
+  id              String            @id @default(cuid())
+  companyId       String
+  company         Company           @relation(fields: [companyId], references: [id])
+  direction       InvoiceDirection
+  status          InvoiceStatus     @default(DRAFT)
+  invoiceNumber   String?
+  vendorId        String?
+  vendor          Vendor?           @relation(fields: [vendorId], references: [id])
+  customerId      String?
+  customer        Customer?         @relation(fields: [customerId], references: [id])
+  issueDate       DateTime?
+  dueDate         DateTime?
+  subtotalAmount  Int               @default(0)
+  taxAmount       Int               @default(0)
+  totalAmount     Int               @default(0)
+  sourceFileUrl   String?
+  aiExtractionId  String?           @unique
+  aiExtraction    AiExtraction?     @relation(fields: [aiExtractionId], references: [id])
+  journalEntryId  String?           @unique
+  journalEntry    JournalEntry?     @relation(fields: [journalEntryId], references: [id])
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model AiExtraction {
+  id                  String              @id @default(cuid())
+  companyId           String
+  company             Company             @relation(fields: [companyId], references: [id])
+  sourceType          SourceType
+  rawResponse         Json
+  confidence          Float
+  suggestedAccountCode String?
+  status              AiExtractionStatus  @default(NEEDS_REVIEW)
+  createdAt           DateTime            @default(now())
+
+  expenseItem  ExpenseItem?
+  invoice      Invoice?
+}
+
+model JournalEntry {
+  id           String             @id @default(cuid())
+  companyId    String
+  company      Company            @relation(fields: [companyId], references: [id])
+  date         DateTime
+  description  String
+  sourceType   SourceType
+  status       JournalEntryStatus @default(PENDING_REVIEW)
+  createdByAi  Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+
+  lines        JournalLine[]
+  expenseItem  ExpenseItem?
+  invoice      Invoice?
+}
+
+model JournalLine {
+  id             String       @id @default(cuid())
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id])
+  accountId      String
+  account        Account      @relation(fields: [accountId], references: [id])
+  debit          Int          @default(0)
+  credit         Int          @default(0)
+  memo           String?
+}
+
+model AutomationRule {
+  id             String     @id @default(cuid())
+  companyId      String
+  company        Company    @relation(fields: [companyId], references: [id])
+  sourceType     SourceType
+  minConfidence  Float      @default(0.9)
+  maxAutoAmount  Int?
+  enabled        Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+
+  @@unique([companyId, sourceType])
+}
