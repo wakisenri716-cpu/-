@@ -12,6 +12,8 @@ const NAV_ITEMS = [
   { href: "/expenses", label: "経費精算" },
   { href: "/invoices", label: "請求書" },
   { href: "/review", label: "レビューキュー" },
+  { href: "/ledger", label: "総勘定元帳" },
+  { href: "/trial-balance", label: "試算表" },
 ];
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
