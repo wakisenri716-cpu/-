@@ -40,6 +40,7 @@ enum InvoiceStatus {
   PENDING_REVIEW
   CONFIRMED
   SENT
+  PARTIALLY_PAID
   PAID
   OVERDUE
   CANCELLED
@@ -48,6 +49,7 @@ enum InvoiceStatus {
 enum SourceType {
   EXPENSE_ITEM
   INVOICE
+  PAYMENT
 }
 
 enum AiExtractionStatus {
@@ -76,6 +78,7 @@ model Company {
   customers        Customer[]
   expenseReports   ExpenseReport[]
   invoices         Invoice[]
+  payments         Payment[]
   journalEntries   JournalEntry[]
   aiExtractions    AiExtraction[]
   automationRules  AutomationRule[]
@@ -190,6 +193,21 @@ model Invoice {
   journalEntry    JournalEntry?     @relation(fields: [journalEntryId], references: [id])
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+
+  payments        Payment[]
+}
+
+model Payment {
+  id             String       @id @default(cuid())
+  companyId      String
+  company        Company      @relation(fields: [companyId], references: [id])
+  invoiceId      String
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id])
+  amount         Int
+  paymentDate    DateTime
+  journalEntryId String?      @unique
+  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  createdAt      DateTime     @default(now())
 }
 
 model AiExtraction {
@@ -221,6 +239,7 @@ model JournalEntry {
   lines        JournalLine[]
   expenseItem  ExpenseItem?
   invoice      Invoice?
+  payment      Payment?
 }
 
 model JournalLine {
