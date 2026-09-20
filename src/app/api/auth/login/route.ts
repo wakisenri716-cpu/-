@@ -12,7 +12,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "名前と有効なメールアドレスを入力してください" }, { status: 400 });
   }
 
-  const companyId = await getDefaultCompanyId();
+  let companyId: string;
+  try {
+    companyId = await getDefaultCompanyId();
+  } catch {
+    return NextResponse.json(
+      { error: "データベースがまだ初期化されていません。/api/seed?secret=... に一度アクセスしてから、もう一度ログインしてください。" },
+      { status: 503 },
+    );
+  }
+
   const user = await prisma.user.upsert({
     where: { email },
     update: { name },

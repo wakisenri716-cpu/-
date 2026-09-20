@@ -30,7 +30,28 @@ prisma/schema.prisma   会社・勘定科目・経費・請求書・仕訳・AI�
 
 これにより「AIが半自動で作業する」を、実際に仕訳を切りながらも人の最終責任を残す形で実現しています。
 
-## セットアップ
+## デプロイして使う(ローカル環境構築不要)
+
+Node.jsやPostgreSQLをローカルにインストールしなくても、Vercel上にデプロイしてブラウザだけで使えます。
+
+1. https://vercel.com を開き、**GitHubアカウントでサインアップ/ログイン**する
+2. ダッシュボードで **「Add New...」→「Project」**
+3. このリポジトリ(`wakisenri716-cpu/-`)を **Import** する
+4. Import画面で **「Storage」タブ** → **「Create Database」** → **Postgres**(Neon)を選んで作成
+   - これで `DATABASE_URL` が自動的にプロジェクトの環境変数に設定されます
+5. **「Environment Variables」** に以下を追加:
+   - `SEED_SECRET` = 好きな文字列(例: `mysecret123`。他人に推測されにくいものにする)
+   - `ANTHROPIC_API_KEY` = 空欄のままでOK(モックAIで動作します)
+6. **「Deploy」**を押す(数分待つ)
+7. デプロイ完了後に表示されるURL(例: `https://xxxx.vercel.app`)の末尾に
+   `/api/seed?secret=手順5で設定した文字列` を付けて**一度だけブラウザで開く**
+   - `{"ok":true,...}` と表示されればデータベースの初期化完了
+8. あらためてそのURL(`https://xxxx.vercel.app`)を開くと `/login` に飛ぶので、名前とメールアドレスを
+   入力してログインすれば使えます
+
+以後は同じURLをブックマークして使えます。データはVercelが作ったPostgreSQL(Neon)に保存され続けます。
+
+## ローカルで動かす場合
 
 ```bash
 cp .env.example .env   # DATABASE_URL / ANTHROPIC_API_KEY を設定
