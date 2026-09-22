@@ -32,14 +32,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     ? await findOrCreateVendor(report.companyId, extraction.vendorName)
     : null;
 
-  const account = await prisma.account.findUnique({
-    where: { companyId_code: { companyId: report.companyId, code: extraction.suggestedAccountCode } },
-  });
+  // A vendor's own default account (set on /vendors) is a stronger signal
+  // than the AI's per-receipt guess, so it takes precedence when set.
+  const account = vendor?.defaultExpenseAccountId
+    ? await prisma.account.findUnique({ where: { id: vendor.defaultExpenseAccountId } })
+    : await prisma.account.findUnique({
+        where: { companyId_code: { companyId: report.companyId, code: extraction.suggestedAccountCode } },
+      });
   if (!account) {
     return NextResponse.json(
       { error: `Suggested account code ${extraction.suggestedAccountCode} does not exist` },
       { status: 500 },
     );
+  }
+  if (vendor?.defaultExpenseAccountId && account.id === vendor.defaultExpenseAccountId) {
+    extraction.notes = [extraction.notes, `取引先の既定科目(${account.code} ${account.name})を適用しました。`]
+      .filter(Boolean)
+      .join(" ");
   }
 
   const aiExtraction = await prisma.aiExtraction.create({

@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/", label: "ダッシュボード" },
   { href: "/expenses", label: "経費精算" },
   { href: "/invoices", label: "請求書" },
+  { href: "/vendors", label: "取引先・顧客" },
   { href: "/review", label: "レビューキュー" },
   { href: "/assets", label: "固定資産" },
   { href: "/ledger", label: "総勘定元帳" },
