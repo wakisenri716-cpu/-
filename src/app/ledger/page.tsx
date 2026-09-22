@@ -31,7 +31,7 @@ export default async function LedgerPage({
               key={row.account.id}
               href={`/ledger?accountId=${row.account.id}`}
               className={`shrink-0 rounded px-2 py-1 text-sm whitespace-nowrap sm:block ${
-                row.account.id === selectedAccountId ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                row.account.id === selectedAccountId ? "bg-indigo-600 text-white" : "text-slate-600 hover:bg-slate-100"
               }`}
             >
               {row.account.code} {row.account.name}
@@ -43,7 +43,7 @@ export default async function LedgerPage({
           {!ledger ? (
             <p className="text-sm text-slate-400">勘定科目を選択してください。</p>
           ) : (
-            <div className="overflow-hidden rounded-lg border bg-white">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b px-4 py-3">
                 <h2 className="font-medium">
                   {ledger.account.code} {ledger.account.name}

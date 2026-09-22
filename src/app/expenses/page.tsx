@@ -88,7 +88,7 @@ export default function ExpensesPage() {
         <button
           onClick={createReport}
           disabled={creating}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
         >
           {creating ? "作成中..." : "新しい経費精算を作成"}
         </button>
@@ -100,7 +100,7 @@ export default function ExpensesPage() {
 
       <div className="space-y-6">
         {reports.map((report) => (
-          <div key={report.id} className="rounded-lg border bg-white p-4">
+          <div key={report.id} className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
             <div className="flex items-center justify-between">
               <div>
                 <span className="font-medium">{report.employee.name}さんの経費精算</span>
@@ -157,7 +157,7 @@ export default function ExpensesPage() {
               <button
                 type="submit"
                 disabled={uploadingFor === report.id}
-                className="rounded-md bg-slate-700 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
               >
                 {uploadingFor === report.id ? "AI解析中..." : "レシートを追加"}
               </button>

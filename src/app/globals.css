@@ -3,3 +3,15 @@
 body {
   font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
 }
+
+/* Subtle row hover across every data table without touching every page. */
+tbody tr {
+  transition: background-color 120ms ease;
+}
+tbody tr:hover {
+  background-color: var(--color-slate-50, #f8fafc);
+}
+
+::selection {
+  background-color: var(--color-indigo-100, #e0e7ff);
+}

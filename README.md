@@ -12,6 +12,8 @@ Money Forward クラウドのようなオールインワン経理SaaSを見据�
 - **Anthropic Claude (Vision + Tool Use)** — 領収書・請求書画像から構造化データを抽出
   - `ANTHROPIC_API_KEY` 未設定時はオフライン動作する `MockAiProvider` に自動フォールバックし、
     APIキーなしでも一連の自動化フローを確認できます (`src/lib/ai/index.ts`)
+- **UI**: 左サイドバー(業務/帳票でセクション分け、モバイルは上部の横スクロールピルメニューに切り替え)、
+  インディゴをブランドカラーにしたTailwind CSSのデザイン(`src/components/Sidebar.tsx`)
 
 ```
 src/lib/ai/            AIプロバイダのインターフェースと実装 (Claude / モック)

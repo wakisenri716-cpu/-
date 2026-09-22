@@ -108,7 +108,7 @@ export default function InvoicesPage() {
             key={tab.key}
             onClick={() => setDirection(tab.key)}
             className={`px-3 py-2 text-sm font-medium ${
-              direction === tab.key ? "border-b-2 border-slate-900 text-slate-900" : "text-slate-500"
+              direction === tab.key ? "border-b-2 border-indigo-600 text-indigo-700" : "text-slate-500"
             }`}
           >
             {tab.label}
@@ -118,7 +118,7 @@ export default function InvoicesPage() {
 
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
 
-      <form onSubmit={handleUpload} className="flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4">
+      <form onSubmit={handleUpload} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white shadow-sm p-4">
         <div>
           <label className="block text-xs text-slate-500">請求書ファイル(画像)</label>
           <input type="file" name="file" accept="image/*" required className="text-sm" />
@@ -126,7 +126,7 @@ export default function InvoicesPage() {
         <button
           type="submit"
           disabled={uploading}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
         >
           {uploading ? "AI解析中..." : "アップロードしてAI処理"}
         </button>
@@ -135,7 +135,7 @@ export default function InvoicesPage() {
       {loading ? (
         <p className="text-sm text-slate-500">読み込み中...</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border bg-white">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
@@ -185,7 +185,7 @@ export default function InvoicesPage() {
                           <button
                             onClick={() => recordPayment(invoice.id)}
                             disabled={payingId === invoice.id}
-                            className="rounded-md bg-slate-700 px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
+                            className="rounded-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
                           >
                             記録
                           </button>

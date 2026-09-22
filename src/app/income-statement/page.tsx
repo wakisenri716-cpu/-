@@ -22,7 +22,7 @@ export default async function IncomeStatementPage() {
         <CsvDownloadLink href="/api/income-statement/export" />
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-white">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
