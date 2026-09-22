@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getAccountBalances } from "@/lib/accounting/ledger";
 import { getDefaultCompanyId } from "@/lib/demo";
 import { formatYen } from "@/lib/format";
+import { CsvDownloadLink } from "@/components/CsvDownloadLink";
 
 export const dynamic = "force-dynamic";
 
@@ -37,13 +38,16 @@ export default async function TrialBalancePage() {
             自動仕訳(AI自動処理・人による承認済み)を勘定科目ごとに集計しています。レビュー待ちの仕訳は含みません。
           </p>
         </div>
-        <span
-          className={`self-start rounded-full px-3 py-1 text-xs font-medium ${
-            balanced ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
-          }`}
-        >
-          {balanced ? "借方・貸方 一致" : "借方・貸方 不一致"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              balanced ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+            }`}
+          >
+            {balanced ? "借方・貸方 一致" : "借方・貸方 不一致"}
+          </span>
+          <CsvDownloadLink href="/api/trial-balance/export" />
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-lg border bg-white">
