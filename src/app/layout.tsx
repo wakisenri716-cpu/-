@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { href: "/ledger", label: "総勘定元帳" },
   { href: "/trial-balance", label: "試算表" },
   { href: "/income-statement", label: "損益計算書" },
+  { href: "/balance-sheet", label: "貸借対照表" },
 ];
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
