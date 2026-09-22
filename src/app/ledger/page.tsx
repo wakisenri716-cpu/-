@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAccountBalances, getAccountLedger } from "@/lib/accounting/ledger";
 import { getDefaultCompanyId } from "@/lib/demo";
 import { formatDate, formatYen } from "@/lib/format";
+import { CsvDownloadLink } from "@/components/CsvDownloadLink";
 
 export const dynamic = "force-dynamic";
 
@@ -47,10 +48,13 @@ export default async function LedgerPage({
                 <h2 className="font-medium">
                   {ledger.account.code} {ledger.account.name}
                 </h2>
-                <span className="text-sm">
-                  残高: <span className="font-semibold">{formatYen(ledger.closingBalance)}</span>{" "}
-                  <span className="text-xs text-slate-400">({ledger.normalSide === "DEBIT" ? "借方" : "貸方"})</span>
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm">
+                    残高: <span className="font-semibold">{formatYen(ledger.closingBalance)}</span>{" "}
+                    <span className="text-xs text-slate-400">({ledger.normalSide === "DEBIT" ? "借方" : "貸方"})</span>
+                  </span>
+                  <CsvDownloadLink href={`/api/ledger/export?accountId=${ledger.account.id}`} />
+                </div>
               </div>
               <div className="overflow-x-auto">
               <table className="w-full text-sm">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getBalanceSheet } from "@/lib/accounting/balanceSheet";
 import { getDefaultCompanyId } from "@/lib/demo";
 import { formatYen } from "@/lib/format";
+import { CsvDownloadLink } from "@/components/CsvDownloadLink";
 
 export const dynamic = "force-dynamic";
 
@@ -27,13 +28,16 @@ export default async function BalanceSheetPage() {
             資産・負債・純資産の残高を集計します。期中決算のため、純資産には当期純利益(損益計算書と連動)を含めて表示しています。
           </p>
         </div>
-        <span
-          className={`self-start rounded-full px-3 py-1 text-xs font-medium ${
-            balanced ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
-          }`}
-        >
-          {balanced ? "資産 = 負債+純資産" : "資産 ≠ 負債+純資産"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              balanced ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+            }`}
+          >
+            {balanced ? "資産 = 負債+純資産" : "資産 ≠ 負債+純資産"}
+          </span>
+          <CsvDownloadLink href="/api/balance-sheet/export" />
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-lg border bg-white">

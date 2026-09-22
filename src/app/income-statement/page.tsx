@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getIncomeStatement } from "@/lib/accounting/incomeStatement";
 import { getDefaultCompanyId } from "@/lib/demo";
 import { formatYen } from "@/lib/format";
+import { CsvDownloadLink } from "@/components/CsvDownloadLink";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +12,14 @@ export default async function IncomeStatementPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">損益計算書</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          記帳済みの仕訳から収益・費用を集計し、当期純利益を計算します。確定申告の損益計算の土台として使えます。
-        </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">損益計算書</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            記帳済みの仕訳から収益・費用を集計し、当期純利益を計算します。確定申告の損益計算の土台として使えます。
+          </p>
+        </div>
+        <CsvDownloadLink href="/api/income-statement/export" />
       </div>
 
       <div className="overflow-hidden rounded-lg border bg-white">
