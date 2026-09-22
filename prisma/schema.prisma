@@ -50,6 +50,7 @@ enum SourceType {
   EXPENSE_ITEM
   INVOICE
   PAYMENT
+  FIXED_ASSET
 }
 
 enum AiExtractionStatus {
@@ -79,6 +80,7 @@ model Company {
   expenseReports   ExpenseReport[]
   invoices         Invoice[]
   payments         Payment[]
+  fixedAssets      FixedAsset[]
   journalEntries   JournalEntry[]
   aiExtractions    AiExtraction[]
   automationRules  AutomationRule[]
@@ -210,6 +212,35 @@ model Payment {
   createdAt      DateTime     @default(now())
 }
 
+model FixedAsset {
+  id              String   @id @default(cuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id])
+  name            String
+  acquisitionDate DateTime
+  acquisitionCost Int
+  residualValue   Int      @default(1)
+  usefulLifeYears Int
+  journalEntryId  String?  @unique
+  journalEntry    JournalEntry? @relation("FixedAssetAcquisition", fields: [journalEntryId], references: [id])
+  createdAt       DateTime @default(now())
+
+  depreciationEntries DepreciationEntry[]
+}
+
+model DepreciationEntry {
+  id             String       @id @default(cuid())
+  fixedAssetId   String
+  fixedAsset     FixedAsset   @relation(fields: [fixedAssetId], references: [id])
+  period         String
+  amount         Int
+  journalEntryId String?      @unique
+  journalEntry   JournalEntry? @relation("DepreciationPosting", fields: [journalEntryId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@unique([fixedAssetId, period])
+}
+
 model AiExtraction {
   id                  String              @id @default(cuid())
   companyId           String
@@ -236,10 +267,12 @@ model JournalEntry {
   createdByAi  Boolean            @default(false)
   createdAt    DateTime           @default(now())
 
-  lines        JournalLine[]
-  expenseItem  ExpenseItem?
-  invoice      Invoice?
-  payment      Payment?
+  lines             JournalLine[]
+  expenseItem       ExpenseItem?
+  invoice           Invoice?
+  payment           Payment?
+  fixedAsset        FixedAsset?        @relation("FixedAssetAcquisition")
+  depreciationEntry DepreciationEntry? @relation("DepreciationPosting")
 }
 
 model JournalLine {
