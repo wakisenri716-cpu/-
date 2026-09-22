@@ -53,6 +53,18 @@ export async function POST(request: Request) {
       ? await findOrCreateCustomer(companyId, extraction.counterpartyName)
       : null;
 
+  // A vendor's own default account (set on /vendors) is a stronger signal
+  // than the AI's per-invoice guess, so it takes precedence when set.
+  if (direction === "RECEIVED" && vendor?.defaultExpenseAccountId) {
+    const defaultAccount = await prisma.account.findUnique({ where: { id: vendor.defaultExpenseAccountId } });
+    if (defaultAccount) {
+      extraction.suggestedAccountCode = defaultAccount.code;
+      extraction.notes = [extraction.notes, `取引先の既定科目(${defaultAccount.code} ${defaultAccount.name})を適用しました。`]
+        .filter(Boolean)
+        .join(" ");
+    }
+  }
+
   const aiExtraction = await prisma.aiExtraction.create({
     data: {
       companyId,
