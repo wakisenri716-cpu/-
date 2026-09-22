@@ -39,7 +39,6 @@ export default function ReviewQueuePage() {
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
-    setLoading(true);
     const [entriesRes, accountsRes] = await Promise.all([fetch("/api/review-queue"), fetch("/api/accounts")]);
     setEntries(await entriesRes.json());
     setAccounts(await accountsRes.json());
@@ -47,6 +46,9 @@ export default function ReviewQueuePage() {
   }
 
   useEffect(() => {
+    // Fetch-on-mount: the resulting setState always lands after the fetch's
+    // await, so the extra render this rule warns about never happens here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 

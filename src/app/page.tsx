@@ -36,44 +36,46 @@ export default async function DashboardPage() {
       <div>
         <h2 className="text-lg font-semibold mb-3">最近の仕訳</h2>
         <div className="overflow-hidden rounded-lg border bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-4 py-2">日付</th>
-                <th className="px-4 py-2">摘要</th>
-                <th className="px-4 py-2">仕訳明細</th>
-                <th className="px-4 py-2">ステータス</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {summary.recentEntries.map((entry) => (
-                <tr key={entry.id}>
-                  <td className="px-4 py-2 whitespace-nowrap">{formatDate(entry.date)}</td>
-                  <td className="px-4 py-2">{entry.description}</td>
-                  <td className="px-4 py-2">
-                    <ul className="space-y-0.5">
-                      {entry.lines.map((line) => (
-                        <li key={line.id} className="whitespace-nowrap">
-                          {line.account.code} {line.account.name}{" "}
-                          {line.debit > 0 ? `借方 ${formatYen(line.debit)}` : `貸方 ${formatYen(line.credit)}`}
-                        </li>
-                      ))}
-                    </ul>
-                  </td>
-                  <td className="px-4 py-2">
-                    <StatusBadge status={entry.status} />
-                  </td>
-                </tr>
-              ))}
-              {summary.recentEntries.length === 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
-                    まだ仕訳がありません。経費精算または請求書を登録してください。
-                  </td>
+                  <th className="px-4 py-2">日付</th>
+                  <th className="px-4 py-2">摘要</th>
+                  <th className="px-4 py-2">仕訳明細</th>
+                  <th className="px-4 py-2">ステータス</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {summary.recentEntries.map((entry) => (
+                  <tr key={entry.id}>
+                    <td className="px-4 py-2 whitespace-nowrap">{formatDate(entry.date)}</td>
+                    <td className="px-4 py-2">{entry.description}</td>
+                    <td className="px-4 py-2">
+                      <ul className="space-y-0.5">
+                        {entry.lines.map((line) => (
+                          <li key={line.id} className="whitespace-nowrap">
+                            {line.account.code} {line.account.name}{" "}
+                            {line.debit > 0 ? `借方 ${formatYen(line.debit)}` : `貸方 ${formatYen(line.credit)}`}
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
+                    <td className="px-4 py-2">
+                      <StatusBadge status={entry.status} />
+                    </td>
+                  </tr>
+                ))}
+                {summary.recentEntries.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                      まだ仕訳がありません。経費精算または請求書を登録してください。
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
