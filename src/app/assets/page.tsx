@@ -100,7 +100,7 @@ export default function AssetsPage() {
 
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
 
-      <form onSubmit={handleRegister} className="flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4">
+      <form onSubmit={handleRegister} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white shadow-sm p-4">
         <div>
           <label className="block text-xs text-slate-500">資産名</label>
           <input name="name" required className="mt-1 w-40 rounded border px-2 py-1.5 text-sm" placeholder="ノートPC" />
@@ -144,7 +144,7 @@ export default function AssetsPage() {
         <button
           type="submit"
           disabled={creating}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
         >
           {creating ? "登録中..." : "資産を登録"}
         </button>
@@ -153,7 +153,7 @@ export default function AssetsPage() {
       {loading ? (
         <p className="text-sm text-slate-500">読み込み中...</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border bg-white">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
@@ -187,7 +187,7 @@ export default function AssetsPage() {
                           <button
                             onClick={() => handleDepreciate(asset.id)}
                             disabled={depreciatingId === asset.id}
-                            className="rounded-md bg-slate-700 px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
+                            className="rounded-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
                           >
                             {period} 分を計上
                           </button>

@@ -47,7 +47,7 @@ function LoginFormInner() {
         パスワードは不要です。名前とメールアドレスを入力すると、そのユーザーとしてアプリを利用できます。
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-lg border bg-white p-5">
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-xl border border-slate-200 bg-white shadow-sm p-5">
         {error && <div className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
         <div>
           <label className="block text-xs text-slate-500">名前</label>
@@ -73,7 +73,7 @@ function LoginFormInner() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
         >
           {submitting ? "ログイン中..." : "ログイン"}
         </button>

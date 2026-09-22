@@ -1,6 +1,7 @@
 import { getDashboardSummary } from "@/lib/dashboard";
 import { formatDate, formatPercent, formatYen } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ChartIcon, DashboardIcon, InboxIcon, ReceiptIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -8,11 +9,18 @@ export default async function DashboardPage() {
   const summary = await getDashboardSummary();
 
   const stats = [
-    { label: "AIが自動処理した仕訳", value: summary.autoPosted },
-    { label: "人によるレビュー待ち", value: summary.pendingReview },
-    { label: "人が承認・修正した仕訳", value: summary.postedManually },
-    { label: "自動化率", value: formatPercent(summary.automationRate) },
+    { label: "AIが自動処理した仕訳", value: summary.autoPosted, icon: ReceiptIcon, tone: "emerald" as const },
+    { label: "人によるレビュー待ち", value: summary.pendingReview, icon: InboxIcon, tone: "amber" as const },
+    { label: "人が承認・修正した仕訳", value: summary.postedManually, icon: DashboardIcon, tone: "blue" as const },
+    { label: "自動化率", value: formatPercent(summary.automationRate), icon: ChartIcon, tone: "indigo" as const },
   ];
+
+  const toneClasses = {
+    emerald: "bg-emerald-50 text-emerald-600",
+    amber: "bg-amber-50 text-amber-600",
+    blue: "bg-blue-50 text-blue-600",
+    indigo: "bg-indigo-50 text-indigo-600",
+  };
 
   return (
     <div className="space-y-8">
@@ -25,17 +33,23 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="rounded-lg border bg-white p-4">
-            <div className="text-2xl font-semibold">{stat.value}</div>
-            <div className="mt-1 text-xs text-slate-500">{stat.label}</div>
-          </div>
-        ))}
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div key={stat.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${toneClasses[stat.tone]}`}>
+                <Icon className="h-5 w-5" />
+              </div>
+              <div className="mt-2.5 text-2xl font-semibold text-slate-900">{stat.value}</div>
+              <div className="mt-0.5 text-xs text-slate-500">{stat.label}</div>
+            </div>
+          );
+        })}
       </div>
 
       <div>
         <h2 className="text-lg font-semibold mb-3">最近の仕訳</h2>
-        <div className="overflow-hidden rounded-lg border bg-white">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">

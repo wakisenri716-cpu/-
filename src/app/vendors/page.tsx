@@ -112,7 +112,7 @@ export default function VendorsPage() {
         <button
           onClick={() => setTab("vendors")}
           className={`px-3 py-2 text-sm font-medium ${
-            tab === "vendors" ? "border-b-2 border-slate-900 text-slate-900" : "text-slate-500"
+            tab === "vendors" ? "border-b-2 border-indigo-600 text-indigo-700" : "text-slate-500"
           }`}
         >
           取引先(仕入・経費)
@@ -120,7 +120,7 @@ export default function VendorsPage() {
         <button
           onClick={() => setTab("customers")}
           className={`px-3 py-2 text-sm font-medium ${
-            tab === "customers" ? "border-b-2 border-slate-900 text-slate-900" : "text-slate-500"
+            tab === "customers" ? "border-b-2 border-indigo-600 text-indigo-700" : "text-slate-500"
           }`}
         >
           顧客(売上)
@@ -132,7 +132,7 @@ export default function VendorsPage() {
       {loading ? (
         <p className="text-sm text-slate-500">読み込み中...</p>
       ) : tab === "vendors" ? (
-        <div className="overflow-hidden rounded-lg border bg-white">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
@@ -183,7 +183,7 @@ export default function VendorsPage() {
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border bg-white">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">

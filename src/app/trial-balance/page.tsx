@@ -40,7 +40,7 @@ export default async function TrialBalancePage() {
         </div>
         <div className="flex items-center gap-2">
           <span
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
+            className={`rounded-full whitespace-nowrap px-3 py-1 text-xs font-medium ${
               balanced ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
             }`}
           >
@@ -50,7 +50,7 @@ export default async function TrialBalancePage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-white">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">

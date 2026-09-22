@@ -84,7 +84,7 @@ export default function ReviewQueuePage() {
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
       {loading && <p className="text-sm text-slate-500">読み込み中...</p>}
       {!loading && entries.length === 0 && (
-        <p className="rounded-lg border bg-white p-6 text-center text-sm text-slate-400">
+        <p className="rounded-xl border border-slate-200 bg-white shadow-sm p-6 text-center text-sm text-slate-400">
           レビュー待ちの項目はありません。
         </p>
       )}
@@ -99,7 +99,7 @@ export default function ReviewQueuePage() {
           const amount = isExpense ? entry.expenseItem?.amount ?? 0 : entry.invoice?.totalAmount ?? 0;
 
           return (
-            <div key={entry.id} className="rounded-lg border bg-white p-4">
+            <div key={entry.id} className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <div className="font-medium">{entry.description}</div>
