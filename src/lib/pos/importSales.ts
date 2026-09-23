@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import type { PosProvider } from "@prisma/client";
 import { ensureAccount } from "@/lib/accounting/accounts";
-import { toBusinessDate, type NormalizedPosSale } from "./types";
+import { jstDateKey } from "@/lib/jst";
+import type { NormalizedPosSale } from "./types";
 
 export const PROVIDER_LABELS: Record<PosProvider, string> = {
   SMAREGI: "スマレジ",
@@ -29,7 +30,7 @@ export async function importPosSales(
           provider,
           externalId: sale.externalId,
           soldAt: sale.soldAt,
-          businessDate: toBusinessDate(sale.soldAt),
+          businessDate: jstDateKey(sale.soldAt),
           storeName: sale.storeName,
           totalAmount: sale.totalAmount,
           taxAmount: sale.taxAmount,

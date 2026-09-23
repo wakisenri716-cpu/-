@@ -8,7 +8,7 @@ type Pay = { workMinutes: number; nightMinutes: number; overtimeMinutes: number;
 type Staff = { id: string; name: string; hourlyWage: number; active: boolean; week: Pay };
 type Shift = { id: string; staffId: string; date: string; startMinutes: number; endMinutes: number; breakMinutes: number; note: string | null };
 type Week = { weekStart: string; days: string[]; staff: Staff[]; shifts: Shift[]; daily: (Pay & { date: string; people: number })[] };
-type PayrollRow = Pay & { staffId: string; name: string; hourlyWage: number };
+type PayrollRow = Pay & { staffId: string; name: string; hourlyWage: number; actualDays: number; plannedDays: number };
 type Payroll = { month: string; rows: PayrollRow[]; total: number; run: { totalAmount: number; createdAt: string } | null };
 
 type Draft = { id?: string; staffId: string; date: string; start: string; end: string; breakMinutes: number; note: string };
@@ -380,6 +380,7 @@ export default function ShiftsPage() {
               <thead className="text-left text-xs whitespace-nowrap text-slate-500">
                 <tr>
                   <th className="py-1 pr-2 font-medium">スタッフ</th>
+                  <th className="py-1 pr-2 text-right font-medium">実績/予定</th>
                   <th className="py-1 pr-2 text-right font-medium">勤務時間</th>
                   <th className="py-1 pr-2 text-right font-medium">基本</th>
                   <th className="py-1 pr-2 text-right font-medium">深夜割増</th>
@@ -391,6 +392,9 @@ export default function ShiftsPage() {
                 {payroll?.rows.map((r) => (
                   <tr key={r.staffId}>
                     <td className="py-1.5 pr-2 whitespace-nowrap">{r.name}</td>
+                    <td className="py-1.5 pr-2 text-right whitespace-nowrap text-slate-500">
+                      {r.actualDays}日/{r.plannedDays}日
+                    </td>
                     <td className="py-1.5 pr-2 text-right whitespace-nowrap">{hours(r.workMinutes)}</td>
                     <td className="py-1.5 pr-2 text-right whitespace-nowrap">{formatYen(r.base)}</td>
                     <td className="py-1.5 pr-2 text-right whitespace-nowrap">{r.night ? formatYen(r.night) : "-"}</td>
@@ -400,7 +404,7 @@ export default function ShiftsPage() {
                 ))}
                 {payroll && payroll.rows.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-4 text-center text-slate-400">
+                    <td colSpan={7} className="py-4 text-center text-slate-400">
                       この月のシフトはまだありません。
                     </td>
                   </tr>
@@ -409,7 +413,7 @@ export default function ShiftsPage() {
               {payroll && payroll.rows.length > 0 && (
                 <tfoot className="border-t font-semibold">
                   <tr>
-                    <td className="pt-2" colSpan={5}>
+                    <td className="pt-2" colSpan={6}>
                       総支給額(見込み)
                     </td>
                     <td className="pt-2 text-right whitespace-nowrap">{formatYen(payroll.total)}</td>
@@ -435,7 +439,7 @@ export default function ShiftsPage() {
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-slate-500">
-                総支給額を「給料手当 / 未払金」で計上します。振込を銀行明細から取り込むと、未払金の支払いとして判定されます。
+                打刻がある日は実績、ない日はシフトの予定で計算した総支給額を「給料手当 / 未払金」で計上します。振込を銀行明細から取り込むと、未払金の支払いとして判定されます。
                 源泉所得税・社会保険料などの控除は含みません。
               </p>
               <button

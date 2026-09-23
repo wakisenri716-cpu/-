@@ -1,4 +1,5 @@
-import { toBusinessDate, type NormalizedPosSale } from "./types";
+import { jstDateKey } from "@/lib/jst";
+import type { NormalizedPosSale } from "./types";
 
 // スマレジ・プラットフォームAPI (https://developers.smaregi.dev/platform-api-reference/)
 // client_credentials でアクセストークンを取得し、POS 取引一覧を取得する。
@@ -120,7 +121,7 @@ function demoTransactions(from: string, to: string): SmaregiTransaction[] {
   const cursor = new Date(`${from}T00:00:00+09:00`);
   const end = new Date(`${to}T00:00:00+09:00`);
   while (cursor <= end) {
-    const date = toBusinessDate(cursor);
+    const date = jstDateKey(cursor);
     const seed = Number(date.replaceAll("-", ""));
     const count = 3 + (seed % 4);
     for (let i = 0; i < count; i++) {

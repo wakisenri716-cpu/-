@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import type { Shift, Staff } from "@prisma/client";
 import { ensureAccount } from "@/lib/accounting/accounts";
-import { addPay, dailyPay, EMPTY_PAY, parseTime, roundPay, type PayBreakdown } from "./pay";
+import { recordTimes } from "@/lib/attendance/times";
+import { addPay, dailyPay, EMPTY_PAY, parseTime, roundPay, type PayBreakdown, type ShiftTimes } from "./pay";
 
 export class ShiftError extends Error {}
 
@@ -138,19 +139,25 @@ export async function copyPreviousWeek(companyId: string, weekStart: string) {
 
 // ---- 集計 ----
 
-// スタッフ×日ごとに割増を計算し、合計してから円単位に丸める
-function summarize(shifts: (Shift & { staff: Staff })[]) {
-  const byStaffDay = new Map<string, { staff: Staff; date: string; shifts: Shift[] }>();
+type StaffDay = { staff: Staff; date: string; times: ShiftTimes[] };
+
+function groupShifts(shifts: (Shift & { staff: Staff })[]): Map<string, StaffDay> {
+  const days = new Map<string, StaffDay>();
   for (const s of shifts) {
     const key = `${s.staffId}|${dateKey(s.date)}`;
-    const group = byStaffDay.get(key) ?? { staff: s.staff, date: dateKey(s.date), shifts: [] };
-    group.shifts.push(s);
-    byStaffDay.set(key, group);
+    const day = days.get(key) ?? { staff: s.staff, date: dateKey(s.date), times: [] };
+    day.times.push(s);
+    days.set(key, day);
   }
+  return days;
+}
+
+// スタッフ×日ごとに割増を計算し、合計してから円単位に丸める
+function summarize(days: Iterable<StaffDay>) {
   const perStaff = new Map<string, PayBreakdown>();
   const perDay = new Map<string, PayBreakdown & { people: Set<string> }>();
-  for (const { staff, date, shifts: dayShifts } of byStaffDay.values()) {
-    const pay = dailyPay(dayShifts, staff.hourlyWage);
+  for (const { staff, date, times } of days) {
+    const pay = dailyPay(times, staff.hourlyWage);
     perStaff.set(staff.id, addPay(perStaff.get(staff.id) ?? EMPTY_PAY, pay));
     const day = perDay.get(date) ?? { ...EMPTY_PAY, people: new Set<string>() };
     day.people.add(staff.id);
@@ -171,7 +178,7 @@ export async function getWeek(companyId: string, weekStart: string) {
     where: { companyId, OR: [{ active: true }, { id: { in: shifts.map((s) => s.staffId) } }] },
     orderBy: [{ active: "desc" }, { createdAt: "asc" }],
   });
-  const { perStaff, perDay } = summarize(shifts);
+  const { perStaff, perDay } = summarize(groupShifts(shifts).values());
   return {
     weekStart: days[0],
     days,
@@ -193,14 +200,36 @@ export async function getWeek(companyId: string, weekStart: string) {
   };
 }
 
+// 退勤まで打刻された日は打刻の実績で、打刻のない日はシフトの予定で人件費を計算する
 export async function getMonthlyPayroll(companyId: string, month: string) {
-  const shifts = await prisma.shift.findMany({
-    where: { companyId, date: monthRange(month) },
-    include: { staff: true },
-  });
-  const { perStaff } = summarize(shifts);
+  const range = monthRange(month);
+  const [shifts, records] = await Promise.all([
+    prisma.shift.findMany({ where: { companyId, date: range }, include: { staff: true } }),
+    prisma.timeRecord.findMany({ where: { companyId, date: range, clockOut: { not: null } }, include: { staff: true } }),
+  ]);
+  const days = groupShifts(shifts);
+  const actualKeys = new Set<string>();
+  for (const r of records) {
+    const key = `${r.staffId}|${dateKey(r.date)}`;
+    if (!actualKeys.has(key)) {
+      actualKeys.add(key);
+      days.set(key, { staff: r.staff, date: dateKey(r.date), times: [] });
+    }
+    days.get(key)!.times.push(recordTimes(r));
+  }
+  const { perStaff } = summarize(days.values());
+  const countDays = (staffId: string, actual: boolean) =>
+    [...days.keys()].filter((k) => k.startsWith(`${staffId}|`) && actualKeys.has(k) === actual).length;
+
   const staff = await prisma.staff.findMany({ where: { id: { in: [...perStaff.keys()] } }, orderBy: { createdAt: "asc" } });
-  const rows = staff.map((s) => ({ staffId: s.id, name: s.name, hourlyWage: s.hourlyWage, ...roundPay(perStaff.get(s.id)!) }));
+  const rows = staff.map((s) => ({
+    staffId: s.id,
+    name: s.name,
+    hourlyWage: s.hourlyWage,
+    actualDays: countDays(s.id, true),
+    plannedDays: countDays(s.id, false),
+    ...roundPay(perStaff.get(s.id)!),
+  }));
   const run = await prisma.payrollRun.findUnique({ where: { companyId_month: { companyId, month } } });
   return { month, rows, total: rows.reduce((sum, r) => sum + r.total, 0), run };
 }

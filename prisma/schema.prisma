@@ -109,6 +109,7 @@ model Company {
   bankTransactions BankTransaction[]
   staff            Staff[]
   shifts           Shift[]
+  timeRecords      TimeRecord[]
   payrollRuns      PayrollRun[]
   journalEntries   JournalEntry[]
   aiExtractions    AiExtraction[]
@@ -366,6 +367,7 @@ model Staff {
   createdAt   DateTime @default(now())
 
   shifts      Shift[]
+  timeRecords TimeRecord[]
 
   @@unique([companyId, name])
 }
@@ -385,6 +387,26 @@ model Shift {
   createdAt    DateTime @default(now())
 
   @@index([companyId, date])
+}
+
+// 出退勤の打刻。date は出勤した日(日本時間)で、日付をまたいで退勤しても出勤日の勤務として扱う。
+// clockOut が空のあいだは勤務中、breakStartedAt が入っているあいだは休憩中。
+model TimeRecord {
+  id             String    @id @default(cuid())
+  companyId      String
+  company        Company   @relation(fields: [companyId], references: [id])
+  staffId        String
+  staff          Staff     @relation(fields: [staffId], references: [id])
+  date           DateTime
+  clockIn        DateTime
+  clockOut       DateTime?
+  breakMinutes   Int       @default(0)
+  breakStartedAt DateTime?
+  edited         Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+
+  @@index([companyId, date])
+  @@index([staffId, clockOut])
 }
 
 model PayrollRun {
