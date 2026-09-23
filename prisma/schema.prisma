@@ -51,6 +51,12 @@ enum SourceType {
   INVOICE
   PAYMENT
   FIXED_ASSET
+  POS_SALE
+}
+
+enum PosProvider {
+  SMAREGI
+  AIRREGI
 }
 
 enum AiExtractionStatus {
@@ -81,6 +87,7 @@ model Company {
   invoices         Invoice[]
   payments         Payment[]
   fixedAssets      FixedAsset[]
+  posSales         PosSale[]
   journalEntries   JournalEntry[]
   aiExtractions    AiExtraction[]
   automationRules  AutomationRule[]
@@ -241,6 +248,29 @@ model DepreciationEntry {
   @@unique([fixedAssetId, period])
 }
 
+// POSレジ(スマレジ/Airレジ)の1会計。仕訳は営業日単位でまとめて切るため、
+// 複数の PosSale が同じ JournalEntry を指す。
+model PosSale {
+  id             String        @id @default(cuid())
+  companyId      String
+  company        Company       @relation(fields: [companyId], references: [id])
+  provider       PosProvider
+  externalId     String
+  soldAt         DateTime
+  businessDate   String
+  storeName      String?
+  totalAmount    Int
+  taxAmount      Int
+  cashAmount     Int
+  cashlessAmount Int
+  journalEntryId String?
+  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  createdAt      DateTime      @default(now())
+
+  @@unique([companyId, provider, externalId])
+  @@index([companyId, businessDate])
+}
+
 model AiExtraction {
   id                  String              @id @default(cuid())
   companyId           String
@@ -273,6 +303,7 @@ model JournalEntry {
   payment           Payment?
   fixedAsset        FixedAsset?        @relation("FixedAssetAcquisition")
   depreciationEntry DepreciationEntry? @relation("DepreciationPosting")
+  posSales          PosSale[]
 }
 
 model JournalLine {
