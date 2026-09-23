@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { CHART_OF_ACCOUNTS } from "./chartOfAccounts";
 
@@ -10,5 +11,13 @@ export async function ensureAccount(tx: Prisma.TransactionClient, companyId: str
     where: { companyId_code: { companyId, code } },
     update: {},
     create: { companyId, ...seed },
+  });
+}
+
+// 勘定科目マスタに後から足した科目を、既存の会社にもまとめて作成する(既存科目は変更しない)。
+export async function ensureChartOfAccounts(companyId: string) {
+  await prisma.account.createMany({
+    data: CHART_OF_ACCOUNTS.map((a) => ({ companyId, ...a })),
+    skipDuplicates: true,
   });
 }
