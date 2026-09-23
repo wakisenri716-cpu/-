@@ -108,3 +108,12 @@ export function ClipboardIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function RegisterIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3.5" y="11" width="17" height="9.5" rx="1.5" />
+      <path d="M7 11V5.5h10V11M9.5 8h5M7.5 15h.01M12 15h.01M16.5 15h.01" />
+    </svg>
+  );
+}

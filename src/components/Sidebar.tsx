@@ -11,6 +11,7 @@ import {
   DocumentIcon,
   InboxIcon,
   ReceiptIcon,
+  RegisterIcon,
   ScaleIcon,
   UsersIcon,
 } from "@/components/icons";
@@ -29,6 +30,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/invoices", label: "請求書", icon: DocumentIcon },
       { href: "/vendors", label: "取引先・顧客", icon: UsersIcon },
       { href: "/review", label: "レビューキュー", icon: InboxIcon },
+      { href: "/pos", label: "POSレジ連携", icon: RegisterIcon },
       { href: "/assets", label: "固定資産", icon: ArchiveIcon },
     ],
   },

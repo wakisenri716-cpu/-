@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/* Tailwind v4 defaults border color to currentColor, which made every bare
+   `border`/`divide-y` (table rows, inputs) render as near-black lines. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-slate-200, currentColor);
+  }
+}
+
 body {
   font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
 }
