@@ -55,6 +55,7 @@ enum SourceType {
   INVENTORY
   MANUAL
   BANK
+  PAYROLL
 }
 
 enum BankTransactionStatus {
@@ -106,6 +107,9 @@ model Company {
   posSales         PosSale[]
   products         Product[]
   bankTransactions BankTransaction[]
+  staff            Staff[]
+  shifts           Shift[]
+  payrollRuns      PayrollRun[]
   journalEntries   JournalEntry[]
   aiExtractions    AiExtraction[]
   automationRules  AutomationRule[]
@@ -351,6 +355,51 @@ model BankTransaction {
   @@index([companyId, status, date])
 }
 
+// シフトに入るスタッフ。ログインするユーザーとは別で、アカウントを持たないアルバイトも登録できる。
+model Staff {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  name        String
+  hourlyWage  Int
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  shifts      Shift[]
+
+  @@unique([companyId, name])
+}
+
+// 時刻は勤務日の0時からの分数。日付をまたぐ勤務は endMinutes が1440(24:00)を超える。
+model Shift {
+  id           String   @id @default(cuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id])
+  staffId      String
+  staff        Staff    @relation(fields: [staffId], references: [id])
+  date         DateTime
+  startMinutes Int
+  endMinutes   Int
+  breakMinutes Int      @default(0)
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@index([companyId, date])
+}
+
+model PayrollRun {
+  id             String       @id @default(cuid())
+  companyId      String
+  company        Company      @relation(fields: [companyId], references: [id])
+  month          String
+  totalAmount    Int
+  journalEntryId String       @unique
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@unique([companyId, month])
+}
+
 model AiExtraction {
   id                  String              @id @default(cuid())
   companyId           String
@@ -386,6 +435,7 @@ model JournalEntry {
   posSales          PosSale[]
   stockMovement     StockMovement?
   bankTransaction   BankTransaction?
+  payrollRun        PayrollRun?
 }
 
 model JournalLine {

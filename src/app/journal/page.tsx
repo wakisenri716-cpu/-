@@ -26,6 +26,7 @@ const SOURCE_LABELS: Record<string, string> = {
   INVENTORY: "在庫",
   MANUAL: "手入力",
   BANK: "銀行明細",
+  PAYROLL: "給料",
 };
 
 const CATEGORY_LABELS: [string, string][] = [

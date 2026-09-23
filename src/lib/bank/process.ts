@@ -4,6 +4,7 @@ import { getAiProvider } from "@/lib/ai";
 import { ensureAccount, ensureChartOfAccounts } from "@/lib/accounting/accounts";
 import { evaluateAutomation } from "@/lib/accounting/automation";
 import { recordInvoicePayment } from "@/lib/accounting/payments";
+import { hasPayrollRuns } from "@/lib/shifts/service";
 import type { StatementRow } from "./statement";
 
 const BANK_ACCOUNT_CODE = "1020"; // 普通預金
@@ -155,6 +156,8 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
   created.sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const summary = { received: rows.length, imported: created.length, matched: 0, autoPosted: 0, pending: 0 };
+  // シフトから給料を「給料手当/未払金」で計上している会社では、給与の振込は未払金の支払いになる
+  const salaryAccrued = await hasPayrollRuns(companyId);
   const suggestions = new Map<string, Suggestion>();
   const needsAi: BankTransaction[] = [];
 
@@ -176,7 +179,10 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
       summary.matched++;
       continue;
     }
-    const suggestion = (await historySuggestion(row)) ?? ruleSuggestion(row);
+    let suggestion = (await historySuggestion(row)) ?? ruleSuggestion(row);
+    if (suggestion?.source === "RULE" && suggestion.accountCode === "5110" && salaryAccrued) {
+      suggestion = { ...suggestion, accountCode: "2020", reason: "給与の振込(シフトから計上済みの未払金の支払い)" };
+    }
     if (suggestion) suggestions.set(row.id, suggestion);
     else needsAi.push(row);
   }
