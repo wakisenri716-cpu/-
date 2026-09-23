@@ -43,5 +43,11 @@ export async function seedDatabase(prisma: PrismaClient) {
     create: { companyId: company.id, sourceType: "INVOICE", minConfidence: 0.9, maxAutoAmount: 300000 },
   });
 
+  await prisma.automationRule.upsert({
+    where: { companyId_sourceType: { companyId: company.id, sourceType: "BANK" } },
+    update: {},
+    create: { companyId: company.id, sourceType: "BANK", minConfidence: 0.9, maxAutoAmount: 300000 },
+  });
+
   return { companyId: company.id };
 }

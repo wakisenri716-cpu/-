@@ -1,4 +1,5 @@
 import type { NormalizedPosSale } from "./types";
+import { parseCsv } from "@/lib/csvParse";
 
 // Airレジの「データ連携API」はAirレジが承認した連携先システムにしか仕様が
 // 公開されていないため、バックオフィスから出力できる「会計明細CSV」を取り込む。
@@ -19,56 +20,6 @@ const COLUMN_ALIASES = {
 } as const;
 
 type ColumnKey = keyof typeof COLUMN_ALIASES;
-
-export function decodeCsv(buffer: ArrayBuffer): string {
-  let text: string;
-  try {
-    text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
-  } catch {
-    // Airレジのバックオフィスから落としたCSVは Shift_JIS
-    text = new TextDecoder("shift_jis").decode(buffer);
-  }
-  return text.replace(/^﻿/, "");
-}
-
-export function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cell = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (inQuotes) {
-      if (ch === '"' && text[i + 1] === '"') {
-        cell += '"';
-        i++;
-      } else if (ch === '"') {
-        inQuotes = false;
-      } else {
-        cell += ch;
-      }
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ",") {
-      row.push(cell);
-      cell = "";
-    } else if (ch === "\n" || ch === "\r") {
-      if (ch === "\r" && text[i + 1] === "\n") i++;
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
-    } else {
-      cell += ch;
-    }
-  }
-  if (cell !== "" || row.length > 0) {
-    row.push(cell);
-    rows.push(row);
-  }
-  return rows.filter((r) => r.some((c) => c.trim() !== ""));
-}
 
 function toAmount(value: string | undefined): number {
   if (!value) return 0;

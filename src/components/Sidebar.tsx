@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArchiveIcon,
+  BankIcon,
   BookIcon,
   BoxIcon,
   ChartIcon,
@@ -32,6 +33,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/invoices", label: "請求書", icon: DocumentIcon },
       { href: "/vendors", label: "取引先・顧客", icon: UsersIcon },
       { href: "/review", label: "レビューキュー", icon: InboxIcon },
+      { href: "/bank", label: "銀行明細", icon: BankIcon },
       { href: "/pos", label: "POSレジ連携", icon: RegisterIcon },
       { href: "/inventory", label: "在庫管理", icon: BoxIcon },
       { href: "/assets", label: "固定資産", icon: ArchiveIcon },

@@ -135,3 +135,11 @@ export function JournalIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function BankIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m3.5 9 8.5-5 8.5 5M5 9.5v8M9.5 9.5v8M14.5 9.5v8M19 9.5v8M3.5 20.5h17" />
+    </svg>
+  );
+}

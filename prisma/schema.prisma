@@ -54,6 +54,14 @@ enum SourceType {
   POS_SALE
   INVENTORY
   MANUAL
+  BANK
+}
+
+enum BankTransactionStatus {
+  PENDING
+  POSTED
+  MATCHED
+  IGNORED
 }
 
 enum StockMovementType {
@@ -97,6 +105,7 @@ model Company {
   fixedAssets      FixedAsset[]
   posSales         PosSale[]
   products         Product[]
+  bankTransactions BankTransaction[]
   journalEntries   JournalEntry[]
   aiExtractions    AiExtraction[]
   automationRules  AutomationRule[]
@@ -212,7 +221,8 @@ model Invoice {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  payments        Payment[]
+  payments         Payment[]
+  bankTransactions BankTransaction[]
 }
 
 model Payment {
@@ -314,6 +324,33 @@ model StockMovement {
   @@index([productId, date])
 }
 
+// 銀行明細の1行。fingerprint は同じCSVを再アップロードしても二重に取り込まないためのキー。
+// 請求書と金額が一致して消込んだ行(MATCHED)は、入金・支払の仕訳を journalEntry として参照する。
+model BankTransaction {
+  id                   String                @id @default(cuid())
+  companyId            String
+  company              Company               @relation(fields: [companyId], references: [id])
+  date                 DateTime
+  description          String
+  withdrawal           Int                   @default(0)
+  deposit              Int                   @default(0)
+  balance              Int?
+  fingerprint          String
+  status               BankTransactionStatus @default(PENDING)
+  suggestedAccountCode String?
+  confidence           Float?
+  suggestionSource     String?
+  suggestionReason     String?
+  matchedInvoiceId     String?
+  matchedInvoice       Invoice?              @relation(fields: [matchedInvoiceId], references: [id])
+  journalEntryId       String?               @unique
+  journalEntry         JournalEntry?         @relation(fields: [journalEntryId], references: [id])
+  createdAt            DateTime              @default(now())
+
+  @@unique([companyId, fingerprint])
+  @@index([companyId, status, date])
+}
+
 model AiExtraction {
   id                  String              @id @default(cuid())
   companyId           String
@@ -348,6 +385,7 @@ model JournalEntry {
   depreciationEntry DepreciationEntry? @relation("DepreciationPosting")
   posSales          PosSale[]
   stockMovement     StockMovement?
+  bankTransaction   BankTransaction?
 }
 
 model JournalLine {

@@ -9,6 +9,7 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
   POS_SALE: "POSレジ",
   INVENTORY: "在庫",
   MANUAL: "手入力",
+  BANK: "銀行明細",
 };
 
 export type ManualLineInput = { accountId: string; debit: number; credit: number; memo?: string | null };
