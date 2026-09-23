@@ -4,11 +4,11 @@ import { getAiProvider } from "@/lib/ai";
 import { fileToBase64, toDataUri } from "@/lib/fileToDataUri";
 import { findOrCreateVendor, findOrCreateCustomer } from "@/lib/accounting/parties";
 import { postInvoiceJournal } from "@/lib/accounting/automation";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import type { InvoiceDirection } from "@prisma/client";
 
 export async function GET(request: Request) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const { searchParams } = new URL(request.url);
   const direction = searchParams.get("direction") as InvoiceDirection | null;
 
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const formData = await request.formData();
 
   const direction = formData.get("direction") as InvoiceDirection | null;

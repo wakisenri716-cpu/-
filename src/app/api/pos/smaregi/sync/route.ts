@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { importPosSales } from "@/lib/pos/importSales";
 import { fetchSmaregiSales, MAX_SYNC_DAYS } from "@/lib/pos/smaregi";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function POST(request: Request) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const body = await request.json().catch(() => ({}));
   const from = String(body.from ?? "");
   const to = String(body.to ?? "");

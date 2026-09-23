@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 
 export async function getDashboardSummary() {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
 
   const [autoPosted, pendingJournals, postedManually, recentEntries, pendingBank] = await Promise.all([
     // 自動化率はAIが判定した仕訳(経費・請求書・銀行明細)だけで測る。POS・在庫・手入力などは対象外。

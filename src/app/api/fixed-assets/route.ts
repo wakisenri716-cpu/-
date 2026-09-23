@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { getFixedAssetsWithSummary, registerFixedAsset } from "@/lib/accounting/fixedAssets";
 
 export async function GET() {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const assets = await getFixedAssetsWithSummary(companyId);
   return NextResponse.json(assets);
 }
 
 export async function POST(request: Request) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const body = await request.json().catch(() => ({}));
 
   const name = String(body.name || "").trim();

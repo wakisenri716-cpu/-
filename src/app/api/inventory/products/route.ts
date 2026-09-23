@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { createProduct, InventoryError } from "@/lib/accounting/inventory";
 
 export async function POST(request: Request) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const body = await request.json().catch(() => ({}));
   const name = String(body.name ?? "").trim();
   const unit = String(body.unit ?? "").trim() || "個";

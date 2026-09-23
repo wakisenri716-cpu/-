@@ -1,9 +1,9 @@
 import { getBalanceSheet } from "@/lib/accounting/balanceSheet";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { csvResponse } from "@/lib/csv";
 
 export async function GET() {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const { assetRows, liabilityRows, equityRows, netIncome, totalAssets, totalLiabilities, totalEquity } =
     await getBalanceSheet(companyId);
 

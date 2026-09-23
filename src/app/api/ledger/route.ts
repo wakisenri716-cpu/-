@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAccountBalances, getAccountLedger } from "@/lib/accounting/ledger";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 
 export async function GET(request: Request) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const { searchParams } = new URL(request.url);
   const accountId = searchParams.get("accountId");
 

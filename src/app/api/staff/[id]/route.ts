@@ -1,10 +1,10 @@
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { updateStaff } from "@/lib/shifts/service";
 import { respond } from "@/lib/shifts/http";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const body = await request.json().catch(() => ({}));
   return respond(() =>
     updateStaff(companyId, id, {

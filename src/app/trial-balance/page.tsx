@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { getAccountBalances } from "@/lib/accounting/ledger";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
 
@@ -17,7 +17,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 const CATEGORY_ORDER = ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"];
 
 export default async function TrialBalancePage() {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const rows = await getAccountBalances(companyId);
 
   const totalDebit = rows.reduce((sum, row) => sum + row.totalDebit, 0);

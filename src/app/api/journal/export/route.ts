@@ -1,11 +1,11 @@
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { getJournalBook, SOURCE_LABELS } from "@/lib/accounting/journal";
 import { csvResponse } from "@/lib/csv";
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 export async function GET(request: Request) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const param = new URL(request.url).searchParams.get("month");
   const month = param && MONTH.test(param) ? param : undefined;
   const entries = await getJournalBook(companyId, { month, postedOnly: true });

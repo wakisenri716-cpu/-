@@ -123,9 +123,27 @@ model User {
   name          String
   email         String   @unique
   role          UserRole @default(EMPLOYEE)
+  passwordHash  String?
+  active        Boolean  @default(true)
+  failedLogins  Int      @default(0)
+  lockedUntil   DateTime?
   createdAt     DateTime @default(now())
 
   expenseReports ExpenseReport[]
+  sessions       Session[]
+}
+
+// ログインセッション。ブラウザのクッキーには推測できないランダムなトークンだけを入れ、
+// データベースにはそのハッシュを保存する(DBが漏れてもセッションを乗っ取れないようにする)。
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Account {

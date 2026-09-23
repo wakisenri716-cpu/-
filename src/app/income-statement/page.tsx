@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { getIncomeStatement } from "@/lib/accounting/incomeStatement";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
 
 export const dynamic = "force-dynamic";
 
 export default async function IncomeStatementPage() {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const { revenueRows, expenseRows, totalRevenue, totalExpense, netIncome } = await getIncomeStatement(companyId);
 
   return (
