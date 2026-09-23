@@ -13,6 +13,7 @@ export const CHART_OF_ACCOUNTS: SeedAccount[] = [
   { code: "1115", name: "クレジット売掛金", category: "ASSET" },
   { code: "1210", name: "仮払金", category: "ASSET" },
   { code: "1220", name: "仮払消費税", category: "ASSET" },
+  { code: "1310", name: "商品", category: "ASSET" },
   { code: "1510", name: "固定資産", category: "ASSET" },
   { code: "2010", name: "買掛金", category: "LIABILITY" },
   { code: "2020", name: "未払金", category: "LIABILITY" },
@@ -22,6 +23,7 @@ export const CHART_OF_ACCOUNTS: SeedAccount[] = [
   // 貸方残高を正しく扱えるよう暫定的に LIABILITY として登録している。
   { code: "1519", name: "減価償却累計額", category: "LIABILITY" },
   { code: "4010", name: "売上高", category: "REVENUE" },
+  { code: "5000", name: "売上原価", category: "EXPENSE" },
   { code: "5010", name: "旅費交通費", category: "EXPENSE" },
   { code: "5020", name: "会議費", category: "EXPENSE" },
   { code: "5030", name: "消耗品費", category: "EXPENSE" },

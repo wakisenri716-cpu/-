@@ -1,24 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import type { PosProvider, Prisma } from "@prisma/client";
-import { CHART_OF_ACCOUNTS } from "@/lib/accounting/chartOfAccounts";
+import type { PosProvider } from "@prisma/client";
+import { ensureAccount } from "@/lib/accounting/accounts";
 import { toBusinessDate, type NormalizedPosSale } from "./types";
 
 export const PROVIDER_LABELS: Record<PosProvider, string> = {
   SMAREGI: "スマレジ",
   AIRREGI: "Airレジ",
 };
-
-// 既存デプロイのDBには後から追加した科目(1115 クレジット売掛金)が無いことがあるので、
-// シードを再実行しなくても仕訳できるよう、勘定科目マスタから都度作成する。
-async function ensureAccount(tx: Prisma.TransactionClient, companyId: string, code: string) {
-  const seed = CHART_OF_ACCOUNTS.find((a) => a.code === code);
-  if (!seed) throw new Error(`Unknown account code ${code}`);
-  return tx.account.upsert({
-    where: { companyId_code: { companyId, code } },
-    update: {},
-    create: { companyId, ...seed },
-  });
-}
 
 function signedLine(accountId: string, amount: number, memo: string) {
   // 返品などで合計がマイナスになった場合は貸借を入れ替えて正の金額で記帳する
