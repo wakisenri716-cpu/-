@@ -1,5 +1,11 @@
 import { EXPENSE_ACCOUNT_CODES } from "@/lib/accounting/chartOfAccounts";
-import type { AiProvider, InvoiceExtraction, ReceiptExtraction } from "./types";
+import type {
+  AiProvider,
+  BankClassification,
+  BankClassificationInput,
+  InvoiceExtraction,
+  ReceiptExtraction,
+} from "./types";
 
 // Deterministic, offline stand-in for the Claude vision provider so the app
 // is runnable end-to-end without an API key (local dev, demos, tests).
@@ -63,5 +69,15 @@ export class MockAiProvider implements AiProvider {
       confidence: Number((0.6 + unit * 0.4).toFixed(2)),
       notes: "ANTHROPIC_API_KEY 未設定のためモック抽出結果です。",
     };
+  }
+
+  // キーワードルールで判定できなかった明細だけがここに来る。モックでは推測せず、
+  // 低い信頼度で雑費/雑収入を提案して必ず人の確認に回す。
+  async classifyBankTransactions(items: BankClassificationInput[]): Promise<BankClassification[]> {
+    return items.map((item) => ({
+      accountCode: item.direction === "OUT" ? "5990" : "4020",
+      confidence: 0.3,
+      reason: "ANTHROPIC_API_KEY 未設定のため判定できませんでした(モック)",
+    }));
   }
 }

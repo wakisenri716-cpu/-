@@ -21,6 +21,10 @@ export type InvoiceExtraction = {
   notes?: string;
 };
 
+export type BankClassificationInput = { description: string; direction: "IN" | "OUT"; amount: number };
+
+export type BankClassification = { accountCode: string; confidence: number; reason: string };
+
 export interface AiProvider {
   extractReceipt(input: { imageBase64: string; mediaType: string }): Promise<ReceiptExtraction>;
   extractInvoice(input: {
@@ -28,4 +32,8 @@ export interface AiProvider {
     mediaType: string;
     direction: "ISSUED" | "RECEIVED";
   }): Promise<InvoiceExtraction>;
+  classifyBankTransactions(
+    items: BankClassificationInput[],
+    accounts: { code: string; name: string }[],
+  ): Promise<BankClassification[]>;
 }

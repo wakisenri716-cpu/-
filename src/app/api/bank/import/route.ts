@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDefaultCompanyId } from "@/lib/demo";
-import { importPosSales } from "@/lib/pos/importSales";
-import { parseAirregiCsv } from "@/lib/pos/airregi";
 import { decodeCsv } from "@/lib/csvParse";
+import { parseBankStatement } from "@/lib/bank/statement";
+import { importBankStatement } from "@/lib/bank/process";
 
 export async function POST(request: Request) {
   const companyId = await getDefaultCompanyId();
@@ -12,16 +12,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "CSVファイルを選択してください" }, { status: 400 });
   }
 
-  let parsed;
+  let rows;
   try {
-    parsed = parseAirregiCsv(decodeCsv(await file.arrayBuffer()));
+    rows = parseBankStatement(decodeCsv(await file.arrayBuffer()));
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "CSVを読み取れません" }, { status: 400 });
   }
-  if (parsed.sales.length === 0) {
-    return NextResponse.json({ error: "CSVに取り込める会計がありません" }, { status: 400 });
+  if (rows.length === 0) {
+    return NextResponse.json({ error: "CSVに取り込める明細がありません" }, { status: 400 });
   }
 
-  const result = await importPosSales(companyId, "AIRREGI", parsed.sales);
-  return NextResponse.json({ ...result, rowCount: parsed.rowCount });
+  return NextResponse.json(await importBankStatement(companyId, rows));
 }

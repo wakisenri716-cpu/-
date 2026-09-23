@@ -4,8 +4,8 @@ import { getDefaultCompanyId } from "@/lib/demo";
 export async function getDashboardSummary() {
   const companyId = await getDefaultCompanyId();
 
-  const [autoPosted, pendingReview, postedManually, recentEntries] = await Promise.all([
-    // 自動化率はAIが判定した仕訳(経費・請求書)だけで測る。POS・在庫・手入力などは対象外。
+  const [autoPosted, pendingJournals, postedManually, recentEntries, pendingBank] = await Promise.all([
+    // 自動化率はAIが判定した仕訳(経費・請求書・銀行明細)だけで測る。POS・在庫・手入力などは対象外。
     prisma.journalEntry.count({ where: { companyId, createdByAi: true, status: "AUTO_POSTED" } }),
     prisma.journalEntry.count({ where: { companyId, createdByAi: true, status: "PENDING_REVIEW" } }),
     prisma.journalEntry.count({ where: { companyId, createdByAi: true, status: "POSTED_MANUALLY" } }),
@@ -15,7 +15,10 @@ export async function getDashboardSummary() {
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
+    // 銀行明細の確認待ちは仕訳になる前の段階なので、仕訳とは別に数えてレビュー待ちに含める
+    prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
   ]);
+  const pendingReview = pendingJournals + pendingBank;
 
   const totalHandled = autoPosted + pendingReview + postedManually;
   const automationRate = totalHandled === 0 ? 0 : autoPosted / totalHandled;

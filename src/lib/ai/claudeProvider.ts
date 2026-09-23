@@ -1,6 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { EXPENSE_ACCOUNT_CODES } from "@/lib/accounting/chartOfAccounts";
-import type { AiProvider, InvoiceExtraction, ReceiptExtraction } from "./types";
+import type {
+  AiProvider,
+  BankClassification,
+  BankClassificationInput,
+  InvoiceExtraction,
+  ReceiptExtraction,
+} from "./types";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
@@ -67,6 +73,34 @@ const invoiceTool: Anthropic.Tool = {
     ],
   },
 };
+
+const BANK_BATCH_SIZE = 50;
+
+function bankClassificationTool(accountCodes: string[]): Anthropic.Tool {
+  return {
+    name: "record_bank_classifications",
+    description: "Record the account classification for each bank statement line.",
+    input_schema: {
+      type: "object",
+      properties: {
+        results: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              index: { type: "integer", description: "Index of the statement line in the input list" },
+              accountCode: { type: "string", enum: accountCodes, description: "Counter account code for this line" },
+              confidence: { type: "number", description: "Confidence 0.0-1.0 that the account code is correct" },
+              reason: { type: "string", description: "One short sentence in Japanese explaining the choice" },
+            },
+            required: ["index", "accountCode", "confidence", "reason"],
+          },
+        },
+      },
+      required: ["results"],
+    },
+  };
+}
 
 function extractToolInput<T>(message: Anthropic.Message, toolName: string): T {
   const toolUse = message.content.find(
@@ -144,5 +178,48 @@ export class ClaudeAiProvider implements AiProvider {
       ],
     });
     return extractToolInput<InvoiceExtraction>(message, invoiceTool.name);
+  }
+
+  async classifyBankTransactions(
+    items: BankClassificationInput[],
+    accounts: { code: string; name: string }[],
+  ): Promise<BankClassification[]> {
+    const tool = bankClassificationTool(accounts.map((a) => a.code));
+    const accountList = accounts.map((a) => `${a.code} ${a.name}`).join("\n");
+    const results: BankClassification[] = [];
+
+    for (let start = 0; start < items.length; start += BANK_BATCH_SIZE) {
+      const batch = items.slice(start, start + BANK_BATCH_SIZE);
+      const lines = batch
+        .map((item, i) => `${i}\t${item.direction === "OUT" ? "出金" : "入金"}\t${item.amount}円\t${item.description}`)
+        .join("\n");
+
+      const message = await client().messages.create({
+        model: MODEL,
+        max_tokens: 8000,
+        tools: [tool],
+        tool_choice: { type: "tool", name: tool.name },
+        messages: [
+          {
+            role: "user",
+            content: `日本の中小企業の普通預金口座の明細です。各行について、普通預金の相手勘定として最も適切な勘定科目を選び、record_bank_classifications ツールで全行分を報告してください。摘要は銀行の半角カナ表記(例: ﾌﾘｺﾐ、ｶ)=株式会社)のことがあります。摘要だけでは判断できない行は confidence を0.5未満にしてください。\n\n勘定科目:\n${accountList}\n\n明細(番号\t区分\t金額\t摘要):\n${lines}`,
+          },
+        ],
+      });
+      const { results: batchResults } = extractToolInput<{
+        results: { index: number; accountCode: string; confidence: number; reason: string }[];
+      }>(message, tool.name);
+
+      const byIndex = new Map(batchResults.map((r) => [r.index, r]));
+      batch.forEach((item, i) => {
+        const r = byIndex.get(i);
+        results.push(
+          r
+            ? { accountCode: r.accountCode, confidence: Math.max(0, Math.min(1, r.confidence)), reason: r.reason }
+            : { accountCode: item.direction === "OUT" ? "5990" : "4020", confidence: 0, reason: "AIの回答にこの行が含まれていませんでした" },
+        );
+      });
+    }
+    return results;
   }
 }
