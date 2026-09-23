@@ -52,6 +52,13 @@ enum SourceType {
   PAYMENT
   FIXED_ASSET
   POS_SALE
+  INVENTORY
+}
+
+enum StockMovementType {
+  PURCHASE
+  ISSUE
+  STOCKTAKE
 }
 
 enum PosProvider {
@@ -88,6 +95,7 @@ model Company {
   payments         Payment[]
   fixedAssets      FixedAsset[]
   posSales         PosSale[]
+  products         Product[]
   journalEntries   JournalEntry[]
   aiExtractions    AiExtraction[]
   automationRules  AutomationRule[]
@@ -271,6 +279,40 @@ model PosSale {
   @@index([companyId, businessDate])
 }
 
+// 在庫は移動平均法で評価する。単価ではなく在庫金額の合計を持つことで、
+// 出庫のたびに端数が積み上がってズレるのを防いでいる。
+model Product {
+  id             String   @id @default(cuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id])
+  code           String?
+  name           String
+  unit           String   @default("個")
+  quantityOnHand Int      @default(0)
+  inventoryValue Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  movements      StockMovement[]
+
+  @@unique([companyId, name])
+}
+
+model StockMovement {
+  id             String            @id @default(cuid())
+  productId      String
+  product        Product           @relation(fields: [productId], references: [id])
+  type           StockMovementType
+  date           DateTime
+  quantity       Int
+  amount         Int
+  memo           String?
+  journalEntryId String?           @unique
+  journalEntry   JournalEntry?     @relation(fields: [journalEntryId], references: [id])
+  createdAt      DateTime          @default(now())
+
+  @@index([productId, date])
+}
+
 model AiExtraction {
   id                  String              @id @default(cuid())
   companyId           String
@@ -304,6 +346,7 @@ model JournalEntry {
   fixedAsset        FixedAsset?        @relation("FixedAssetAcquisition")
   depreciationEntry DepreciationEntry? @relation("DepreciationPosting")
   posSales          PosSale[]
+  stockMovement     StockMovement?
 }
 
 model JournalLine {
