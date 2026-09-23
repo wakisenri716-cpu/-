@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { getBalanceSheet } from "@/lib/accounting/balanceSheet";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
 
 export const dynamic = "force-dynamic";
 
 export default async function BalanceSheetPage() {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const {
     assetRows,
     liabilityRows,

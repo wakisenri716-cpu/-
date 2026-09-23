@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { ensureChartOfAccounts } from "@/lib/accounting/accounts";
 import { createManualJournal, getJournalBook, JournalError } from "@/lib/accounting/journal";
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 export async function GET(request: Request) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const month = new URL(request.url).searchParams.get("month") ?? undefined;
   if (month && !MONTH.test(month)) {
     return NextResponse.json({ error: "月の指定が正しくありません" }, { status: 400 });
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const body = await request.json().catch(() => ({}));
   const lines = Array.isArray(body.lines) ? body.lines : [];
 

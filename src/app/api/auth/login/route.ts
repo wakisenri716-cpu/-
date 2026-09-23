@@ -1,39 +1,47 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getDefaultCompanyId } from "@/lib/demo";
-import { SESSION_COOKIE } from "@/lib/auth";
+import { burnPasswordCheck, verifyPassword } from "@/lib/auth/password";
+import { createSession } from "@/lib/auth/session";
+
+const MAX_FAILURES = 5;
+const LOCK_MINUTES = 15;
+const INVALID = "メールアドレスまたはパスワードが違います";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
-  const name = String(body.name || "").trim();
-  const email = String(body.email || "").trim().toLowerCase();
-
-  if (!name || !email || !email.includes("@")) {
-    return NextResponse.json({ error: "名前と有効なメールアドレスを入力してください" }, { status: 400 });
+  const email = String(body.email ?? "").trim().toLowerCase();
+  const password = String(body.password ?? "");
+  if (!email || !password) {
+    return NextResponse.json({ error: "メールアドレスとパスワードを入力してください" }, { status: 400 });
   }
 
-  let companyId: string;
-  try {
-    companyId = await getDefaultCompanyId();
-  } catch {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user?.passwordHash || !user.active) {
+    await burnPasswordCheck(password);
+    return NextResponse.json({ error: INVALID }, { status: 401 });
+  }
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
     return NextResponse.json(
-      { error: "データベースがまだ初期化されていません。/api/seed?secret=... に一度アクセスしてから、もう一度ログインしてください。" },
-      { status: 503 },
+      { error: `ログインの失敗が続いたため、${LOCK_MINUTES}分間ロックしています。しばらくしてからお試しください` },
+      { status: 429 },
     );
   }
 
-  const user = await prisma.user.upsert({
-    where: { email },
-    update: { name },
-    create: { companyId, name, email, role: "EMPLOYEE" },
-  });
+  if (!(await verifyPassword(password, user.passwordHash))) {
+    const failures = user.failedLogins + 1;
+    const lock = failures >= MAX_FAILURES;
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLogins: lock ? 0 : failures,
+        lockedUntil: lock ? new Date(Date.now() + LOCK_MINUTES * 60_000) : user.lockedUntil,
+      },
+    });
+    return NextResponse.json({ error: INVALID }, { status: 401 });
+  }
 
-  const response = NextResponse.json({ user });
-  response.cookies.set(SESSION_COOKIE, user.id, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
-  return response;
+  await prisma.user.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null } });
+  await prisma.session.deleteMany({ where: { userId: user.id, expiresAt: { lt: new Date() } } });
+  await createSession(user.id);
+  return NextResponse.json({ ok: true });
 }

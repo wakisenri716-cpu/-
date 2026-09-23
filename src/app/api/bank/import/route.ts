@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { decodeCsv } from "@/lib/csvParse";
 import { parseBankStatement } from "@/lib/bank/statement";
 import { importBankStatement } from "@/lib/bank/process";
 
 export async function POST(request: Request) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const formData = await request.formData();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {

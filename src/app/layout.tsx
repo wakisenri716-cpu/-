@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth/session";
 import { Sidebar, MobileNav } from "@/components/Sidebar";
 import { LogoutButton } from "@/components/LogoutButton";
 
@@ -17,7 +17,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full bg-slate-50 text-slate-900">
         {user ? (
           <div className="flex min-h-screen">
-            <Sidebar userName={user.name} />
+            <Sidebar userName={user.name} isAdmin={user.role === "ADMIN"} />
             <div className="flex min-w-0 flex-1 flex-col">
               <header className="border-b bg-white px-4 py-3 md:hidden">
                 <div className="flex items-center justify-between gap-3">
@@ -30,7 +30,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                   <LogoutButton />
                 </div>
                 <div className="mt-2">
-                  <MobileNav />
+                  <MobileNav isAdmin={user.role === "ADMIN"} />
                 </div>
               </header>
               <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>

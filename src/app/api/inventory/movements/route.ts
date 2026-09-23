@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { InventoryError, recordStockMovement } from "@/lib/accounting/inventory";
 
 const TYPES = ["PURCHASE", "ISSUE", "STOCKTAKE"] as const;
 
 export async function POST(request: Request) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const body = await request.json().catch(() => ({}));
 
   const type = TYPES.find((t) => t === body.type);

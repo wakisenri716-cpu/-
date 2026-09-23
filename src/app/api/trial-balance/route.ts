@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAccountBalances } from "@/lib/accounting/ledger";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 
 export async function GET() {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const balances = await getAccountBalances(companyId);
 
   const totalDebit = balances.reduce((sum, row) => sum + row.totalDebit, 0);

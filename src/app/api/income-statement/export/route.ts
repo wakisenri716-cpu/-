@@ -1,9 +1,9 @@
 import { getIncomeStatement } from "@/lib/accounting/incomeStatement";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { csvResponse } from "@/lib/csv";
 
 export async function GET() {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const { revenueRows, expenseRows, totalRevenue, totalExpense, netIncome } = await getIncomeStatement(companyId);
 
   const rows: (string | number)[][] = [["区分", "科目コード", "科目名", "金額"]];

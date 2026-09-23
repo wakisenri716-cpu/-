@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { getInventory } from "@/lib/accounting/inventory";
 
 export async function GET() {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   return NextResponse.json(await getInventory(companyId));
 }

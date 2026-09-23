@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 
 export async function GET() {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const entries = await prisma.journalEntry.findMany({
     where: { companyId, status: "PENDING_REVIEW" },
     include: {

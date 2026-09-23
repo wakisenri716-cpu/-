@@ -16,9 +16,11 @@ import {
   DocumentIcon,
   InboxIcon,
   JournalIcon,
+  KeyIcon,
   ReceiptIcon,
   RegisterIcon,
   ScaleIcon,
+  ShieldIcon,
   UsersIcon,
 } from "@/components/icons";
 import { LogoutButton } from "@/components/LogoutButton";
@@ -57,6 +59,19 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+function sectionsFor(isAdmin: boolean): NavSection[] {
+  return [
+    ...NAV_SECTIONS,
+    {
+      title: "設定",
+      items: [
+        { href: "/account", label: "アカウント", icon: KeyIcon },
+        ...(isAdmin ? [{ href: "/users", label: "ユーザー管理", icon: ShieldIcon }] : []),
+      ],
+    },
+  ];
+}
+
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
   return (
@@ -72,7 +87,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-export function Sidebar({ userName }: { userName: string }) {
+export function Sidebar({ userName, isAdmin }: { userName: string; isAdmin: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -85,7 +100,7 @@ export function Sidebar({ userName }: { userName: string }) {
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-2">
-        {NAV_SECTIONS.map((section, i) => (
+        {sectionsFor(isAdmin).map((section, i) => (
           <div key={section.title ?? i}>
             {section.title && (
               <div className="px-3 pb-1.5 text-xs font-semibold tracking-wide text-slate-400">{section.title}</div>
@@ -107,9 +122,9 @@ export function Sidebar({ userName }: { userName: string }) {
   );
 }
 
-export function MobileNav() {
+export function MobileNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
-  const allItems = NAV_SECTIONS.flatMap((s) => s.items);
+  const allItems = sectionsFor(isAdmin).flatMap((s) => s.items);
 
   return (
     <nav className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 text-sm md:hidden">

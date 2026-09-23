@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getAccountBalances, getAccountLedger } from "@/lib/accounting/ledger";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { formatDate, formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
 
@@ -12,7 +12,7 @@ export default async function LedgerPage({
   searchParams: Promise<{ accountId?: string }>;
 }) {
   const { accountId } = await searchParams;
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const accounts = await getAccountBalances(companyId);
   const selectedAccountId = accountId ?? accounts.find((row) => row.totalDebit > 0 || row.totalCredit > 0)?.account.id;
   const ledger = selectedAccountId ? await getAccountLedger(companyId, selectedAccountId) : null;

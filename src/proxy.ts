@@ -1,19 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE } from "@/lib/auth";
+
+// ここではクッキーの有無と形だけを見る(楽観的チェック)。セッションが本当に有効かは、
+// データを読み書きする直前の requireUser()/requireCompanyId() でデータベースと照合する。
+const SESSION_COOKIE = "session";
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/setup", "/api/seed"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isPublicRoute =
-    pathname.startsWith("/login") || pathname.startsWith("/api/auth") || pathname.startsWith("/api/seed");
-  if (isPublicRoute) return NextResponse.next();
+  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return NextResponse.next();
 
-  const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
-  if (hasSession) return NextResponse.next();
+  const token = request.cookies.get(SESSION_COOKIE)?.value ?? "";
+  if (/^[A-Za-z0-9_-]{43}$/.test(token)) return NextResponse.next();
 
   if (pathname.startsWith("/api")) {
     return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
   }
-
   const loginUrl = new URL("/login", request.url);
   loginUrl.searchParams.set("next", pathname);
   return NextResponse.redirect(loginUrl);

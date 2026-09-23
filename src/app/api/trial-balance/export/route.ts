@@ -1,5 +1,5 @@
 import { getAccountBalances } from "@/lib/accounting/ledger";
-import { getDefaultCompanyId } from "@/lib/demo";
+import { requireCompanyId } from "@/lib/auth/session";
 import { csvResponse } from "@/lib/csv";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -11,7 +11,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export async function GET() {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await requireCompanyId();
   const balances = await getAccountBalances(companyId);
 
   const rows: (string | number)[][] = [["科目コード", "科目名", "区分", "借方合計", "貸方合計", "残高"]];
