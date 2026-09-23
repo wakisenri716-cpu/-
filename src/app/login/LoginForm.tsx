@@ -3,7 +3,7 @@
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type Props = { mode: "login" | "setup"; secretRequired: boolean };
+type Props = { mode: "login" | "setup" };
 
 export function LoginForm(props: Props) {
   return (
@@ -15,7 +15,7 @@ export function LoginForm(props: Props) {
 
 const inputClass = "mt-1 w-full rounded-md border px-3 py-2 text-sm";
 
-function LoginFormInner({ mode, secretRequired }: Props) {
+function LoginFormInner({ mode }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [submitting, setSubmitting] = useState(false);
@@ -90,13 +90,6 @@ function LoginFormInner({ mode, secretRequired }: Props) {
           <div>
             <label className="block text-xs text-slate-500">パスワード(確認)</label>
             <input name="passwordConfirm" type="password" required autoComplete="new-password" className={inputClass} />
-          </div>
-        )}
-        {secretRequired && (
-          <div>
-            <label className="block text-xs text-slate-500">セットアップ用の合言葉</label>
-            <input name="secret" type="password" required autoComplete="off" className={inputClass} />
-            <p className="mt-1 text-xs text-slate-500">Vercelの環境変数 SEED_SECRET に設定した文字列です。</p>
           </div>
         )}
         <button
