@@ -53,6 +53,7 @@ enum SourceType {
   FIXED_ASSET
   POS_SALE
   INVENTORY
+  MANUAL
 }
 
 enum StockMovementType {

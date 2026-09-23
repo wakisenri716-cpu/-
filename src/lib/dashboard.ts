@@ -5,9 +5,10 @@ export async function getDashboardSummary() {
   const companyId = await getDefaultCompanyId();
 
   const [autoPosted, pendingReview, postedManually, recentEntries] = await Promise.all([
-    prisma.journalEntry.count({ where: { companyId, status: "AUTO_POSTED" } }),
-    prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
-    prisma.journalEntry.count({ where: { companyId, status: "POSTED_MANUALLY" } }),
+    // 自動化率はAIが判定した仕訳(経費・請求書)だけで測る。POS・在庫・手入力などは対象外。
+    prisma.journalEntry.count({ where: { companyId, createdByAi: true, status: "AUTO_POSTED" } }),
+    prisma.journalEntry.count({ where: { companyId, createdByAi: true, status: "PENDING_REVIEW" } }),
+    prisma.journalEntry.count({ where: { companyId, createdByAi: true, status: "POSTED_MANUALLY" } }),
     prisma.journalEntry.findMany({
       where: { companyId, status: { not: "VOID" } },
       include: { lines: { include: { account: true } } },
