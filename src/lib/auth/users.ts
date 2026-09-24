@@ -17,6 +17,7 @@ export const PUBLIC_USER_FIELDS = {
   active: true,
   createdAt: true,
   passwordHash: true,
+  totpEnabled: true,
 } as const;
 
 // パスワードのハッシュそのものは画面に渡さず、設定済みかどうかだけを返す

@@ -37,6 +37,11 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
               督促状を作成
             </Link>
           )}
+          {!cancelled && (
+            <Link href={`/recurring-invoices?template=${invoice.id}`} className="rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              毎月の定期請求にする
+            </Link>
+          )}
           <Link href={`/invoices/new?from=${invoice.id}`} className="rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
             複製して作成
           </Link>

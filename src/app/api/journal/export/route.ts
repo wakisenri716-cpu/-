@@ -1,14 +1,15 @@
 import { requireCompanyId } from "@/lib/auth/session";
-import { getJournalBook, SOURCE_LABELS } from "@/lib/accounting/journal";
+import { getJournalBook, journalFilterFromParams, SOURCE_LABELS } from "@/lib/accounting/journal";
 import { csvResponse } from "@/lib/csv";
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 export async function GET(request: Request) {
   const companyId = await requireCompanyId();
-  const param = new URL(request.url).searchParams.get("month");
+  const params = new URL(request.url).searchParams;
+  const param = params.get("month");
   const month = param && MONTH.test(param) ? param : undefined;
-  const entries = await getJournalBook(companyId, { month, postedOnly: true });
+  const entries = await getJournalBook(companyId, { month, postedOnly: true, filter: journalFilterFromParams(params) });
 
   const rows: (string | number)[][] = [["日付", "伝票", "摘要", "区分", "科目コード", "勘定科目", "借方金額", "貸方金額", "メモ"]];
   entries

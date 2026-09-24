@@ -92,12 +92,46 @@ function monthRange(month: string) {
   return { gte: new Date(Date.UTC(y, m - 1, 1)), lt: new Date(Date.UTC(y, m, 1)) };
 }
 
-export async function getJournalBook(companyId: string, options: { month?: string; postedOnly?: boolean } = {}) {
+export type JournalFilter = { q?: string; accountId?: string; min?: number; max?: number; sourceType?: SourceType };
+
+// URL の検索条件(?q=&accountId=&min=&max=&source=)を読み取る。おかしな値は無視する。
+export function journalFilterFromParams(params: URLSearchParams): JournalFilter {
+  const num = (v: string | null) => (v && /^\d+$/.test(v) ? Number(v) : undefined);
+  const source = params.get("source");
+  return {
+    q: params.get("q")?.trim() || undefined,
+    accountId: params.get("accountId") || undefined,
+    min: num(params.get("min")),
+    max: num(params.get("max")),
+    sourceType: source && source in SOURCE_LABELS ? (source as SourceType) : undefined,
+  };
+}
+
+export async function getJournalBook(companyId: string, options: { month?: string; postedOnly?: boolean; filter?: JournalFilter } = {}) {
+  const f = options.filter ?? {};
+  const amount = f.min !== undefined || f.max !== undefined ? { ...(f.min !== undefined ? { gte: f.min } : {}), ...(f.max !== undefined ? { lte: f.max } : {}) } : undefined;
+  const filtered = !!(f.q || f.accountId || amount || f.sourceType);
   return prisma.journalEntry.findMany({
     where: {
       companyId,
       ...(options.month ? { date: monthRange(options.month) } : {}),
       ...(options.postedOnly ? { status: { in: ["AUTO_POSTED", "POSTED_MANUALLY"] } } : {}),
+      // 摘要か明細のメモにキーワードを含む
+      ...(f.q
+        ? { OR: [{ description: { contains: f.q, mode: "insensitive" as const } }, { lines: { some: { memo: { contains: f.q, mode: "insensitive" as const } } } }] }
+        : {}),
+      ...(f.sourceType ? { sourceType: f.sourceType } : {}),
+      // 科目と金額は同じ明細の行で一致するものを探す(例: 地代家賃が10万円以上)
+      ...(f.accountId || amount
+        ? {
+            lines: {
+              some: {
+                ...(f.accountId ? { accountId: f.accountId } : {}),
+                ...(amount ? { OR: [{ debit: amount }, { credit: amount }] } : {}),
+              },
+            },
+          }
+        : {}),
     },
     include: {
       lines: {
@@ -106,6 +140,6 @@ export async function getJournalBook(companyId: string, options: { month?: strin
       },
     },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    take: options.month ? undefined : 200,
+    take: options.month ? undefined : filtered ? 500 : 200,
   });
 }

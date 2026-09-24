@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getCashBalance, getDashboardSummary, getMonthlyTrend, getTodos } from "@/lib/dashboard";
+import { getCashBalance, getDashboardSummary, getMonthlyTrend, getRankings, getTodos } from "@/lib/dashboard";
+import { RankList } from "@/components/RankList";
 import { requireCompanyId } from "@/lib/auth/session";
 import { TrendChart } from "@/components/TrendChart";
 import { formatDate, formatPercent, formatYen } from "@/lib/format";
@@ -16,11 +17,12 @@ const TODO_TONES = {
 
 export default async function DashboardPage() {
   const companyId = await requireCompanyId();
-  const [summary, trend, cash, todos] = await Promise.all([
+  const [summary, trend, cash, todos, rankings] = await Promise.all([
     getDashboardSummary(),
     getMonthlyTrend(companyId),
     getCashBalance(companyId),
     getTodos(companyId),
+    getRankings(companyId),
   ]);
   const thisMonth = trend[trend.length - 1];
   const lastMonth = trend[trend.length - 2];
@@ -103,6 +105,19 @@ export default async function DashboardPage() {
               ))}
             </ul>
           )}
+        </section>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="font-semibold">顧客別の売上(今期・税抜)</h2>
+          <p className="mb-3 text-xs text-slate-500">{rankings.fiscalYear}年度の発行請求書から集計</p>
+          <RankList items={rankings.customers} color="#2a78d6" empty="今期の請求書はまだありません" />
+        </section>
+        <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="font-semibold">費用の内訳(今期)</h2>
+          <p className="mb-3 text-xs text-slate-500">{rankings.fiscalYear}年度の記帳済みの費用を科目別に集計</p>
+          <RankList items={rankings.expenses} color="#eb6834" empty="今期の費用はまだありません" />
         </section>
       </div>
 

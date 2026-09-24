@@ -133,6 +133,7 @@ model Company {
   automationRules  AutomationRule[]
   quotes           Quote[]
   budgets          Budget[]
+  recurringInvoices RecurringInvoice[]
   recurringEntries RecurringEntry[]
   auditLogs        AuditLog[]
 }
@@ -148,6 +149,14 @@ model User {
   active        Boolean  @default(true)
   failedLogins  Int      @default(0)
   lockedUntil   DateTime?
+  // 2段階認証(認証アプリの6桁コード)。totpSecret は有効化済みの鍵、totpPendingSecret は設定途中の鍵(Base32)。
+  totpEnabled       Boolean  @default(false)
+  totpSecret        String?
+  totpPendingSecret String?
+  // 同じコードを2回使わせないため、最後に受け付けた30秒区切りの番号
+  totpLastStep      Int?
+  // 回復コード(SHA-256 のハッシュを JSON 配列で保存。使ったものは消す)
+  recoveryCodes     String?
   createdAt     DateTime @default(now())
 
   expenseReports ExpenseReport[]
@@ -162,6 +171,9 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
+  // ログイン中の端末の一覧に出すための情報
+  userAgent  String?
+  lastSeenAt DateTime?
   createdAt DateTime @default(now())
 
   @@index([userId])
@@ -279,6 +291,40 @@ model Invoice {
   lines            InvoiceLine[]
   notes            String?
   quote            Quote?
+  recurringTemplates RecurringInvoice[] @relation("RecurringInvoiceTemplate")
+  recurringRun     RecurringInvoiceRun?
+}
+
+// 毎月の定額請求。ひな形の請求書(宛先・明細・備考)を写した請求書を、毎月決まった日に作る。
+model RecurringInvoice {
+  id                String   @id @default(cuid())
+  companyId         String
+  company           Company  @relation(fields: [companyId], references: [id])
+  name              String
+  templateInvoiceId String
+  templateInvoice   Invoice  @relation("RecurringInvoiceTemplate", fields: [templateInvoiceId], references: [id])
+  // 請求日(1〜28日、0 = 月末)
+  issueDay          Int
+  // 支払期限: 請求日から何日後か。null なら翌月末
+  dueDays           Int?
+  startMonth        String
+  endMonth          String?
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  runs              RecurringInvoiceRun[]
+}
+
+model RecurringInvoiceRun {
+  id                 String           @id @default(cuid())
+  recurringInvoiceId String
+  recurringInvoice   RecurringInvoice @relation(fields: [recurringInvoiceId], references: [id], onDelete: Cascade)
+  month              String
+  invoiceId          String           @unique
+  invoice            Invoice          @relation(fields: [invoiceId], references: [id])
+  createdAt          DateTime         @default(now())
+
+  @@unique([recurringInvoiceId, month])
 }
 
 // 見積書。仕訳は作らず、「請求書に変換」したときに請求書(と売上の仕訳)を作る。
