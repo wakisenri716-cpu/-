@@ -5,8 +5,9 @@ import { parseTime } from "@/lib/shifts/pay";
 import { dateKey, mondayOf } from "@/lib/shifts/service";
 import { verifyPassword } from "@/lib/auth/password";
 import { minutesFromWorkDay, recordTimes } from "./times";
+import { UserError } from "@/lib/errors";
 
-export class AttendanceError extends Error {}
+export class AttendanceError extends UserError {}
 
 // これより長く出勤中のままの記録は、退勤の押し忘れとして扱う
 const MAX_OPEN_MS = 16 * 60 * 60 * 1000;

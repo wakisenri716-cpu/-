@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireCompanyId } from "@/lib/auth/session";
-import { BudgetError, getBudgets, saveBudgets } from "@/lib/accounting/monthly";
+import { getBudgets, saveBudgets } from "@/lib/accounting/monthly";
 import { audit } from "@/lib/audit";
+import { UserError } from "@/lib/errors";
 
 export async function GET(request: Request) {
   const companyId = await requireCompanyId();
@@ -24,7 +25,7 @@ export async function PUT(request: Request) {
     await audit("予算を変更", `${Number(body.fiscalYear)}年度`);
     return NextResponse.json({ ok: true });
   } catch (error) {
-    if (error instanceof BudgetError) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 400 });
     throw error;
   }
 }

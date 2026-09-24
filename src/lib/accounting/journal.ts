@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { SourceType } from "@prisma/client";
+import { UserError } from "@/lib/errors";
 
 export const SOURCE_LABELS: Record<SourceType, string> = {
   EXPENSE_ITEM: "経費精算",
@@ -18,7 +19,7 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
 
 export type ManualLineInput = { accountId: string; debit: number; credit: number; memo?: string | null };
 
-export class JournalError extends Error {}
+export class JournalError extends UserError {}
 
 function isAmount(n: number) {
   return Number.isInteger(n) && n >= 0;

@@ -4,8 +4,9 @@ import { ensureAccount } from "@/lib/accounting/accounts";
 import { hashPassword } from "@/lib/auth/password";
 import { recordTimes } from "@/lib/attendance/times";
 import { addPay, dailyPay, EMPTY_PAY, parseTime, roundPay, type PayBreakdown, type ShiftTimes } from "./pay";
+import { UserError } from "@/lib/errors";
 
-export class ShiftError extends Error {}
+export class ShiftError extends UserError {}
 
 const SALARY_ACCOUNT = "5110"; // 給料手当
 const ACCRUED_ACCOUNT = "2020"; // 未払金

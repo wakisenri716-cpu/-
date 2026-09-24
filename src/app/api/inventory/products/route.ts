@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCompanyId } from "@/lib/auth/session";
-import { createProduct, InventoryError } from "@/lib/accounting/inventory";
+import { createProduct } from "@/lib/accounting/inventory";
+import { UserError } from "@/lib/errors";
 
 export async function POST(request: Request) {
   const companyId = await requireCompanyId();
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
   try {
     return NextResponse.json(await createProduct(companyId, { name, unit, code }), { status: 201 });
   } catch (error) {
-    if (error instanceof InventoryError) {
+    if (error instanceof UserError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     throw error;

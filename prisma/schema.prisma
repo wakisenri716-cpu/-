@@ -109,6 +109,8 @@ model Company {
   phone            String?
   bankAccount      String?
   invoiceNote      String?
+  // この日までの帳簿は締め済み(この日以前の日付の仕訳は、データベースのトリガーで追加・変更・削除できない)
+  booksClosedThrough DateTime?
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -173,6 +175,8 @@ model Account {
   name          String
   category      AccountCategory
   isTaxable     Boolean         @default(false)
+  // 使わなくなった科目は、仕訳の入力画面の選択肢から隠す(過去の仕訳・帳票には残る)
+  hidden        Boolean         @default(false)
   createdAt     DateTime        @default(now())
 
   expenseItems       ExpenseItem[]
@@ -422,6 +426,8 @@ model Product {
   unit           String   @default("個")
   quantityOnHand Int      @default(0)
   inventoryValue Int      @default(0)
+  // 在庫数がこの数以下になったら発注を促す(未設定なら在庫切れのときだけ)
+  reorderPoint   Int?
   createdAt      DateTime @default(now())
 
   movements      StockMovement[]

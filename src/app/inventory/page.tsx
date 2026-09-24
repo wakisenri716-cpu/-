@@ -14,7 +14,13 @@ type Product = {
   quantityOnHand: number;
   inventoryValue: number;
   averageUnitCost: number;
+  reorderPoint: number | null;
 };
+
+// 在庫切れ、または発注点以下になった商品
+function needsOrder(p: Product) {
+  return p.quantityOnHand <= (p.reorderPoint ?? 0);
+}
 
 type Movement = {
   id: string;
@@ -82,6 +88,20 @@ export default function InventoryPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
+
+  async function saveReorderPoint(id: string, reorderPoint: number | null) {
+    setError(null);
+    const res = await fetch(`/api/inventory/products/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reorderPoint }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error || "発注点を保存できませんでした");
+    }
+    await load();
+  }
 
   const products = data?.products ?? [];
   const selected = products.find((p) => p.id === productId);
@@ -156,7 +176,7 @@ export default function InventoryPage() {
   const stats = [
     { label: "在庫金額(合計)", value: formatYen(data?.totalValue ?? 0) },
     { label: "登録商品数", value: `${products.length}` },
-    { label: "在庫切れの商品", value: `${products.filter((p) => p.quantityOnHand === 0).length}` },
+    { label: "発注が必要な商品", value: `${products.filter(needsOrder).length}` },
   ];
 
   return (
@@ -334,6 +354,7 @@ export default function InventoryPage() {
                 <th className="px-4 py-2">コード</th>
                 <th className="px-4 py-2">商品名</th>
                 <th className="px-4 py-2 text-right">在庫数</th>
+                <th className="px-4 py-2 text-right">発注点</th>
                 <th className="px-4 py-2 text-right">平均単価</th>
                 <th className="px-4 py-2 text-right">在庫金額</th>
               </tr>
@@ -347,8 +368,25 @@ export default function InventoryPage() {
                     {p.quantityOnHand === 0 ? (
                       <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">在庫切れ</span>
                     ) : (
-                      `${p.quantityOnHand.toLocaleString("ja-JP")}${p.unit}`
+                      <>
+                        {`${p.quantityOnHand.toLocaleString("ja-JP")}${p.unit}`}
+                        {needsOrder(p) && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">発注が必要</span>}
+                      </>
                     )}
+                  </td>
+                  <td className="px-4 py-2 text-right whitespace-nowrap">
+                    <input
+                      type="number"
+                      min={0}
+                      defaultValue={p.reorderPoint ?? ""}
+                      placeholder="未設定"
+                      onBlur={(e) => {
+                        const value = e.target.value === "" ? null : Number(e.target.value);
+                        if (value !== p.reorderPoint) saveReorderPoint(p.id, value);
+                      }}
+                      className="w-20 rounded-md border px-2 py-1 text-right text-sm"
+                      aria-label={`${p.name}の発注点`}
+                    />
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">{formatYen(p.averageUnitCost)}</td>
                   <td className="px-4 py-2 text-right font-medium whitespace-nowrap">{formatYen(p.inventoryValue)}</td>
@@ -356,7 +394,7 @@ export default function InventoryPage() {
               ))}
               {data && products.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                  <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                     まだ商品が登録されていません。「商品を登録」から追加してください。
                   </td>
                 </tr>
@@ -365,7 +403,7 @@ export default function InventoryPage() {
             {products.length > 0 && (
               <tfoot className="border-t bg-slate-50 font-medium">
                 <tr>
-                  <td className="px-4 py-2" colSpan={4}>
+                  <td className="px-4 py-2" colSpan={5}>
                     合計
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">{formatYen(data?.totalValue ?? 0)}</td>

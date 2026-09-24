@@ -147,7 +147,14 @@ export default async function ReceivablesPage({ searchParams }: { searchParams: 
                       <td className="px-4 py-2 whitespace-nowrap">{r.invoiceNumber ?? "-"}</td>
                       <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap">{formatYen(r.total)}</td>
                       <td className="px-4 py-2 text-right font-medium tabular-nums whitespace-nowrap">{formatYen(r.remaining)}</td>
-                      <td className={`px-4 py-2 whitespace-nowrap ${BUCKET_TONE[r.bucket]}`}>{r.overdueDays > 0 ? `${r.overdueDays}日超過` : "期日前"}</td>
+                      <td className={`px-4 py-2 whitespace-nowrap ${BUCKET_TONE[r.bucket]}`}>
+                        {r.overdueDays > 0 ? `${r.overdueDays}日超過` : "期日前"}
+                        {r.overdueDays > 0 && tab.direction === "ISSUED" && (
+                          <Link href={`/invoices/${r.id}/reminder`} className="ml-2 text-xs font-normal text-indigo-700 hover:underline">
+                            督促状
+                          </Link>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

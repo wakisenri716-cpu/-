@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireCompanyId } from "@/lib/auth/session";
 import { getPrintableInvoice } from "@/lib/accounting/issueInvoice";
 import { formatYen } from "@/lib/format";
+import { jstDateKey } from "@/lib/jst";
 import { PrintButton } from "@/components/PrintButton";
 import { BillingDocument } from "@/components/BillingDocument";
 import { CancelInvoiceButton } from "@/components/CancelInvoiceButton";
@@ -29,6 +30,11 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           {!company.registrationNumber && (
             <Link href="/company" className="text-xs text-amber-700 hover:underline">
               登録番号が未設定です(会社情報で設定)
+            </Link>
+          )}
+          {!cancelled && calc.total - paid > 0 && invoice.dueDate && invoice.dueDate.toISOString().slice(0, 10) < jstDateKey(new Date()) && (
+            <Link href={`/invoices/${invoice.id}/reminder`} className="rounded-md border border-amber-300 px-3 py-2 text-sm text-amber-800 hover:bg-amber-50">
+              督促状を作成
             </Link>
           )}
           <Link href={`/invoices/new?from=${invoice.id}`} className="rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">

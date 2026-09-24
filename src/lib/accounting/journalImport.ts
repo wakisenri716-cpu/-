@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { parseCsv } from "@/lib/csvParse";
 import { parseStatementDate } from "@/lib/bank/statement";
+import { UserError } from "@/lib/errors";
 
 // 他の会計ソフトから書き出した仕訳や、Excelで作った仕訳を取り込む。
 // 1行 = 借方1つ・貸方1つ。同じ伝票番号の行は1つの仕訳(複合仕訳)にまとめる(伝票番号がなければ1行1仕訳)。
-export class ImportError extends Error {}
+export class ImportError extends UserError {}
 
 const MAX_ROWS = 2000;
 

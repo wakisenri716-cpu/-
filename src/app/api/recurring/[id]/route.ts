@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireCompanyId } from "@/lib/auth/session";
-import { JournalError } from "@/lib/accounting/journal";
+
 import { deleteRecurring, setRecurringActive, updateRecurring } from "@/lib/accounting/recurring";
 import { parseRecurringBody } from "../parse";
 import { audit } from "@/lib/audit";
+import { UserError } from "@/lib/errors";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -17,7 +18,7 @@ async function handle(fn: () => Promise<unknown>) {
     await fn();
     return NextResponse.json({ ok: true });
   } catch (error) {
-    if (error instanceof JournalError) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 400 });
     throw error;
   }
 }

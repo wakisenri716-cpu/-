@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma, StockMovementType } from "@prisma/client";
 import { ensureAccount } from "./accounts";
+import { UserError } from "@/lib/errors";
 
 const INVENTORY_ACCOUNT = "1310"; // 商品
 const COST_OF_SALES_ACCOUNT = "5000"; // 売上原価
@@ -20,7 +21,7 @@ export type StockMovementInput = {
   memo?: string | null;
 };
 
-export class InventoryError extends Error {}
+export class InventoryError extends UserError {}
 
 type Line = Prisma.JournalLineUncheckedCreateWithoutJournalEntryInput;
 
