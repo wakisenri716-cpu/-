@@ -13,6 +13,7 @@ export async function POST(request: Request) {
       issueDate: String(body.issueDate ?? ""),
       dueDate: String(body.dueDate ?? ""),
       notes: body.notes ? String(body.notes) : null,
+      departmentId: body.departmentId ? String(body.departmentId) : null,
       lines: parseLines(body.lines),
     });
     await audit("請求書を作成", `${invoice.invoiceNumber} ${yen(invoice.totalAmount)}`);

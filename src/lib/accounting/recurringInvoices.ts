@@ -104,7 +104,7 @@ export async function issueRecurringInvoice(companyId: string, id: string, month
   if (!item.due.includes(month)) throw new UserError(`${month} 分は作成できません(作成済み・請求日前・期間外のいずれかです)`);
   const template = await prisma.invoice.findFirstOrThrow({
     where: { id: item.template.id, companyId },
-    include: { lines: { orderBy: { sortOrder: "asc" } }, customer: true },
+    include: { lines: { orderBy: { sortOrder: "asc" } }, customer: true, journalEntry: { select: { departmentId: true } } },
   });
   const issueDate = postingDate(month, item.issueDay);
   const invoice = await issueInvoice(companyId, {
@@ -113,6 +113,10 @@ export async function issueRecurringInvoice(companyId: string, id: string, month
     dueDate: dueDateFor(issueDate, item.dueDays),
     notes: template.notes,
     lines: template.lines,
+    // ひな形の請求書と同じ部門にする(停止した部門なら部門なし)
+    departmentId: template.journalEntry?.departmentId
+      ? ((await prisma.department.findFirst({ where: { id: template.journalEntry.departmentId, active: true }, select: { id: true } }))?.id ?? null)
+      : null,
   });
   try {
     const previous = await prisma.recurringInvoiceRun.findUnique({ where: { recurringInvoiceId_month: { recurringInvoiceId: id, month } } });

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -9,6 +9,13 @@ import { LogoutButton } from "@/components/LogoutButton";
 export const metadata: Metadata = {
   title: "AI経理オートメーション",
   description: "経費精算・請求書処理をAIが半自動化する統合SaaS基盤",
+  // iPhone・iPad の「ホーム画面に追加」用(Android などは manifest.ts を使う)
+  appleWebApp: { capable: true, title: "経理AI", statusBarStyle: "default" },
+  icons: { apple: "/pwa-icon/180" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#4f46e5",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

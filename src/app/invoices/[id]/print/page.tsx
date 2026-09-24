@@ -26,7 +26,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         <Link href="/invoices" className="text-sm text-indigo-700 hover:underline">
           ← 請求書一覧
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {!company.registrationNumber && (
             <Link href="/company" className="text-xs text-amber-700 hover:underline">
               登録番号が未設定です(会社情報で設定)
@@ -35,6 +35,16 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           {!cancelled && calc.total - paid > 0 && invoice.dueDate && invoice.dueDate.toISOString().slice(0, 10) < jstDateKey(new Date()) && (
             <Link href={`/invoices/${invoice.id}/reminder`} className="rounded-md border border-amber-300 px-3 py-2 text-sm text-amber-800 hover:bg-amber-50">
               督促状を作成
+            </Link>
+          )}
+          {!cancelled && (
+            <Link href={`/invoices/${invoice.id}/delivery`} className="rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              納品書
+            </Link>
+          )}
+          {invoice.status === "PAID" && (
+            <Link href={`/invoices/${invoice.id}/receipt`} className="rounded-md border border-emerald-300 px-3 py-2 text-sm text-emerald-800 hover:bg-emerald-50">
+              領収書
             </Link>
           )}
           {!cancelled && (

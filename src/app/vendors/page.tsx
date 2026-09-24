@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { CsvImportForm } from "@/components/CsvImportForm";
 
 type Account = { id: string; code: string; name: string };
 type Vendor = {
@@ -108,6 +109,13 @@ export default function VendorsPage() {
           設定しておくと、その取引先からの領収書・請求書はAIの判定よりも優先してその科目で仕訳されます。
         </p>
       </div>
+
+      <CsvImportForm
+        endpoint="/api/vendors/import"
+        title="CSVでまとめて登録"
+        hint="「種類(取引先/顧客)・名前・既定の勘定科目」の列があるCSVを読み込みます。同じ名前がすでにあれば、既定の勘定科目だけ更新します。"
+        onDone={load}
+      />
 
       <div className="flex gap-2 border-b">
         <button

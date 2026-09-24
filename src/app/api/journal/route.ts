@@ -18,11 +18,12 @@ export async function GET(request: Request) {
 
   // 資本金・借入金など後から追加した科目を、既存デプロイでも選べるようにする
   await ensureChartOfAccounts(companyId);
-  const [entries, accounts] = await Promise.all([
+  const [entries, accounts, departments] = await Promise.all([
     getJournalBook(companyId, { month, filter: journalFilterFromParams(params) }),
     prisma.account.findMany({ where: { companyId, hidden: false }, orderBy: { code: "asc" }, select: { id: true, code: true, name: true, category: true } }),
+    prisma.department.findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } }),
   ]);
-  return NextResponse.json({ entries, accounts });
+  return NextResponse.json({ entries, accounts, departments });
 }
 
 export async function POST(request: Request) {
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
     const entry = await createManualJournal(companyId, {
       date: new Date(String(body.date ?? "")),
       description: String(body.description ?? ""),
+      departmentId: body.departmentId ? String(body.departmentId) : null,
       lines: lines.map((l: Record<string, unknown>) => ({
         accountId: String(l.accountId ?? ""),
         debit: Number(l.debit || 0),

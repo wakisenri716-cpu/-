@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { formatDate, formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
+import { CsvImportForm } from "@/components/CsvImportForm";
 
 type MovementType = "PURCHASE" | "ISSUE" | "STOCKTAKE";
 
@@ -193,6 +194,13 @@ export default function InventoryPage() {
 
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
       {message && <div className="rounded-md bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{message}</div>}
+
+      <CsvImportForm
+        endpoint="/api/inventory/products/import"
+        title="商品をCSVでまとめて登録"
+        hint="「商品名・コード・単位・発注点」の列があるCSVを読み込みます。同じ名前の商品があれば、コード・単位・発注点を更新します(在庫数は入庫・棚卸で入れてください)。"
+        onDone={load}
+      />
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
         {stats.map((stat) => (

@@ -9,9 +9,15 @@ export function jpDate(d: Date | null) {
   return `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日`;
 }
 
-// 請求書・見積書の共通レイアウト(印刷・PDF保存用。A4 1枚に収まる想定)
+const TEXT = {
+  invoice: { title: "請求書", number: "請求番号", date: "請求日", lead: "下記のとおりご請求申し上げます。", total: "ご請求金額(税込)", deadline: "お支払期限" },
+  quote: { title: "御見積書", number: "見積番号", date: "見積日", lead: "下記のとおりお見積り申し上げます。", total: "お見積金額(税込)", deadline: "有効期限" },
+  delivery: { title: "納品書", number: "納品書番号", date: "納品日", lead: "下記のとおり納品いたしました。", total: "合計金額(税込)", deadline: null },
+} as const;
+
+// 請求書・見積書・納品書の共通レイアウト(印刷・PDF保存用。A4 1枚に収まる想定)
 export function BillingDocument(props: {
-  kind: "invoice" | "quote";
+  kind: keyof typeof TEXT;
   number: string;
   issueDate: Date;
   deadline: Date | null;
@@ -23,19 +29,20 @@ export function BillingDocument(props: {
 }) {
   const { kind, company, lines, calc } = props;
   const invoice = kind === "invoice";
+  const text = TEXT[kind];
   const notes = [props.notes, invoice ? company.invoiceNote : null].filter(Boolean).join("\n");
 
   return (
     <article className="mx-auto max-w-[210mm] bg-white p-5 text-[13px] leading-relaxed text-slate-900 shadow-sm ring-1 ring-slate-200 sm:p-12 print:max-w-none print:p-0 print:shadow-none print:ring-0">
       <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <h1 className="text-2xl font-bold tracking-[0.3em] whitespace-nowrap sm:text-3xl">{invoice ? "請求書" : "御見積書"}</h1>
+        <h1 className="text-2xl font-bold tracking-[0.3em] whitespace-nowrap sm:text-3xl">{text.title}</h1>
         <dl className="text-right text-xs whitespace-nowrap">
           <div>
-            <dt className="inline text-slate-500">{invoice ? "請求番号" : "見積番号"} </dt>
+            <dt className="inline text-slate-500">{text.number} </dt>
             <dd className="inline">{props.number}</dd>
           </div>
           <div>
-            <dt className="inline text-slate-500">{invoice ? "請求日" : "見積日"} </dt>
+            <dt className="inline text-slate-500">{text.date} </dt>
             <dd className="inline">{jpDate(props.issueDate)}</dd>
           </div>
         </dl>
@@ -44,14 +51,16 @@ export function BillingDocument(props: {
       <section className="mt-8 flex flex-col gap-6 sm:flex-row sm:justify-between print:flex-row print:justify-between">
         <div>
           <p className="border-b border-slate-400 pb-1 text-lg font-semibold">{props.customerName} 御中</p>
-          <p className="mt-4">{invoice ? "下記のとおりご請求申し上げます。" : "下記のとおりお見積り申し上げます。"}</p>
+          <p className="mt-4">{text.lead}</p>
           <div className="mt-3 inline-flex items-baseline gap-4 border-b-2 border-slate-900 pb-1">
-            <span className="text-sm">{invoice ? "ご請求金額(税込)" : "お見積金額(税込)"}</span>
+            <span className="text-sm">{text.total}</span>
             <span className="text-2xl font-bold tabular-nums">{formatYen(calc.total)}</span>
           </div>
-          <p className="mt-2 text-xs">
-            {invoice ? "お支払期限" : "有効期限"}: {jpDate(props.deadline)}
-          </p>
+          {text.deadline && (
+            <p className="mt-2 text-xs">
+              {text.deadline}: {jpDate(props.deadline)}
+            </p>
+          )}
         </div>
         <div className="text-xs sm:text-right print:text-right">
           <p className="text-sm font-semibold">{company.name}</p>
