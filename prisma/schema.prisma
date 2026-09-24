@@ -56,6 +56,13 @@ enum SourceType {
   MANUAL
   BANK
   PAYROLL
+  REIMBURSEMENT
+}
+
+enum QuoteStatus {
+  OPEN
+  INVOICED
+  CANCELLED
 }
 
 enum BankTransactionStatus {
@@ -120,6 +127,8 @@ model Company {
   journalEntries   JournalEntry[]
   aiExtractions    AiExtraction[]
   automationRules  AutomationRule[]
+  quotes           Quote[]
+  budgets          Budget[]
 }
 
 model User {
@@ -165,6 +174,7 @@ model Account {
   expenseItems       ExpenseItem[]
   journalLines       JournalLine[]
   vendorsAsDefault   Vendor[]        @relation("VendorDefaultAccount")
+  budgets            Budget[]
 
   @@unique([companyId, code])
 }
@@ -190,6 +200,7 @@ model Customer {
   createdAt  DateTime @default(now())
 
   invoices   Invoice[]
+  quotes     Quote[]
 }
 
 model ExpenseReport {
@@ -201,6 +212,10 @@ model ExpenseReport {
   status        ExpenseReportStatus @default(DRAFT)
   totalAmount   Int                 @default(0)
   submittedAt   DateTime?
+  // 立替えた本人へ精算(振込など)した日と、その「未払金 / 普通預金」の仕訳
+  reimbursedAt         DateTime?
+  reimbursementEntryId String?       @unique
+  reimbursementEntry   JournalEntry? @relation("ExpenseReimbursement", fields: [reimbursementEntryId], references: [id])
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
@@ -254,6 +269,57 @@ model Invoice {
   bankTransactions BankTransaction[]
   lines            InvoiceLine[]
   notes            String?
+  quote            Quote?
+}
+
+// 見積書。仕訳は作らず、「請求書に変換」したときに請求書(と売上の仕訳)を作る。
+model Quote {
+  id             String      @id @default(cuid())
+  companyId      String
+  company        Company     @relation(fields: [companyId], references: [id])
+  quoteNumber    String
+  customerId     String
+  customer       Customer    @relation(fields: [customerId], references: [id])
+  issueDate      DateTime
+  validUntil     DateTime
+  subtotalAmount Int
+  taxAmount      Int
+  totalAmount    Int
+  notes          String?
+  status         QuoteStatus @default(OPEN)
+  invoiceId      String?     @unique
+  invoice        Invoice?    @relation(fields: [invoiceId], references: [id])
+  createdAt      DateTime    @default(now())
+
+  lines          QuoteLine[]
+
+  @@unique([companyId, quoteNumber])
+}
+
+model QuoteLine {
+  id          String @id @default(cuid())
+  quoteId     String
+  quote       Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  sortOrder   Int
+  description String
+  quantity    Float
+  unit        String?
+  unitPrice   Int
+  taxRate     Int
+  amount      Int
+}
+
+// 勘定科目ごとの年間予算(fiscalYear は期首の年。4月始まりなら 2026年4月〜2027年3月 が 2026)
+model Budget {
+  id         String  @id @default(cuid())
+  companyId  String
+  company    Company @relation(fields: [companyId], references: [id])
+  fiscalYear Int
+  accountId  String
+  account    Account @relation(fields: [accountId], references: [id])
+  amount     Int
+
+  @@unique([companyId, fiscalYear, accountId])
 }
 
 // アプリで作成した請求書の明細。税率ごとに合計してから消費税の端数を処理する(インボイス制度のルール)。
@@ -502,6 +568,7 @@ model JournalEntry {
   stockMovement     StockMovement?
   bankTransaction   BankTransaction?
   payrollRun        PayrollRun?
+  reimbursedReport  ExpenseReport?     @relation("ExpenseReimbursement")
 }
 
 model JournalLine {

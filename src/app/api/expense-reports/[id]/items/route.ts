@@ -16,6 +16,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!report) {
     return NextResponse.json({ error: "Expense report not found" }, { status: 404 });
   }
+  if (report.reimbursedAt) {
+    return NextResponse.json({ error: "精算済みの経費精算にはレシートを追加できません。新しい経費精算を作成してください" }, { status: 400 });
+  }
 
   const formData = await request.formData();
   const receipt = formData.get("receipt");

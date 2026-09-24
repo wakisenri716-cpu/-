@@ -11,6 +11,7 @@ import {
   CalendarIcon,
   ChecklistIcon,
   ClockIcon,
+  CoinsIcon,
   ChartIcon,
   ClipboardIcon,
   DashboardIcon,
@@ -19,11 +20,15 @@ import {
   JournalIcon,
   KeyIcon,
   PercentIcon,
+  QuoteIcon,
   ReceiptIcon,
   RegisterIcon,
   ScaleIcon,
+  SearchIcon,
   ShieldIcon,
+  TrendIcon,
   UsersIcon,
+  WalletIcon,
 } from "@/components/icons";
 import { LogoutButton } from "@/components/LogoutButton";
 import type { ComponentType, SVGProps } from "react";
@@ -37,7 +42,10 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "業務",
     items: [
       { href: "/expenses", label: "経費精算", icon: ReceiptIcon },
+      { href: "/reimbursements", label: "立替経費の精算", icon: WalletIcon },
+      { href: "/quotes", label: "見積書", icon: QuoteIcon },
       { href: "/invoices", label: "請求書", icon: DocumentIcon },
+      { href: "/receivables", label: "売掛金・買掛金", icon: CoinsIcon },
       { href: "/vendors", label: "取引先・顧客", icon: UsersIcon },
       { href: "/review", label: "レビューキュー", icon: InboxIcon },
       { href: "/bank", label: "銀行明細", icon: BankIcon },
@@ -56,8 +64,10 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/ledger", label: "総勘定元帳", icon: BookIcon },
       { href: "/trial-balance", label: "試算表", icon: ScaleIcon },
       { href: "/income-statement", label: "損益計算書", icon: ChartIcon },
+      { href: "/monthly", label: "月次推移・予算", icon: TrendIcon },
       { href: "/balance-sheet", label: "貸借対照表", icon: ClipboardIcon },
       { href: "/tax", label: "消費税集計", icon: PercentIcon },
+      { href: "/documents", label: "証憑の検索", icon: SearchIcon },
     ],
   },
 ];

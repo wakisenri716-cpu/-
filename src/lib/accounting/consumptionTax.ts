@@ -15,6 +15,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   MANUAL: "手入力の仕訳",
   BANK: "銀行明細",
   PAYROLL: "給料",
+  REIMBURSEMENT: "立替経費の精算",
 };
 
 // 期間中の仮受消費税・仮払消費税を、仕訳の発生元(請求書・POSレジ・在庫など)ごとに集計する。

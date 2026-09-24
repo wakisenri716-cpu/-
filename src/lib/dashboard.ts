@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { jstDateKey } from "@/lib/jst";
 import { requireCompanyId } from "@/lib/auth/session";
+import { getReimbursements } from "@/lib/accounting/reimbursement";
 
 export async function getDashboardSummary() {
   const companyId = await requireCompanyId();
@@ -79,7 +80,7 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -88,12 +89,21 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
     prisma.timeRecord.count({ where: { companyId, date: lastMonthRange } }),
     prisma.payrollRun.findUnique({ where: { companyId_month: { companyId, month: lastMonth } } }),
     prisma.product.count({ where: { companyId, quantityOnHand: 0 } }),
+    getReimbursements(companyId),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
     { key: "review", label: "AI仕訳のレビュー待ち", detail: "経費・請求書のAI判定を確認してください", count: reviews, href: "/review", tone: "amber" },
     { key: "bank", label: "銀行明細の確認待ち", detail: "勘定科目を選んで確定してください", count: bank, href: "/bank", tone: "amber" },
     { key: "overdue", label: "支払期限を過ぎた請求書", detail: "入金・支払の状況を確認してください", count: overdue, href: "/invoices", tone: "rose" },
+    {
+      key: "reimburse",
+      label: "立替経費の精算待ち",
+      detail: "従業員が立て替えた経費を支払って「精算する」を押してください",
+      count: reimbursements.filter((r) => r.state === "READY").length,
+      href: "/reimbursements",
+      tone: "amber",
+    },
     { key: "forgot", label: "退勤の打刻忘れ", detail: "勤怠一覧で退勤時刻を入れてください", count: forgot, href: "/attendance", tone: "rose" },
     {
       key: "payroll",
