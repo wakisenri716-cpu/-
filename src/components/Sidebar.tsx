@@ -21,6 +21,8 @@ import {
   InboxIcon,
   JournalIcon,
   KeyIcon,
+  LockIcon,
+  DownloadIcon,
   PercentIcon,
   QuoteIcon,
   ReceiptIcon,
@@ -111,6 +113,13 @@ function sectionsFor(role: Role): NavSection[] {
       title: "設定",
       items: [
         { href: "/account", label: "アカウント", icon: KeyIcon },
+        ...(role === "EMPLOYEE"
+          ? []
+          : [
+              { href: "/accounts", label: "勘定科目", icon: BookIcon },
+              { href: "/closing", label: "締め処理", icon: LockIcon },
+              { href: "/backup", label: "データのバックアップ", icon: DownloadIcon },
+            ]),
         ...(role === "ADMIN"
           ? [
               { href: "/company", label: "会社情報", icon: BuildingIcon },

@@ -6,11 +6,12 @@ import { evaluateAutomation } from "@/lib/accounting/automation";
 import { recordInvoicePayment } from "@/lib/accounting/payments";
 import { hasPayrollRuns } from "@/lib/shifts/service";
 import type { StatementRow } from "./statement";
+import { UserError } from "@/lib/errors";
 
 const BANK_ACCOUNT_CODE = "1020"; // 普通預金
 const SETTLEABLE_INVOICE_STATUSES = ["CONFIRMED", "SENT", "PARTIALLY_PAID", "OVERDUE"] as const;
 
-export class BankError extends Error {}
+export class BankError extends UserError {}
 
 type Suggestion = { accountCode: string; confidence: number; source: "RULE" | "HISTORY" | "AI"; reason: string };
 
@@ -189,7 +190,7 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
 
   if (needsAi.length > 0) {
     const accounts = await prisma.account.findMany({
-      where: { companyId, code: { not: BANK_ACCOUNT_CODE } },
+      where: { companyId, code: { not: BANK_ACCOUNT_CODE }, hidden: false },
       orderBy: { code: "asc" },
       select: { code: true, name: true },
     });
@@ -286,7 +287,7 @@ export async function getBankTransactions(companyId: string) {
       take: 100,
     }),
     prisma.account.findMany({
-      where: { companyId, code: { not: BANK_ACCOUNT_CODE } },
+      where: { companyId, code: { not: BANK_ACCOUNT_CODE }, hidden: false },
       orderBy: { code: "asc" },
       select: { id: true, code: true, name: true, category: true },
     }),

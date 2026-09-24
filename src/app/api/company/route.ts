@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyId } from "@/lib/auth/session";
 import { adminOr403 } from "@/lib/auth/users";
-import { InvoiceError, updateCompanyInfo } from "@/lib/accounting/issueInvoice";
+import { updateCompanyInfo } from "@/lib/accounting/issueInvoice";
 import { audit } from "@/lib/audit";
+import { UserError } from "@/lib/errors";
 
 export async function GET() {
   const companyId = await requireCompanyId();
@@ -27,7 +28,7 @@ export async function PUT(request: Request) {
     await audit("会社情報を変更", company.name);
     return NextResponse.json(company);
   } catch (error) {
-    if (error instanceof InvoiceError) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 400 });
     throw error;
   }
 }

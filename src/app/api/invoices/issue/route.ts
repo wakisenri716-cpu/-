@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireCompanyId } from "@/lib/auth/session";
-import { InvoiceError, issueInvoice, parseLines } from "@/lib/accounting/issueInvoice";
+import { issueInvoice, parseLines } from "@/lib/accounting/issueInvoice";
 import { audit, yen } from "@/lib/audit";
+import { UserError } from "@/lib/errors";
 
 export async function POST(request: Request) {
   const companyId = await requireCompanyId();
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
     await audit("請求書を作成", `${invoice.invoiceNumber} ${yen(invoice.totalAmount)}`);
     return NextResponse.json(invoice, { status: 201 });
   } catch (error) {
-    if (error instanceof InvoiceError) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 400 });
     throw error;
   }
 }

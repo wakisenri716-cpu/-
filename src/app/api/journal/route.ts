@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyId } from "@/lib/auth/session";
 import { ensureChartOfAccounts } from "@/lib/accounting/accounts";
-import { createManualJournal, getJournalBook, JournalError } from "@/lib/accounting/journal";
+import { createManualJournal, getJournalBook } from "@/lib/accounting/journal";
 import { audit } from "@/lib/audit";
+import { UserError } from "@/lib/errors";
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   await ensureChartOfAccounts(companyId);
   const [entries, accounts] = await Promise.all([
     getJournalBook(companyId, { month }),
-    prisma.account.findMany({ where: { companyId }, orderBy: { code: "asc" }, select: { id: true, code: true, name: true, category: true } }),
+    prisma.account.findMany({ where: { companyId, hidden: false }, orderBy: { code: "asc" }, select: { id: true, code: true, name: true, category: true } }),
   ]);
   return NextResponse.json({ entries, accounts });
 }
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     await audit("仕訳を入力", `${entry.date.toISOString().slice(0, 10)} ${entry.description}`);
     return NextResponse.json(entry, { status: 201 });
   } catch (error) {
-    if (error instanceof JournalError) {
+    if (error instanceof UserError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     throw error;

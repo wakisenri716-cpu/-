@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { ensureAccount } from "./accounts";
 import { findOrCreateCustomer } from "./parties";
+import { UserError } from "@/lib/errors";
 
-export class InvoiceError extends Error {}
+export class InvoiceError extends UserError {}
 
 export const TAX_RATES = [10, 8] as const;
 

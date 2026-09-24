@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireCompanyId } from "@/lib/auth/session";
-import { reimburse, ReimbursementError, undoReimbursement } from "@/lib/accounting/reimbursement";
+import { reimburse, undoReimbursement } from "@/lib/accounting/reimbursement";
 import { audit } from "@/lib/audit";
+import { UserError } from "@/lib/errors";
 
 async function reportLabel(companyId: string, id: string) {
   const report = await prisma.expenseReport.findFirst({ where: { id, companyId }, include: { employee: { select: { name: true } } } });
@@ -14,7 +15,7 @@ async function handle(fn: () => Promise<unknown>) {
     await fn();
     return NextResponse.json({ ok: true });
   } catch (error) {
-    if (error instanceof ReimbursementError) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 400 });
     throw error;
   }
 }

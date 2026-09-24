@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { jstDateKey } from "@/lib/jst";
 import { fiscalYearOf, getFiscalStartMonth } from "./period";
+import { UserError } from "@/lib/errors";
 
 const POSTED_STATUSES = ["AUTO_POSTED", "POSTED_MANUALLY"] as const;
 
-export class BudgetError extends Error {}
+export class BudgetError extends UserError {}
 
 function monthKey(date: Date) {
   return date.toISOString().slice(0, 7);

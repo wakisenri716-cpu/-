@@ -5,7 +5,7 @@ import { requireCompanyId } from "@/lib/auth/session";
 export async function GET() {
   const companyId = await requireCompanyId();
   const accounts = await prisma.account.findMany({
-    where: { companyId, category: "EXPENSE" },
+    where: { companyId, category: "EXPENSE", hidden: false },
     orderBy: { code: "asc" },
   });
   return NextResponse.json(accounts);

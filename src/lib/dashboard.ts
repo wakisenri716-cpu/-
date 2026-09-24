@@ -89,7 +89,13 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
     prisma.shift.count({ where: { companyId, date: lastMonthRange } }),
     prisma.timeRecord.count({ where: { companyId, date: lastMonthRange } }),
     prisma.payrollRun.findUnique({ where: { companyId_month: { companyId, month: lastMonth } } }),
-    prisma.product.count({ where: { companyId, quantityOnHand: 0 } }),
+    // 在庫切れ、または発注点以下になった商品
+    prisma.product.count({
+      where: {
+        companyId,
+        OR: [{ reorderPoint: null, quantityOnHand: { lte: 0 } }, { quantityOnHand: { lte: prisma.product.fields.reorderPoint } }],
+      },
+    }),
     getReimbursements(companyId),
     countDueRecurring(companyId),
   ]);
@@ -116,7 +122,7 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
       href: "/shifts",
       tone: "amber",
     },
-    { key: "stock", label: "在庫切れの商品", detail: "仕入れ(入庫)が必要か確認してください", count: stockouts, href: "/inventory", tone: "slate" },
+    { key: "stock", label: "発注が必要な商品", detail: "在庫切れ・発注点以下の商品があります", count: stockouts, href: "/inventory", tone: "slate" },
   ];
   return todos.filter((t) => t.count > 0);
 }

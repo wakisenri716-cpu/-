@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type Account = { id: string; code: string; name: string };
@@ -168,7 +169,15 @@ export default function VendorsPage() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-4 py-2 text-xs text-slate-400">{savingId === vendor.id ? "保存中..." : ""}</td>
+                    <td className="px-4 py-2 text-xs whitespace-nowrap text-slate-400">
+                      {savingId === vendor.id ? (
+                        "保存中..."
+                      ) : (
+                        <Link href={`/vendors/vendor/${vendor.id}`} className="text-indigo-700 hover:underline">
+                          取引の履歴
+                        </Link>
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {vendors.length === 0 && (
@@ -203,7 +212,15 @@ export default function VendorsPage() {
                         className="w-48 rounded border px-2 py-1 text-sm"
                       />
                     </td>
-                    <td className="px-4 py-2 text-xs text-slate-400">{savingId === customer.id ? "保存中..." : ""}</td>
+                    <td className="px-4 py-2 text-xs whitespace-nowrap text-slate-400">
+                      {savingId === customer.id ? (
+                        "保存中..."
+                      ) : (
+                        <Link href={`/vendors/customer/${customer.id}`} className="text-indigo-700 hover:underline">
+                          取引の履歴
+                        </Link>
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {customers.length === 0 && (

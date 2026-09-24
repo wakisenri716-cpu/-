@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { jstDateKey } from "@/lib/jst";
 import { ensureAccount } from "./accounts";
+import { UserError } from "@/lib/errors";
 
-export class ReimbursementError extends Error {}
+export class ReimbursementError extends UserError {}
 
 const POSTED = new Set(["AUTO_POSTED", "POSTED_MANUALLY"]);
 const PAYABLE_ACCOUNT = "2020"; // 未払金(経費の仕訳で「従業員立替分」として計上している)
