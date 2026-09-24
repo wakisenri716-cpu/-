@@ -27,3 +27,9 @@ tbody tr:hover {
 ::selection {
   background-color: var(--color-indigo-100, #e0e7ff);
 }
+
+/* 請求書などを印刷・PDF保存するときの用紙の余白 */
+@page {
+  size: A4;
+  margin: 15mm;
+}

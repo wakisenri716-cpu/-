@@ -1,10 +1,12 @@
 import { getIncomeStatement } from "@/lib/accounting/incomeStatement";
 import { requireCompanyId } from "@/lib/auth/session";
+import { getFiscalStartMonth, paramsFromUrl, resolvePeriod, toRange } from "@/lib/accounting/period";
 import { csvResponse } from "@/lib/csv";
 
-export async function GET() {
+export async function GET(request: Request) {
   const companyId = await requireCompanyId();
-  const { revenueRows, expenseRows, totalRevenue, totalExpense, netIncome } = await getIncomeStatement(companyId);
+  const period = resolvePeriod(paramsFromUrl(request.url), await getFiscalStartMonth(companyId));
+  const { revenueRows, expenseRows, totalRevenue, totalExpense, netIncome } = await getIncomeStatement(companyId, toRange(period));
 
   const rows: (string | number)[][] = [["区分", "科目コード", "科目名", "金額"]];
   for (const row of revenueRows) {
@@ -17,5 +19,5 @@ export async function GET() {
   rows.push(["", "", "費用合計", totalExpense]);
   rows.push(["", "", "当期純利益", netIncome]);
 
-  return csvResponse("income_statement.csv", rows);
+  return csvResponse(`損益計算書_${period.from ?? "最初"}_${period.to ?? "最新"}.csv`, rows);
 }

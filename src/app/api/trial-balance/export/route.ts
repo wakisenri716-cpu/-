@@ -1,5 +1,6 @@
 import { getAccountBalances } from "@/lib/accounting/ledger";
 import { requireCompanyId } from "@/lib/auth/session";
+import { nextDay, paramsFromUrl, resolveAsOf } from "@/lib/accounting/period";
 import { csvResponse } from "@/lib/csv";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -10,9 +11,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   EXPENSE: "費用",
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   const companyId = await requireCompanyId();
-  const balances = await getAccountBalances(companyId);
+  const { asOf } = resolveAsOf(paramsFromUrl(request.url));
+  const balances = await getAccountBalances(companyId, { lt: nextDay(asOf) });
 
   const rows: (string | number)[][] = [["科目コード", "科目名", "区分", "借方合計", "貸方合計", "残高"]];
   let totalDebit = 0;
@@ -32,5 +34,5 @@ export async function GET() {
   }
   rows.push(["", "合計", "", totalDebit, totalCredit, ""]);
 
-  return csvResponse("trial_balance.csv", rows);
+  return csvResponse(`試算表_${asOf}.csv`, rows);
 }

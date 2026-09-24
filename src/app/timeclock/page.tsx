@@ -8,6 +8,7 @@ type Action = "in" | "breakStart" | "breakEnd" | "out";
 type StaffCard = {
   id: string;
   name: string;
+  hasPin: boolean;
   status: Status;
   since: string | null;
   forgotClockOut: string | null;
@@ -38,6 +39,8 @@ const DONE_LABEL: Record<Action, string> = { in: "出勤", breakStart: "休憩�
 
 const TIME = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit" });
 const TIME_S = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"] as const;
+
 const DATE = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", month: "long", day: "numeric", weekday: "short" });
 
 export default function TimeClockPage() {
@@ -47,6 +50,10 @@ export default function TimeClockPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // 暗証番号が設定されたスタッフは、ボタンを押した後にテンキーで4桁を入力してから打刻する
+  const [pinFor, setPinFor] = useState<{ staff: StaffCard; action: Action } | null>(null);
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/timeclock");
@@ -66,27 +73,64 @@ export default function TimeClockPage() {
     };
   }, [load]);
 
-  async function punch(staff: StaffCard, action: Action) {
+  async function punch(staff: StaffCard, action: Action, enteredPin?: string) {
     setBusy(true);
     setError(null);
+    setPinError(null);
     setMessage(null);
     try {
       const res = await fetch("/api/timeclock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ staffId: staff.id, action }),
+        body: JSON.stringify({ staffId: staff.id, action, pin: enteredPin }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "打刻に失敗しました");
       setBoard(body);
       setMessage(`${staff.name}さん ${DONE_LABEL[action]}しました(${TIME.format(new Date())})`);
       setSelected(null);
+      setPinFor(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "エラーが発生しました");
+      const text = e instanceof Error ? e.message : "エラーが発生しました";
+      if (enteredPin !== undefined) setPinError(text);
+      else setError(text);
     } finally {
+      setPin("");
       setBusy(false);
     }
   }
+
+  function startPunch(staff: StaffCard, action: Action) {
+    if (!staff.hasPin) return punch(staff, action);
+    setPin("");
+    setPinError(null);
+    setPinFor({ staff, action });
+  }
+
+  const pressKey = useCallback(
+    (key: string) => {
+      if (!pinFor || busy) return;
+      if (key === "clear") return setPin("");
+      if (key === "back") return setPin((p) => p.slice(0, -1));
+      if (!/^\d$/.test(key) || pin.length >= 4) return;
+      const next = pin + key;
+      setPin(next);
+      if (next.length === 4) punch(pinFor.staff, pinFor.action, next);
+    },
+    [pinFor, busy, pin],
+  );
+
+  // パソコンのキーボードからも入力できるようにする
+  useEffect(() => {
+    if (!pinFor) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPinFor(null);
+      else if (e.key === "Backspace") pressKey("back");
+      else pressKey(e.key);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pinFor, pressKey]);
 
   const selectedStaff = board?.staff.find((s) => s.id === selected) ?? null;
 
@@ -151,7 +195,7 @@ export default function TimeClockPage() {
               {ACTIONS[selectedStaff.status].map((a) => (
                 <button
                   key={a.action}
-                  onClick={() => punch(selectedStaff, a.action)}
+                  onClick={() => startPunch(selectedStaff, a.action)}
                   disabled={busy}
                   className={`min-w-[7rem] rounded-xl px-6 py-4 text-lg font-semibold text-white shadow-sm disabled:opacity-50 ${a.className}`}
                 >
@@ -162,6 +206,46 @@ export default function TimeClockPage() {
                 閉じる
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {pinFor && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4" onClick={() => setPinFor(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="暗証番号の入力"
+            className="w-full max-w-xs rounded-2xl bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-center text-sm text-slate-500">
+              {pinFor.staff.name}さん・{DONE_LABEL[pinFor.action]}
+            </p>
+            <p className="mt-1 text-center text-base font-semibold text-slate-900">暗証番号(4桁)を入力</p>
+            <div className="mt-4 flex justify-center gap-3" aria-live="polite" aria-label={`${pin.length}桁入力済み`}>
+              {[0, 1, 2, 3].map((i) => (
+                <span key={i} className={`h-4 w-4 rounded-full border-2 ${i < pin.length ? "border-indigo-600 bg-indigo-600" : "border-slate-300"}`} />
+              ))}
+            </div>
+            <p className="mt-3 min-h-[2.5rem] text-center text-sm text-rose-600">{busy ? <span className="text-slate-500">確認中...</span> : pinError}</p>
+            <div className="grid grid-cols-3 gap-2">
+              {KEYS.map((k) => (
+                <button
+                  key={k}
+                  onClick={() => pressKey(k)}
+                  disabled={busy}
+                  className={`rounded-xl py-4 font-semibold disabled:opacity-50 ${
+                    k === "clear" || k === "back" ? "bg-slate-50 text-sm text-slate-600 hover:bg-slate-100" : "bg-slate-100 text-2xl text-slate-900 hover:bg-slate-200"
+                  }`}
+                >
+                  {k === "clear" ? "クリア" : k === "back" ? "← 1字消す" : k}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setPinFor(null)} className="mt-3 w-full rounded-xl border py-3 text-sm text-slate-600 hover:bg-slate-50">
+              キャンセル
+            </button>
           </div>
         </div>
       )}

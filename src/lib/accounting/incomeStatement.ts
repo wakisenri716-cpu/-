@@ -1,7 +1,8 @@
 import { getAccountBalances } from "@/lib/accounting/ledger";
+import type { DateRange } from "./period";
 
-export async function getIncomeStatement(companyId: string) {
-  const balances = await getAccountBalances(companyId);
+export async function getIncomeStatement(companyId: string, range: DateRange = {}) {
+  const balances = await getAccountBalances(companyId, range);
 
   const revenueRows = balances.filter((row) => row.account.category === "REVENUE" && row.balance !== 0);
   const expenseRows = balances.filter((row) => row.account.category === "EXPENSE" && row.balance !== 0);

@@ -4,6 +4,8 @@ import { getAccountBalances } from "@/lib/accounting/ledger";
 import { requireCompanyId } from "@/lib/auth/session";
 import { formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
+import { AsOfPicker } from "@/components/PeriodPicker";
+import { nextDay, resolveAsOf, type PeriodParams } from "@/lib/accounting/period";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +18,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 const CATEGORY_ORDER = ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"];
 
-export default async function TrialBalancePage() {
+export default async function TrialBalancePage({ searchParams }: { searchParams: Promise<PeriodParams> }) {
   const companyId = await requireCompanyId();
-  const rows = await getAccountBalances(companyId);
+  const { asOf, label } = resolveAsOf(await searchParams);
+  const rows = await getAccountBalances(companyId, { lt: nextDay(asOf) });
 
   const totalDebit = rows.reduce((sum, row) => sum + row.totalDebit, 0);
   const totalCredit = rows.reduce((sum, row) => sum + row.totalCredit, 0);
@@ -37,6 +40,7 @@ export default async function TrialBalancePage() {
           <p className="mt-1 text-sm text-slate-600">
             自動仕訳(AI自動処理・人による承認済み)を勘定科目ごとに集計しています。レビュー待ちの仕訳は含みません。
           </p>
+          <p className="mt-1 text-sm font-medium text-slate-800">{label}</p>
         </div>
         <div className="flex items-center gap-2">
           <span
@@ -46,9 +50,11 @@ export default async function TrialBalancePage() {
           >
             {balanced ? "借方・貸方 一致" : "借方・貸方 不一致"}
           </span>
-          <CsvDownloadLink href="/api/trial-balance/export" />
+          <CsvDownloadLink href={`/api/trial-balance/export?asOf=${asOf}`} />
         </div>
       </div>
+
+      <AsOfPicker path="/trial-balance" asOf={asOf} />
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">

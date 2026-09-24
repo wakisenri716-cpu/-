@@ -4,11 +4,15 @@ import { getAiProvider } from "@/lib/ai";
 import { fileToBase64, toDataUri } from "@/lib/fileToDataUri";
 import { findOrCreateVendor } from "@/lib/accounting/parties";
 import { postExpenseItemJournal } from "@/lib/accounting/automation";
+import { requireMember } from "@/lib/auth/session";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: expenseReportId } = await params;
 
-  const report = await prisma.expenseReport.findUnique({ where: { id: expenseReportId } });
+  const user = await requireMember();
+  const report = await prisma.expenseReport.findFirst({
+    where: { id: expenseReportId, companyId: user.companyId, ...(user.role === "EMPLOYEE" ? { employeeId: user.id } : {}) },
+  });
   if (!report) {
     return NextResponse.json({ error: "Expense report not found" }, { status: 404 });
   }

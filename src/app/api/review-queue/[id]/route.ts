@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireCompanyId } from "@/lib/auth/session";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: journalEntryId } = await params;
+  const companyId = await requireCompanyId();
   const body = await request.json().catch(() => ({}));
   const action = body.action as "approve" | "reject";
   const correctedAccountId = body.correctedAccountId as string | undefined;
@@ -11,8 +13,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "action must be 'approve' or 'reject'" }, { status: 400 });
   }
 
-  const entry = await prisma.journalEntry.findUnique({
-    where: { id: journalEntryId },
+  const entry = await prisma.journalEntry.findFirst({
+    where: { id: journalEntryId, companyId },
     include: {
       lines: { include: { account: true } },
       expenseItem: true,
@@ -48,6 +50,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   // approve
+  if (correctedAccountId && !(await prisma.account.findFirst({ where: { id: correctedAccountId, companyId } }))) {
+    return NextResponse.json({ error: "勘定科目が見つかりません" }, { status: 400 });
+  }
   const expenseLine = entry.lines.find((line) => line.account.category === "EXPENSE" && line.debit > 0);
 
   await prisma.$transaction(async (tx) => {

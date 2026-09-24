@@ -3,12 +3,15 @@ import { getIncomeStatement } from "@/lib/accounting/incomeStatement";
 import { requireCompanyId } from "@/lib/auth/session";
 import { formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
+import { PeriodPicker } from "@/components/PeriodPicker";
+import { getFiscalStartMonth, periodQuery, resolvePeriod, toRange, type PeriodParams } from "@/lib/accounting/period";
 
 export const dynamic = "force-dynamic";
 
-export default async function IncomeStatementPage() {
+export default async function IncomeStatementPage({ searchParams }: { searchParams: Promise<PeriodParams> }) {
   const companyId = await requireCompanyId();
-  const { revenueRows, expenseRows, totalRevenue, totalExpense, netIncome } = await getIncomeStatement(companyId);
+  const period = resolvePeriod(await searchParams, await getFiscalStartMonth(companyId));
+  const { revenueRows, expenseRows, totalRevenue, totalExpense, netIncome } = await getIncomeStatement(companyId, toRange(period));
 
   return (
     <div className="space-y-6">
@@ -18,9 +21,12 @@ export default async function IncomeStatementPage() {
           <p className="mt-1 text-sm text-slate-600">
             記帳済みの仕訳から収益・費用を集計し、当期純利益を計算します。確定申告の損益計算の土台として使えます。
           </p>
+          <p className="mt-1 text-sm font-medium text-slate-800">{period.label}</p>
         </div>
-        <CsvDownloadLink href="/api/income-statement/export" />
+        <CsvDownloadLink href={`/api/income-statement/export?${periodQuery(period)}`} />
       </div>
+
+      <PeriodPicker path="/income-statement" period={period} />
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
@@ -88,7 +94,7 @@ export default async function IncomeStatementPage() {
             </tbody>
             <tfoot className="border-t-2 bg-slate-50 font-semibold">
               <tr>
-                <td className="px-4 py-3">当期純利益</td>
+                <td className="px-4 py-3">{period.preset === "this-fy" || period.preset === "last-fy" ? "当期純利益" : "純利益"}</td>
                 <td className={`px-4 py-3 text-right whitespace-nowrap ${netIncome < 0 ? "text-rose-700" : ""}`}>
                   {formatYen(netIncome)}
                 </td>

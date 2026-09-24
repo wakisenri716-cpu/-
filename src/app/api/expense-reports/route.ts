@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireCompanyId, requireUser } from "@/lib/auth/session";
+import { requireMember } from "@/lib/auth/session";
 
 export async function GET() {
-  const companyId = await requireCompanyId();
+  const user = await requireMember();
+  // 従業員には自分の経費精算だけを見せる
   const reports = await prisma.expenseReport.findMany({
-    where: { companyId },
+    where: { companyId: user.companyId, ...(user.role === "EMPLOYEE" ? { employeeId: user.id } : {}) },
     include: { items: { include: { account: true, vendor: true, aiExtraction: true } }, employee: true },
     orderBy: { createdAt: "desc" },
   });
@@ -13,7 +14,7 @@ export async function GET() {
 }
 
 export async function POST() {
-  const user = await requireUser();
+  const user = await requireMember();
   const report = await prisma.expenseReport.create({
     data: { companyId: user.companyId, employeeId: user.id, status: "DRAFT" },
   });

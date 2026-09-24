@@ -5,7 +5,7 @@ import { formatYen } from "@/lib/format";
 import { dailyPay, formatClock, formatMinutes, parseTime } from "@/lib/shifts/pay";
 
 type Pay = { workMinutes: number; nightMinutes: number; overtimeMinutes: number; base: number; night: number; overtime: number; total: number };
-type Staff = { id: string; name: string; hourlyWage: number; active: boolean; week: Pay };
+type Staff = { id: string; name: string; hourlyWage: number; active: boolean; hasPin: boolean; week: Pay };
 type Shift = { id: string; staffId: string; date: string; startMinutes: number; endMinutes: number; breakMinutes: number; note: string | null };
 type Week = { weekStart: string; days: string[]; staff: Staff[]; shifts: Shift[]; daily: (Pay & { date: string; people: number })[] };
 type PayrollRow = Pay & { staffId: string; name: string; hourlyWage: number; actualDays: number; plannedDays: number };
@@ -59,6 +59,7 @@ export default function ShiftsPage() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [allStaff, setAllStaff] = useState<Omit<Staff, "week">[]>([]);
   const [wages, setWages] = useState<Record<string, string>>({});
+  const [pinEdit, setPinEdit] = useState<{ id: string; value: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -506,15 +507,72 @@ export default function ShiftsPage() {
                   </button>
                 )}
                 <button
+                  onClick={() => setPinEdit(pinEdit?.id === person.id ? null : { id: person.id, value: "" })}
+                  className={`text-xs hover:underline ${person.hasPin ? "text-emerald-700" : "text-slate-500"}`}
+                >
+                  {person.hasPin ? "暗証番号あり" : "暗証番号なし"}
+                </button>
+                <button
                   onClick={() => call(`/api/staff/${person.id}`, { method: "PATCH", body: JSON.stringify({ active: !person.active }) })}
                   className="text-xs text-slate-500 hover:underline"
                 >
                   {person.active ? "退職にする" : "在籍に戻す"}
                 </button>
+                {pinEdit?.id === person.id && (
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const ok = await call(
+                        `/api/staff/${person.id}`,
+                        { method: "PATCH", body: JSON.stringify({ pin: pinEdit.value }) },
+                        `${person.name}さんの暗証番号を設定しました`,
+                      );
+                      if (ok) setPinEdit(null);
+                    }}
+                    className="flex w-full flex-wrap items-center gap-2 rounded-md bg-slate-50 p-2"
+                  >
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                      pattern="\d{4}"
+                      maxLength={4}
+                      required
+                      value={pinEdit.value}
+                      onChange={(e) => setPinEdit({ id: person.id, value: e.target.value.replace(/\D/g, "") })}
+                      placeholder="4桁の数字"
+                      className="w-28 rounded-md border px-2 py-1 text-sm tracking-widest"
+                      aria-label={`${person.name}さんの暗証番号`}
+                    />
+                    <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                      {person.hasPin ? "変更" : "設定"}
+                    </button>
+                    {person.hasPin && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={async () => {
+                          const ok = await call(
+                            `/api/staff/${person.id}`,
+                            { method: "PATCH", body: JSON.stringify({ pin: null }) },
+                            `${person.name}さんの暗証番号を解除しました`,
+                          );
+                          if (ok) setPinEdit(null);
+                        }}
+                        className="text-xs text-rose-600 hover:underline"
+                      >
+                        解除する
+                      </button>
+                    )}
+                    <span className="text-xs text-slate-500">タイムカードで打刻するときに入力します</span>
+                  </form>
+                )}
               </li>
             ))}
           </ul>
-          <p className="text-xs text-slate-500">時給を変えると、まだ計上していない月の人件費は新しい時給で計算し直されます。</p>
+          <p className="text-xs text-slate-500">
+            時給を変えると、まだ計上していない月の人件費は新しい時給で計算し直されます。暗証番号を設定すると、タイムカードで本人以外が打刻できなくなります(5回間違えると5分間ロック)。
+          </p>
         </section>
       </div>
     </div>

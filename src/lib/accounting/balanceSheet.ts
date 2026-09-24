@@ -1,5 +1,6 @@
 import { getAccountBalances } from "@/lib/accounting/ledger";
 import { getIncomeStatement } from "@/lib/accounting/incomeStatement";
+import { nextDay } from "./period";
 
 // This app doesn't do a period-end closing entry (revenue/expense accounts
 // stay open, never swept into retained earnings), so a strict "assets =
@@ -7,9 +8,11 @@ import { getIncomeStatement } from "@/lib/accounting/incomeStatement";
 // net income. Instead the current period's net income is folded into 純資産
 // here for display, the common approach for an interim (期中) balance sheet
 // without formal closing.
-export async function getBalanceSheet(companyId: string) {
-  const balances = await getAccountBalances(companyId);
-  const { netIncome } = await getIncomeStatement(companyId);
+// asOf(その日を含む)時点の残高。期末の振替をしていないので、純利益もその日までの累計を使う。
+export async function getBalanceSheet(companyId: string, asOf?: string) {
+  const range = asOf ? { lt: nextDay(asOf) } : {};
+  const balances = await getAccountBalances(companyId, range);
+  const { netIncome } = await getIncomeStatement(companyId, range);
 
   const assetRows = balances.filter((row) => row.account.category === "ASSET" && row.balance !== 0);
   const liabilityRows = balances.filter((row) => row.account.category === "LIABILITY" && row.balance !== 0);
