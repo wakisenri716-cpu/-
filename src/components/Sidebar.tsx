@@ -6,6 +6,7 @@ import {
   ArchiveIcon,
   BankIcon,
   BookIcon,
+  BuildingIcon,
   BoxIcon,
   CalendarIcon,
   ChecklistIcon,
@@ -17,6 +18,7 @@ import {
   InboxIcon,
   JournalIcon,
   KeyIcon,
+  PercentIcon,
   ReceiptIcon,
   RegisterIcon,
   ScaleIcon,
@@ -55,18 +57,37 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/trial-balance", label: "試算表", icon: ScaleIcon },
       { href: "/income-statement", label: "損益計算書", icon: ChartIcon },
       { href: "/balance-sheet", label: "貸借対照表", icon: ClipboardIcon },
+      { href: "/tax", label: "消費税集計", icon: PercentIcon },
     ],
   },
 ];
 
-function sectionsFor(isAdmin: boolean): NavSection[] {
+type Role = "ADMIN" | "ACCOUNTANT" | "EMPLOYEE";
+
+const EMPLOYEE_SECTIONS: NavSection[] = [
+  {
+    title: "業務",
+    items: [
+      { href: "/expenses", label: "経費精算", icon: ReceiptIcon },
+      { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
+    ],
+  },
+];
+
+// 従業員には自分が使える画面だけを見せる(実際のアクセス制限はサーバー側で行う)
+function sectionsFor(role: Role): NavSection[] {
   return [
-    ...NAV_SECTIONS,
+    ...(role === "EMPLOYEE" ? EMPLOYEE_SECTIONS : NAV_SECTIONS),
     {
       title: "設定",
       items: [
         { href: "/account", label: "アカウント", icon: KeyIcon },
-        ...(isAdmin ? [{ href: "/users", label: "ユーザー管理", icon: ShieldIcon }] : []),
+        ...(role === "ADMIN"
+          ? [
+              { href: "/company", label: "会社情報", icon: BuildingIcon },
+              { href: "/users", label: "ユーザー管理", icon: ShieldIcon },
+            ]
+          : []),
       ],
     },
   ];
@@ -87,11 +108,11 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-export function Sidebar({ userName, isAdmin }: { userName: string; isAdmin: boolean }) {
+export function Sidebar({ userName, role }: { userName: string; role: Role }) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r bg-white md:flex">
+    <aside className="hidden w-60 shrink-0 flex-col border-r bg-white md:flex print:hidden">
       <div className="flex items-center gap-2 px-5 py-4">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
           AI
@@ -100,7 +121,7 @@ export function Sidebar({ userName, isAdmin }: { userName: string; isAdmin: bool
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-2">
-        {sectionsFor(isAdmin).map((section, i) => (
+        {sectionsFor(role).map((section, i) => (
           <div key={section.title ?? i}>
             {section.title && (
               <div className="px-3 pb-1.5 text-xs font-semibold tracking-wide text-slate-400">{section.title}</div>
@@ -122,9 +143,9 @@ export function Sidebar({ userName, isAdmin }: { userName: string; isAdmin: bool
   );
 }
 
-export function MobileNav({ isAdmin }: { isAdmin: boolean }) {
+export function MobileNav({ role }: { role: Role }) {
   const pathname = usePathname();
-  const allItems = sectionsFor(isAdmin).flatMap((s) => s.items);
+  const allItems = sectionsFor(role).flatMap((s) => s.items);
 
   return (
     <nav className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 text-sm md:hidden">

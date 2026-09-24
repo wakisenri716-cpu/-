@@ -3,11 +3,14 @@ import { getBalanceSheet } from "@/lib/accounting/balanceSheet";
 import { requireCompanyId } from "@/lib/auth/session";
 import { formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
+import { AsOfPicker } from "@/components/PeriodPicker";
+import { resolveAsOf, type PeriodParams } from "@/lib/accounting/period";
 
 export const dynamic = "force-dynamic";
 
-export default async function BalanceSheetPage() {
+export default async function BalanceSheetPage({ searchParams }: { searchParams: Promise<PeriodParams> }) {
   const companyId = await requireCompanyId();
+  const { asOf, label } = resolveAsOf(await searchParams);
   const {
     assetRows,
     liabilityRows,
@@ -17,7 +20,7 @@ export default async function BalanceSheetPage() {
     totalLiabilities,
     totalEquity,
     balanced,
-  } = await getBalanceSheet(companyId);
+  } = await getBalanceSheet(companyId, asOf);
 
   return (
     <div className="space-y-6">
@@ -27,6 +30,7 @@ export default async function BalanceSheetPage() {
           <p className="mt-1 text-sm text-slate-600">
             資産・負債・純資産の残高を集計します。期中決算のため、純資産には当期純利益(損益計算書と連動)を含めて表示しています。
           </p>
+          <p className="mt-1 text-sm font-medium text-slate-800">{label}</p>
         </div>
         <div className="flex items-center gap-2">
           <span
@@ -36,9 +40,11 @@ export default async function BalanceSheetPage() {
           >
             {balanced ? "資産 = 負債+純資産" : "資産 ≠ 負債+純資産"}
           </span>
-          <CsvDownloadLink href="/api/balance-sheet/export" />
+          <CsvDownloadLink href={`/api/balance-sheet/export?asOf=${asOf}`} />
         </div>
       </div>
+
+      <AsOfPicker path="/balance-sheet" asOf={asOf} />
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">

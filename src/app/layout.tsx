@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { getCurrentUser } from "@/lib/auth/session";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { EMPLOYEE_PATHS, getCurrentUser } from "@/lib/auth/session";
 import { Sidebar, MobileNav } from "@/components/Sidebar";
 import { LogoutButton } from "@/components/LogoutButton";
 
@@ -11,15 +13,19 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
+  if (user?.role === "EMPLOYEE") {
+    const pathname = (await headers()).get("x-pathname") ?? "/";
+    if (!EMPLOYEE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) redirect("/expenses");
+  }
 
   return (
     <html lang="ja" className="h-full antialiased">
-      <body className="min-h-full bg-slate-50 text-slate-900">
+      <body className="min-h-full bg-slate-50 text-slate-900 print:bg-white">
         {user ? (
           <div className="flex min-h-screen">
-            <Sidebar userName={user.name} isAdmin={user.role === "ADMIN"} />
+            <Sidebar userName={user.name} role={user.role} />
             <div className="flex min-w-0 flex-1 flex-col">
-              <header className="border-b bg-white px-4 py-3 md:hidden">
+              <header className="border-b bg-white px-4 py-3 md:hidden print:hidden">
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-sm font-semibold whitespace-nowrap">
                     <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white">
@@ -30,10 +36,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                   <LogoutButton />
                 </div>
                 <div className="mt-2">
-                  <MobileNav isAdmin={user.role === "ADMIN"} />
+                  <MobileNav role={user.role} />
                 </div>
               </header>
-              <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+              <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 lg:px-8 print:max-w-none print:p-0">{children}</main>
             </div>
           </div>
         ) : (

@@ -20,7 +20,8 @@ export async function recordInvoicePayment(invoiceId: string, amount: number, pa
       include: { payments: true },
     });
 
-    if (invoice.status === "PENDING_REVIEW" || invoice.status === "DRAFT" || invoice.status === "CANCELLED") {
+    if (invoice.status === "CANCELLED") throw new Error("取り消された請求書には入金・支払を記録できません");
+    if (invoice.status === "PENDING_REVIEW" || invoice.status === "DRAFT") {
       throw new Error("この請求書はまだ確定していないため入金・支払を記録できません");
     }
 

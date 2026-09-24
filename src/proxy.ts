@@ -10,7 +10,12 @@ export function proxy(request: NextRequest) {
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return NextResponse.next();
 
   const token = request.cookies.get(SESSION_COOKIE)?.value ?? "";
-  if (/^[A-Za-z0-9_-]{43}$/.test(token)) return NextResponse.next();
+  if (/^[A-Za-z0-9_-]{43}$/.test(token)) {
+    // レイアウトで役割ごとに見られる画面を判定できるよう、表示中のパスを渡す
+    const headers = new Headers(request.headers);
+    headers.set("x-pathname", pathname);
+    return NextResponse.next({ request: { headers } });
+  }
 
   if (pathname.startsWith("/api")) {
     return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });

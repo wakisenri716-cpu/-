@@ -188,3 +188,22 @@ export function ShieldIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function BuildingIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4.5 20.5V5.5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v15M14.5 10h4a1 1 0 0 1 1 1v9.5M3 20.5h18" />
+      <path d="M8 8h3M8 11.5h3M8 15h3M17 13.5h0M17 16.5h0" />
+    </svg>
+  );
+}
+
+export function PercentIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M18.5 5.5 5.5 18.5" />
+      <circle cx="7" cy="7" r="2.5" />
+      <circle cx="17" cy="17" r="2.5" />
+    </svg>
+  );
+}

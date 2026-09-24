@@ -50,8 +50,19 @@ export async function requireUser() {
   return user;
 }
 
+// 従業員が使える画面。これ以外(帳票・銀行・給料など)は管理者と経理担当だけ。
+export const EMPLOYEE_PATHS = ["/expenses", "/timeclock", "/account"];
+
+// 従業員も使える機能(自分の経費精算・タイムカード)用
+export async function requireMember() {
+  return requireUser();
+}
+
+// 既定はこちら: 管理者・経理担当だけがデータに届く。従業員は経費精算へ戻す。
 export async function requireCompanyId(): Promise<string> {
-  return (await requireUser()).companyId;
+  const user = await requireUser();
+  if (user.role === "EMPLOYEE") redirect("/expenses");
+  return user.companyId;
 }
 
 export async function requireAdmin() {

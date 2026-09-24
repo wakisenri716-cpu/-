@@ -10,6 +10,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     updateStaff(companyId, id, {
       ...(body.hourlyWage !== undefined ? { hourlyWage: Number(body.hourlyWage) } : {}),
       ...(typeof body.active === "boolean" ? { active: body.active } : {}),
+      ...(body.pin === null || typeof body.pin === "string" ? { pin: body.pin } : {}),
     }),
   );
 }

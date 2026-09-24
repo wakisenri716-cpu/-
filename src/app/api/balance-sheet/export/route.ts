@@ -1,11 +1,13 @@
 import { getBalanceSheet } from "@/lib/accounting/balanceSheet";
 import { requireCompanyId } from "@/lib/auth/session";
+import { paramsFromUrl, resolveAsOf } from "@/lib/accounting/period";
 import { csvResponse } from "@/lib/csv";
 
-export async function GET() {
+export async function GET(request: Request) {
   const companyId = await requireCompanyId();
+  const { asOf } = resolveAsOf(paramsFromUrl(request.url));
   const { assetRows, liabilityRows, equityRows, netIncome, totalAssets, totalLiabilities, totalEquity } =
-    await getBalanceSheet(companyId);
+    await getBalanceSheet(companyId, asOf);
 
   const rows: (string | number)[][] = [["区分", "科目コード", "科目名", "金額"]];
   for (const row of assetRows) {
@@ -22,5 +24,5 @@ export async function GET() {
   rows.push(["純資産", "", "当期純利益", netIncome]);
   rows.push(["", "", "純資産合計", totalEquity]);
 
-  return csvResponse("balance_sheet.csv", rows);
+  return csvResponse(`貸借対照表_${asOf}.csv`, rows);
 }

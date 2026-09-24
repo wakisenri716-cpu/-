@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { formatDate, formatYen } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
 
@@ -16,13 +17,18 @@ type Invoice = {
   customer: { name: string } | null;
   aiExtraction: { confidence: number } | null;
   payments: { amount: number }[];
+  _count: { lines: number };
 };
 
 const SETTLEABLE_STATUSES = new Set(["CONFIRMED", "SENT", "PARTIALLY_PAID", "OVERDUE"]);
 
 const TABS: { key: Invoice["direction"]; label: string; hint: string }[] = [
   { key: "RECEIVED", label: "受領請求書(支払)", hint: "取引先から届いた請求書をアップロードすると、AIが金額・税額・勘定科目を読み取り買掛金として仕訳します。" },
-  { key: "ISSUED", label: "発行請求書(売上)", hint: "自社が発行した請求書をアップロードすると、AIが売上・売掛金として仕訳します。" },
+  {
+    key: "ISSUED",
+    label: "発行請求書(売上)",
+    hint: "「請求書を作成」から請求書を作って印刷・PDF保存できます(売上の仕訳も自動)。他のソフトで作った請求書は画像をアップロードするとAIが仕訳します。",
+  },
 ];
 
 export default function InvoicesPage() {
@@ -118,6 +124,15 @@ export default function InvoicesPage() {
 
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
 
+      {direction === "ISSUED" && (
+        <Link
+          href="/invoices/new"
+          className="inline-flex rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+        >
+          + 請求書を作成
+        </Link>
+      )}
+
       <form onSubmit={handleUpload} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white shadow-sm p-4">
         <div>
           <label className="block text-xs text-slate-500">請求書ファイル(画像)</label>
@@ -138,7 +153,7 @@ export default function InvoicesPage() {
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <thead className="bg-slate-50 text-left text-xs whitespace-nowrap uppercase text-slate-500">
               <tr>
                 <th className="px-4 py-2">請求書番号</th>
                 <th className="px-4 py-2">{direction === "RECEIVED" ? "取引先" : "顧客"}</th>
@@ -158,7 +173,15 @@ export default function InvoicesPage() {
                 const canSettle = SETTLEABLE_STATUSES.has(invoice.status) && remaining > 0;
                 return (
                   <tr key={invoice.id}>
-                    <td className="px-4 py-2 whitespace-nowrap">{invoice.invoiceNumber ?? "-"}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      {invoice._count.lines > 0 ? (
+                        <Link href={`/invoices/${invoice.id}/print`} className="text-indigo-700 hover:underline">
+                          {invoice.invoiceNumber}
+                        </Link>
+                      ) : (
+                        (invoice.invoiceNumber ?? "-")
+                      )}
+                    </td>
                     <td className="px-4 py-2 whitespace-nowrap">{invoice.vendor?.name ?? invoice.customer?.name ?? "-"}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{formatDate(invoice.issueDate)}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{formatDate(invoice.dueDate)}</td>
@@ -167,7 +190,7 @@ export default function InvoicesPage() {
                     <td className="px-4 py-2">
                       {invoice.aiExtraction ? `${(invoice.aiExtraction.confidence * 100).toFixed(0)}%` : "-"}
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 whitespace-nowrap">
                       <StatusBadge status={invoice.status} />
                     </td>
                     <td className="px-4 py-2">

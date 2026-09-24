@@ -94,6 +94,12 @@ model Company {
   id               String   @id @default(cuid())
   name             String
   fiscalYearStartMonth Int  @default(4)
+  // 発行する請求書に載せる情報(適格請求書発行事業者の登録番号など)
+  registrationNumber String?
+  address          String?
+  phone            String?
+  bankAccount      String?
+  invoiceNote      String?
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -246,6 +252,22 @@ model Invoice {
 
   payments         Payment[]
   bankTransactions BankTransaction[]
+  lines            InvoiceLine[]
+  notes            String?
+}
+
+// アプリで作成した請求書の明細。税率ごとに合計してから消費税の端数を処理する(インボイス制度のルール)。
+model InvoiceLine {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  sortOrder   Int
+  description String
+  quantity    Float
+  unit        String?
+  unitPrice   Int
+  taxRate     Int
+  amount      Int
 }
 
 model Payment {
@@ -382,6 +404,10 @@ model Staff {
   name        String
   hourlyWage  Int
   active      Boolean  @default(true)
+  // タイムカードの暗証番号(ハッシュ)。設定されていれば打刻のたびに入力を求める。
+  pinHash     String?
+  pinFailures Int      @default(0)
+  pinLockedUntil DateTime?
   createdAt   DateTime @default(now())
 
   shifts      Shift[]

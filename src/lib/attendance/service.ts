@@ -3,6 +3,7 @@ import type { TimeRecord } from "@prisma/client";
 import { jstDateKey, jstMidnight } from "@/lib/jst";
 import { parseTime } from "@/lib/shifts/pay";
 import { dateKey, mondayOf } from "@/lib/shifts/service";
+import { verifyPassword } from "@/lib/auth/password";
 import { minutesFromWorkDay, recordTimes } from "./times";
 
 export class AttendanceError extends Error {}
@@ -11,6 +12,31 @@ export class AttendanceError extends Error {}
 const MAX_OPEN_MS = 16 * 60 * 60 * 1000;
 
 export type PunchAction = "in" | "breakStart" | "breakEnd" | "out";
+
+// 暗証番号を続けて間違えたら、しばらく打刻できなくする(4桁の総当たり対策)
+const MAX_PIN_FAILURES = 5;
+const PIN_LOCK_MS = 5 * 60 * 1000;
+
+// 暗証番号が設定されているスタッフだけ確認する。未設定なら今まで通り名前を選ぶだけで打刻できる。
+async function checkPin(staff: { id: string; name: string; pinHash: string | null; pinLockedUntil: Date | null }, pin: string | undefined, now: Date) {
+  if (!staff.pinHash) return;
+  if (staff.pinLockedUntil && staff.pinLockedUntil > now) {
+    const minutes = Math.ceil((staff.pinLockedUntil.getTime() - now.getTime()) / 60_000);
+    throw new AttendanceError(`暗証番号を${MAX_PIN_FAILURES}回間違えたため、あと${minutes}分は打刻できません`);
+  }
+  if (!pin) throw new AttendanceError("暗証番号を入力してください");
+  if (await verifyPassword(pin, staff.pinHash)) {
+    await prisma.staff.update({ where: { id: staff.id }, data: { pinFailures: 0, pinLockedUntil: null } });
+    return;
+  }
+  // 同時に何回送られても回数を取りこぼさないよう、DB上で1ずつ増やす
+  const updated = await prisma.staff.update({ where: { id: staff.id }, data: { pinFailures: { increment: 1 } } });
+  if (updated.pinFailures >= MAX_PIN_FAILURES) {
+    await prisma.staff.update({ where: { id: staff.id }, data: { pinFailures: 0, pinLockedUntil: new Date(now.getTime() + PIN_LOCK_MS) } });
+    throw new AttendanceError(`暗証番号を${MAX_PIN_FAILURES}回間違えたため、5分間打刻できません`);
+  }
+  throw new AttendanceError(`暗証番号が違います(あと${MAX_PIN_FAILURES - updated.pinFailures}回で5分間ロック)`);
+}
 
 function workDate(key: string) {
   return new Date(`${key}T00:00:00Z`);
@@ -33,9 +59,10 @@ function staleMessage(record: TimeRecord) {
   return `前回(${m}月${d}日)の退勤が打刻されていません。管理者に「勤怠一覧」から修正してもらってください`;
 }
 
-export async function punch(companyId: string, staffId: string, action: PunchAction, now = new Date()) {
+export async function punch(companyId: string, staffId: string, action: PunchAction, now = new Date(), pin?: string) {
   const staff = await prisma.staff.findFirst({ where: { id: staffId, companyId, active: true } });
   if (!staff) throw new AttendanceError("スタッフが見つかりません");
+  await checkPin(staff, pin, now);
   const open = await openRecord(staffId);
   const current = open && !isStale(open, now) ? open : null;
 
@@ -94,6 +121,7 @@ export async function getBoard(companyId: string, now = new Date()) {
       return {
         id: s.id,
         name: s.name,
+        hasPin: s.pinHash !== null,
         status,
         since: status === "break" ? record!.breakStartedAt : status === "working" ? record!.clockIn : null,
         forgotClockOut: stale ? dateKey(record!.date) : null,

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { AccountCategory } from "@prisma/client";
+import type { DateRange } from "./period";
 
 // Journal entries only affect the books once posted; PENDING_REVIEW items
 // are provisional and VOID ones were rejected, so both are excluded here.
@@ -15,10 +16,16 @@ export function signedMovement(side: NormalSide, debit: number, credit: number):
   return side === "DEBIT" ? debit - credit : credit - debit;
 }
 
-export async function getAccountBalances(companyId: string) {
+export async function getAccountBalances(companyId: string, range: DateRange = {}) {
   const accounts = await prisma.account.findMany({ where: { companyId }, orderBy: { code: "asc" } });
   const lines = await prisma.journalLine.findMany({
-    where: { journalEntry: { companyId, status: { in: [...POSTED_STATUSES] } } },
+    where: {
+      journalEntry: {
+        companyId,
+        status: { in: [...POSTED_STATUSES] },
+        ...(range.gte || range.lt ? { date: range } : {}),
+      },
+    },
     select: { accountId: true, debit: true, credit: true },
   });
 

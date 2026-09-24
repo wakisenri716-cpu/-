@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Shift, Staff } from "@prisma/client";
 import { ensureAccount } from "@/lib/accounting/accounts";
+import { hashPassword } from "@/lib/auth/password";
 import { recordTimes } from "@/lib/attendance/times";
 import { addPay, dailyPay, EMPTY_PAY, parseTime, roundPay, type PayBreakdown, type ShiftTimes } from "./pay";
 
@@ -41,6 +42,13 @@ function monthRange(month: string) {
 
 // ---- スタッフ ----
 
+// 画面に返すスタッフ情報。暗証番号のハッシュや失敗回数は外に出さず、設定済みかどうかだけ返す。
+export function publicStaff(s: Staff) {
+  return { id: s.id, name: s.name, hourlyWage: s.hourlyWage, active: s.active, createdAt: s.createdAt, hasPin: s.pinHash !== null };
+}
+
+const PIN = /^\d{4}$/;
+
 function validWage(wage: number) {
   if (!Number.isInteger(wage) || wage <= 0 || wage > 100_000) throw new ShiftError("時給を正しく入力してください");
 }
@@ -50,18 +58,22 @@ export async function createStaff(companyId: string, input: { name: string; hour
   if (!name) throw new ShiftError("名前を入力してください");
   validWage(input.hourlyWage);
   try {
-    return await prisma.staff.create({ data: { companyId, name, hourlyWage: input.hourlyWage } });
+    return publicStaff(await prisma.staff.create({ data: { companyId, name, hourlyWage: input.hourlyWage } }));
   } catch (error) {
     if ((error as { code?: string }).code === "P2002") throw new ShiftError(`「${name}」はすでに登録されています`);
     throw error;
   }
 }
 
-export async function updateStaff(companyId: string, id: string, input: { hourlyWage?: number; active?: boolean }) {
+// pin: 4桁の数字で設定、null で解除、undefined なら変更しない
+export async function updateStaff(companyId: string, id: string, input: { hourlyWage?: number; active?: boolean; pin?: string | null }) {
   const staff = await prisma.staff.findFirst({ where: { id, companyId } });
   if (!staff) throw new ShiftError("スタッフが見つかりません");
   if (input.hourlyWage !== undefined) validWage(input.hourlyWage);
-  return prisma.staff.update({ where: { id }, data: input });
+  const { pin, ...rest } = input;
+  if (pin != null && !PIN.test(pin)) throw new ShiftError("暗証番号は4桁の数字で入力してください");
+  const pinData = pin === undefined ? {} : { pinHash: pin === null ? null : await hashPassword(pin), pinFailures: 0, pinLockedUntil: null };
+  return publicStaff(await prisma.staff.update({ where: { id }, data: { ...rest, ...pinData } }));
 }
 
 // ---- シフト ----
@@ -182,7 +194,7 @@ export async function getWeek(companyId: string, weekStart: string) {
   return {
     weekStart: days[0],
     days,
-    staff: staff.map((s) => ({ ...s, week: roundPay(perStaff.get(s.id) ?? EMPTY_PAY) })),
+    staff: staff.map((s) => ({ ...publicStaff(s), week: roundPay(perStaff.get(s.id) ?? EMPTY_PAY) })),
     shifts: shifts.map((s) => ({
       id: s.id,
       staffId: s.staffId,
