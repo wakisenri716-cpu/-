@@ -57,6 +57,8 @@ enum SourceType {
   BANK
   PAYROLL
   REIMBURSEMENT
+  RECURRING
+  IMPORT
 }
 
 enum QuoteStatus {
@@ -129,6 +131,8 @@ model Company {
   automationRules  AutomationRule[]
   quotes           Quote[]
   budgets          Budget[]
+  recurringEntries RecurringEntry[]
+  auditLogs        AuditLog[]
 }
 
 model User {
@@ -175,6 +179,7 @@ model Account {
   journalLines       JournalLine[]
   vendorsAsDefault   Vendor[]        @relation("VendorDefaultAccount")
   budgets            Budget[]
+  recurringLines     RecurringLine[]
 
   @@unique([companyId, code])
 }
@@ -360,6 +365,11 @@ model FixedAsset {
   usefulLifeYears Int
   journalEntryId  String?  @unique
   journalEntry    JournalEntry? @relation("FixedAssetAcquisition", fields: [journalEntryId], references: [id])
+  // 除却・売却した日と売却額(除却なら0)、その仕訳
+  disposedAt      DateTime?
+  disposalPrice   Int?
+  disposalEntryId String?  @unique
+  disposalEntry   JournalEntry? @relation("FixedAssetDisposal", fields: [disposalEntryId], references: [id])
   createdAt       DateTime @default(now())
 
   depreciationEntries DepreciationEntry[]
@@ -569,6 +579,64 @@ model JournalEntry {
   bankTransaction   BankTransaction?
   payrollRun        PayrollRun?
   reimbursedReport  ExpenseReport?     @relation("ExpenseReimbursement")
+  disposedAsset     FixedAsset?        @relation("FixedAssetDisposal")
+  recurringPosting  RecurringPosting?
+}
+
+// 毎月決まった日に同じ仕訳を記帳する定期取引(家賃・リース料・借入金の返済など)
+model RecurringEntry {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  name        String
+  description String
+  // 1〜28日、または 0 = 月末
+  dayOfMonth  Int
+  startMonth  String
+  endMonth    String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  lines       RecurringLine[]
+  postings    RecurringPosting[]
+}
+
+model RecurringLine {
+  id               String         @id @default(cuid())
+  recurringEntryId String
+  recurringEntry   RecurringEntry @relation(fields: [recurringEntryId], references: [id], onDelete: Cascade)
+  sortOrder        Int
+  accountId        String
+  account          Account        @relation(fields: [accountId], references: [id])
+  debit            Int
+  credit           Int
+}
+
+// 定期取引をどの月に記帳したか。同じ月に2回記帳しないための記録。
+model RecurringPosting {
+  id               String         @id @default(cuid())
+  recurringEntryId String
+  recurringEntry   RecurringEntry @relation(fields: [recurringEntryId], references: [id], onDelete: Cascade)
+  month            String
+  journalEntryId   String         @unique
+  journalEntry     JournalEntry   @relation(fields: [journalEntryId], references: [id])
+  createdAt        DateTime       @default(now())
+
+  @@unique([recurringEntryId, month])
+}
+
+// 操作ログ(誰が・いつ・何をしたか)
+model AuditLog {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  userId    String?
+  userName  String
+  action    String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([companyId, createdAt])
 }
 
 model JournalLine {

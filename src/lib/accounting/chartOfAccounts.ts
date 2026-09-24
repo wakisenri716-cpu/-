@@ -28,6 +28,7 @@ export const CHART_OF_ACCOUNTS: SeedAccount[] = [
   { code: "3020", name: "繰越利益剰余金", category: "EQUITY" },
   { code: "4010", name: "売上高", category: "REVENUE" },
   { code: "4020", name: "雑収入", category: "REVENUE" },
+  { code: "4030", name: "固定資産売却益", category: "REVENUE" },
   { code: "5000", name: "売上原価", category: "EXPENSE" },
   { code: "5010", name: "旅費交通費", category: "EXPENSE" },
   { code: "5020", name: "会議費", category: "EXPENSE" },
@@ -44,6 +45,7 @@ export const CHART_OF_ACCOUNTS: SeedAccount[] = [
   { code: "5130", name: "広告宣伝費", category: "EXPENSE" },
   { code: "5140", name: "租税公課", category: "EXPENSE" },
   { code: "5150", name: "支払利息", category: "EXPENSE" },
+  { code: "5160", name: "固定資産除売却損", category: "EXPENSE" },
   { code: "5990", name: "雑費", category: "EXPENSE" },
 ];
 

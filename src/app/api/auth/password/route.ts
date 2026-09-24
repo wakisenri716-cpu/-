@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, passwordProblem, verifyPassword } from "@/lib/auth/password";
 import { createSession, requireUser } from "@/lib/auth/session";
+import { audit } from "@/lib/audit";
 
 export async function POST(request: Request) {
   const user = await requireUser();
@@ -21,5 +22,6 @@ export async function POST(request: Request) {
     prisma.session.deleteMany({ where: { userId: user.id } }),
   ]);
   await createSession(user.id);
+  await audit("パスワード変更", null, user);
   return NextResponse.json({ ok: true });
 }

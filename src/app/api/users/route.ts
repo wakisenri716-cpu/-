@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, passwordProblem } from "@/lib/auth/password";
 import { adminOr403, PUBLIC_USER_FIELDS, ROLES, toPublicUser } from "@/lib/auth/users";
+import { audit } from "@/lib/audit";
+
+const ROLE_LABELS = { ADMIN: "管理者", ACCOUNTANT: "経理担当", EMPLOYEE: "従業員" } as const;
 
 export async function GET() {
   const admin = await adminOr403();
@@ -43,5 +46,6 @@ export async function POST(request: Request) {
     create: { companyId: admin.companyId, name, email, role, passwordHash: await hashPassword(password) },
     select: PUBLIC_USER_FIELDS,
   });
+  await audit("ユーザー追加", `${name}(${email}) を ${ROLE_LABELS[role]} として追加`);
   return NextResponse.json(toPublicUser(user), { status: 201 });
 }

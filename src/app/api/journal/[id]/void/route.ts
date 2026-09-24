@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireCompanyId } from "@/lib/auth/session";
 import { JournalError, voidManualJournal } from "@/lib/accounting/journal";
+import { audit } from "@/lib/audit";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const companyId = await requireCompanyId();
   try {
-    return NextResponse.json(await voidManualJournal(companyId, id));
+    const entry = await voidManualJournal(companyId, id);
+    await audit("仕訳を取消", `${entry.date.toISOString().slice(0, 10)} ${entry.description}`);
+    return NextResponse.json(entry);
   } catch (error) {
     if (error instanceof JournalError) {
       return NextResponse.json({ error: error.message }, { status: 400 });

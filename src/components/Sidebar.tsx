@@ -9,6 +9,7 @@ import {
   BuildingIcon,
   BoxIcon,
   CalendarIcon,
+  CashflowIcon,
   ChecklistIcon,
   ClockIcon,
   CoinsIcon,
@@ -16,6 +17,7 @@ import {
   ClipboardIcon,
   DashboardIcon,
   DocumentIcon,
+  HistoryIcon,
   InboxIcon,
   JournalIcon,
   KeyIcon,
@@ -23,6 +25,7 @@ import {
   QuoteIcon,
   ReceiptIcon,
   RegisterIcon,
+  RepeatIcon,
   ScaleIcon,
   SearchIcon,
   ShieldIcon,
@@ -37,24 +40,40 @@ type NavItem = { href: string; label: string; icon: ComponentType<SVGProps<SVGSV
 type NavSection = { title?: string; items: NavItem[] };
 
 export const NAV_SECTIONS: NavSection[] = [
-  { items: [{ href: "/", label: "ダッシュボード", icon: DashboardIcon }] },
   {
-    title: "業務",
     items: [
-      { href: "/expenses", label: "経費精算", icon: ReceiptIcon },
-      { href: "/reimbursements", label: "立替経費の精算", icon: WalletIcon },
+      { href: "/", label: "ダッシュボード", icon: DashboardIcon },
+      { href: "/review", label: "レビューキュー", icon: InboxIcon },
+    ],
+  },
+  {
+    title: "売上・取引先",
+    items: [
       { href: "/quotes", label: "見積書", icon: QuoteIcon },
       { href: "/invoices", label: "請求書", icon: DocumentIcon },
       { href: "/receivables", label: "売掛金・買掛金", icon: CoinsIcon },
       { href: "/vendors", label: "取引先・顧客", icon: UsersIcon },
-      { href: "/review", label: "レビューキュー", icon: InboxIcon },
-      { href: "/bank", label: "銀行明細", icon: BankIcon },
       { href: "/pos", label: "POSレジ連携", icon: RegisterIcon },
       { href: "/inventory", label: "在庫管理", icon: BoxIcon },
+    ],
+  },
+  {
+    title: "経費・お金",
+    items: [
+      { href: "/expenses", label: "経費精算", icon: ReceiptIcon },
+      { href: "/reimbursements", label: "立替経費の精算", icon: WalletIcon },
+      { href: "/bank", label: "銀行明細", icon: BankIcon },
+      { href: "/recurring", label: "定期取引", icon: RepeatIcon },
+      { href: "/cashflow", label: "資金繰り予測", icon: CashflowIcon },
+      { href: "/assets", label: "固定資産", icon: ArchiveIcon },
+    ],
+  },
+  {
+    title: "人事・勤怠",
+    items: [
       { href: "/shifts", label: "シフト管理", icon: CalendarIcon },
       { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
       { href: "/attendance", label: "勤怠一覧", icon: ChecklistIcon },
-      { href: "/assets", label: "固定資産", icon: ArchiveIcon },
     ],
   },
   {
@@ -96,6 +115,7 @@ function sectionsFor(role: Role): NavSection[] {
           ? [
               { href: "/company", label: "会社情報", icon: BuildingIcon },
               { href: "/users", label: "ユーザー管理", icon: ShieldIcon },
+              { href: "/audit", label: "操作ログ", icon: HistoryIcon },
             ]
           : []),
       ],

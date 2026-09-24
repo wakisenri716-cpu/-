@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyId } from "@/lib/auth/session";
+import { audit } from "@/lib/audit";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: journalEntryId } = await params;
@@ -46,6 +47,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         ? [prisma.invoice.update({ where: { id: entry.invoice.id }, data: { status: "CANCELLED" } })]
         : []),
     ]);
+    await audit("AI仕訳を却下", entry.description);
     return NextResponse.json({ status: "rejected" });
   }
 
@@ -79,5 +81,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
   });
 
+  await audit(correctedAccountId ? "AI仕訳を修正して承認" : "AI仕訳を承認", entry.description);
   return NextResponse.json({ status: "approved" });
 }

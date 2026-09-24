@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCompanyId } from "@/lib/auth/session";
 import { getFixedAssetsWithSummary, registerFixedAsset } from "@/lib/accounting/fixedAssets";
+import { audit, yen } from "@/lib/audit";
 
 export async function GET() {
   const companyId = await requireCompanyId();
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
       usefulLifeYears,
       residualValue,
     });
+    await audit("固定資産を登録", `${asset.name} ${yen(asset.acquisitionCost)}`);
     return NextResponse.json(asset, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "登録に失敗しました" }, { status: 400 });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { burnPasswordCheck, verifyPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
+import { audit } from "@/lib/audit";
 
 const MAX_FAILURES = 5;
 const LOCK_MINUTES = 15;
@@ -43,5 +44,6 @@ export async function POST(request: Request) {
   await prisma.user.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null } });
   await prisma.session.deleteMany({ where: { userId: user.id, expiresAt: { lt: new Date() } } });
   await createSession(user.id);
+  await audit("ログイン", null, user);
   return NextResponse.json({ ok: true });
 }
