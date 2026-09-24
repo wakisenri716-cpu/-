@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyId } from "@/lib/auth/session";
 import { ensureChartOfAccounts } from "@/lib/accounting/accounts";
-import { createManualJournal, getJournalBook } from "@/lib/accounting/journal";
+import { createManualJournal, getJournalBook, journalFilterFromParams } from "@/lib/accounting/journal";
 import { audit } from "@/lib/audit";
 import { UserError } from "@/lib/errors";
 
@@ -10,7 +10,8 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 export async function GET(request: Request) {
   const companyId = await requireCompanyId();
-  const month = new URL(request.url).searchParams.get("month") ?? undefined;
+  const params = new URL(request.url).searchParams;
+  const month = params.get("month") ?? undefined;
   if (month && !MONTH.test(month)) {
     return NextResponse.json({ error: "月の指定が正しくありません" }, { status: 400 });
   }
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   // 資本金・借入金など後から追加した科目を、既存デプロイでも選べるようにする
   await ensureChartOfAccounts(companyId);
   const [entries, accounts] = await Promise.all([
-    getJournalBook(companyId, { month }),
+    getJournalBook(companyId, { month, filter: journalFilterFromParams(params) }),
     prisma.account.findMany({ where: { companyId, hidden: false }, orderBy: { code: "asc" }, select: { id: true, code: true, name: true, category: true } }),
   ]);
   return NextResponse.json({ entries, accounts });

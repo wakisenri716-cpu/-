@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { jstDateKey } from "@/lib/jst";
+import { fiscalYearOf, getFiscalStartMonth } from "@/lib/accounting/period";
 import { requireCompanyId } from "@/lib/auth/session";
 import { getReimbursements } from "@/lib/accounting/reimbursement";
 import { countDueRecurring } from "@/lib/accounting/recurring";
+import { countDueRecurringInvoices } from "@/lib/accounting/recurringInvoices";
 
 export async function getDashboardSummary() {
   const companyId = await requireCompanyId();
@@ -81,7 +83,7 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -98,12 +100,14 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
     }),
     getReimbursements(companyId),
     countDueRecurring(companyId),
+    countDueRecurringInvoices(companyId),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
     { key: "review", label: "AI仕訳のレビュー待ち", detail: "経費・請求書のAI判定を確認してください", count: reviews, href: "/review", tone: "amber" },
     { key: "bank", label: "銀行明細の確認待ち", detail: "勘定科目を選んで確定してください", count: bank, href: "/bank", tone: "amber" },
     { key: "overdue", label: "支払期限を過ぎた請求書", detail: "入金・支払の状況を確認してください", count: overdue, href: "/invoices", tone: "rose" },
+    { key: "recurringInvoices", label: "定期請求の作成", detail: "請求日が来た毎月の請求書を作成してください", count: recurringInvoicesDue, href: "/recurring-invoices", tone: "amber" },
     { key: "recurring", label: "定期取引の記帳", detail: "記帳日が来た家賃などを記帳してください", count: recurringDue, href: "/recurring", tone: "amber" },
     {
       key: "reimburse",
@@ -125,4 +129,51 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
     { key: "stock", label: "発注が必要な商品", detail: "在庫切れ・発注点以下の商品があります", count: stockouts, href: "/inventory", tone: "slate" },
   ];
   return todos.filter((t) => t.count > 0);
+}
+
+export type RankItem = { label: string; amount: number; href?: string };
+
+// 今期(期首から今日まで)の顧客別売上(発行請求書の税抜金額)と、費用の内訳(科目別)の上位5件
+export async function getRankings(companyId: string, today = jstDateKey(new Date())) {
+  const startMonth = await getFiscalStartMonth(companyId);
+  const fy = fiscalYearOf(today, startMonth);
+  const range = { gte: new Date(`${fy.from}T00:00:00Z`), lt: new Date(Date.parse(`${today}T00:00:00Z`) + 86_400_000) };
+  const [invoices, expenseLines] = await Promise.all([
+    prisma.invoice.groupBy({
+      by: ["customerId"],
+      where: { companyId, direction: "ISSUED", status: { in: [...SETTLEABLE, "PAID"] }, issueDate: range, customerId: { not: null } },
+      _sum: { subtotalAmount: true },
+    }),
+    prisma.journalLine.groupBy({
+      by: ["accountId"],
+      where: { account: { companyId, category: "EXPENSE" }, journalEntry: { companyId, status: { in: [...POSTED] }, date: range } },
+      _sum: { debit: true, credit: true },
+    }),
+  ]);
+  const [customers, accounts] = await Promise.all([
+    prisma.customer.findMany({ where: { id: { in: invoices.map((i) => i.customerId!) } }, select: { id: true, name: true } }),
+    prisma.account.findMany({ where: { id: { in: expenseLines.map((l) => l.accountId) } }, select: { id: true, name: true } }),
+  ]);
+  const top = (items: RankItem[]) => {
+    const sorted = items.filter((i) => i.amount > 0).sort((a, b) => b.amount - a.amount);
+    const rest = sorted.slice(5).reduce((s, i) => s + i.amount, 0);
+    return rest > 0 ? [...sorted.slice(0, 5), { label: "その他", amount: rest }] : sorted;
+  };
+  return {
+    fiscalYear: fy.year,
+    customers: top(
+      invoices.map((i) => ({
+        label: customers.find((c) => c.id === i.customerId)?.name ?? "-",
+        amount: i._sum.subtotalAmount ?? 0,
+        href: `/vendors/customer/${i.customerId}`,
+      })),
+    ),
+    expenses: top(
+      expenseLines.map((l) => ({
+        label: accounts.find((a) => a.id === l.accountId)?.name ?? "-",
+        amount: (l._sum.debit ?? 0) - (l._sum.credit ?? 0),
+        href: `/ledger?accountId=${l.accountId}`,
+      })),
+    ),
+  };
 }

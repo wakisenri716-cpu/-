@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "crypto";
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 
@@ -14,7 +14,8 @@ function hashToken(token: string) {
 export async function createSession(userId: string) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86_400_000);
-  await prisma.session.create({ data: { tokenHash: hashToken(token), userId, expiresAt } });
+  const userAgent = (await headers()).get("user-agent")?.slice(0, 300) ?? null;
+  await prisma.session.create({ data: { tokenHash: hashToken(token), userId, expiresAt, userAgent, lastSeenAt: new Date() } });
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -39,8 +40,19 @@ export const getCurrentUser = cache(async () => {
   if (!token) return null;
   const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: true } });
   if (!session || session.expiresAt < new Date() || !session.user.active) return null;
+  // 「ログイン中の端末」に最終利用日時を出すため、10分に1回だけ更新する(毎回書き込まない)
+  if (!session.lastSeenAt || Date.now() - session.lastSeenAt.getTime() > 10 * 60_000) {
+    await prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } }).catch(() => {});
+  }
   return session.user;
 });
+
+// 今使っているセッション(この端末)の ID
+export async function getCurrentSessionId() {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  return (await prisma.session.findUnique({ where: { tokenHash: hashToken(token) }, select: { id: true } }))?.id ?? null;
+}
 
 // データを読み書きする処理はすべてここを通る。proxy のクッキー確認をすり抜けても、
 // 有効なセッションがなければデータには届かない。

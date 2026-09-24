@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { formatDate } from "@/lib/format";
 
 type Role = "ADMIN" | "ACCOUNTANT" | "EMPLOYEE";
-type User = { id: string; name: string; email: string; role: Role; active: boolean; hasPassword: boolean; createdAt: string };
+type User = { id: string; name: string; email: string; role: Role; active: boolean; hasPassword: boolean; totpEnabled: boolean; createdAt: string };
 
 const ROLE_LABELS: Record<Role, string> = { ADMIN: "管理者", ACCOUNTANT: "経理担当", EMPLOYEE: "従業員" };
 const inputClass = "w-full rounded-md border px-2.5 py-1.5 text-sm";
@@ -150,7 +150,10 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
                       {!u.active ? (
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">停止中</span>
                       ) : u.hasPassword ? (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">利用中</span>
+                        <>
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">利用中</span>
+                          {u.totpEnabled && <span className="ml-1 rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-700">2段階認証</span>}
+                        </>
                       ) : (
                         <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">パスワード未設定</span>
                       )}
@@ -160,6 +163,18 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
                       <button onClick={() => setResetFor(u)} disabled={busy} className="text-xs text-indigo-700 hover:underline">
                         {u.hasPassword ? "パスワード再設定" : "パスワード設定"}
                       </button>
+                      {u.totpEnabled && !self && (
+                        <button
+                          onClick={() =>
+                            window.confirm(`${u.name}さんの2段階認証を解除しますか?(スマホをなくした場合など)`) &&
+                            send(`/api/users/${u.id}`, "PATCH", { resetTotp: true }, `${u.name}さんの2段階認証を解除しました`)
+                          }
+                          disabled={busy}
+                          className="ml-3 text-xs text-slate-500 hover:underline"
+                        >
+                          2段階認証を解除
+                        </button>
+                      )}
                       {!self && (
                         <button
                           onClick={() =>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { TwoFactorSection } from "./TwoFactorSection";
+import { SessionsSection } from "./SessionsSection";
 
 const inputClass = "mt-1 w-full rounded-md border px-3 py-2 text-sm";
 
@@ -38,10 +40,10 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="max-w-md space-y-6">
+    <div className="max-w-lg space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">アカウント</h1>
-        <p className="mt-1 text-sm text-slate-600">ログインパスワードを変更できます。</p>
+        <p className="mt-1 text-sm text-slate-600">パスワードの変更、2段階認証の設定、ログイン中の端末の確認ができます。</p>
       </div>
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
       {message && <div className="rounded-md bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{message}</div>}
@@ -66,6 +68,8 @@ export default function AccountPage() {
           {busy ? "変更中..." : "パスワードを変更"}
         </button>
       </form>
+      <TwoFactorSection />
+      <SessionsSection />
     </div>
   );
 }

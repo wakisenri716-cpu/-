@@ -18,6 +18,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (body.role !== undefined && !role) return NextResponse.json({ error: "権限が正しくありません" }, { status: 400 });
   const active = typeof body.active === "boolean" ? body.active : undefined;
   const password = body.password === undefined ? undefined : String(body.password);
+  // スマホをなくした人の2段階認証を管理者が解除する(本人は次のログインから設定し直せる)
+  const resetTotp = body.resetTotp === true;
 
   // 自分自身を管理者から外したり停止したりすると、誰も管理できなくなるので禁止する
   if (target.id === admin.id && ((role && role !== "ADMIN") || active === false)) {
@@ -35,17 +37,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         ...(role ? { role } : {}),
         ...(active !== undefined ? { active } : {}),
         ...(password !== undefined ? { passwordHash: await hashPassword(password), failedLogins: 0, lockedUntil: null } : {}),
+        ...(resetTotp ? { totpEnabled: false, totpSecret: null, totpPendingSecret: null, totpLastStep: null, recoveryCodes: null } : {}),
       },
       select: PUBLIC_USER_FIELDS,
     });
     // 停止・パスワード再設定をしたら、その人のログイン中の端末はすべてログアウトさせる
-    if (active === false || password !== undefined) await tx.session.deleteMany({ where: { userId: id } });
+    if (active === false || password !== undefined || resetTotp) await tx.session.deleteMany({ where: { userId: id } });
     return updated;
   });
   const changes = [
     role ? `権限を${ROLE_LABELS[role]}に変更` : null,
     active === false ? "利用停止" : active === true ? "利用再開" : null,
     password !== undefined ? "パスワード再設定" : null,
+    resetTotp ? "2段階認証を解除" : null,
   ].filter(Boolean);
   if (changes.length) await audit("ユーザー変更", `${target.name}: ${changes.join("・")}`);
   return NextResponse.json(toPublicUser(user));

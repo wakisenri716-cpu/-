@@ -64,6 +64,9 @@ export default function JournalPage() {
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [month, setMonth] = useState("");
+  // 検索条件(入力中の値と、実際に検索に使う値を分ける)
+  const [search, setSearch] = useState({ q: "", accountId: "", min: "", max: "", source: "" });
+  const [applied, setApplied] = useState(search);
   const [date, setDate] = useState(today());
   const [description, setDescription] = useState("");
   const [lines, setLines] = useState<LineDraft[]>([emptyLine(), emptyLine()]);
@@ -71,12 +74,17 @@ export default function JournalPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const query = new URLSearchParams(
+    Object.entries({ month, ...applied }).filter(([, v]) => v !== "") as [string, string][],
+  ).toString();
+  const searching = Object.values(applied).some((v) => v !== "");
+
   const load = useCallback(async () => {
-    const res = await fetch(`/api/journal${month ? `?month=${month}` : ""}`);
+    const res = await fetch(`/api/journal${query ? `?${query}` : ""}`);
     const body = await res.json();
     setEntries(body.entries);
     setAccounts(body.accounts);
-  }, [month]);
+  }, [query]);
 
   useEffect(() => {
     // Fetch-on-mount/month change: the resulting setState always lands after
@@ -158,7 +166,7 @@ export default function JournalPage() {
           >
             CSVから取込
           </Link>
-          <CsvDownloadLink href={`/api/journal/export${month ? `?month=${month}` : ""}`} />
+          <CsvDownloadLink href={`/api/journal/export${query ? `?${query}` : ""}`} />
         </div>
       </div>
 
@@ -343,6 +351,61 @@ export default function JournalPage() {
             )}
           </div>
         </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setApplied(search);
+          }}
+          className="grid gap-2 border-b bg-slate-50/60 px-4 py-3 sm:grid-cols-2 lg:grid-cols-[2fr_2fr_1.4fr_1.4fr_auto]"
+        >
+          <input
+            value={search.q}
+            onChange={(e) => setSearch({ ...search, q: e.target.value })}
+            placeholder="摘要・メモで検索"
+            className="rounded-md border px-2 py-1.5 text-sm"
+            aria-label="キーワード"
+          />
+          <select value={search.accountId} onChange={(e) => setSearch({ ...search, accountId: e.target.value })} className="rounded-md border px-2 py-1.5 text-sm" aria-label="勘定科目">
+            <option value="">すべての勘定科目</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.code} {a.name}
+              </option>
+            ))}
+          </select>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1">
+            <input type="number" min={0} value={search.min} onChange={(e) => setSearch({ ...search, min: e.target.value })} placeholder="金額 下限" className="w-full min-w-0 rounded-md border px-2 py-1.5 text-sm" aria-label="金額の下限" />
+            <span className="text-xs text-slate-400">〜</span>
+            <input type="number" min={0} value={search.max} onChange={(e) => setSearch({ ...search, max: e.target.value })} placeholder="上限" className="w-full min-w-0 rounded-md border px-2 py-1.5 text-sm" aria-label="金額の上限" />
+          </div>
+          <select value={search.source} onChange={(e) => setSearch({ ...search, source: e.target.value })} className="rounded-md border px-2 py-1.5 text-sm" aria-label="種類">
+            <option value="">すべての種類</option>
+            {Object.entries(SOURCE_LABELS).map(([k, label]) => (
+              <option key={k} value={k}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            <button type="submit" className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-indigo-700">
+              検索
+            </button>
+            {searching && (
+              <button
+                type="button"
+                onClick={() => {
+                  const empty = { q: "", accountId: "", min: "", max: "", source: "" };
+                  setSearch(empty);
+                  setApplied(empty);
+                }}
+                className="rounded-md border px-3 py-1.5 text-sm whitespace-nowrap text-slate-600 hover:bg-white"
+              >
+                クリア
+              </button>
+            )}
+          </div>
+          {searching && entries && <p className="text-xs text-slate-500 sm:col-span-2 lg:col-span-5">{entries.length}件見つかりました(金額は明細1行の金額で探します)</p>}
+        </form>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs whitespace-nowrap uppercase text-slate-500">
@@ -393,7 +456,7 @@ export default function JournalPage() {
               {entries && entries.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
-                    {month ? "この月の仕訳はありません。" : "まだ仕訳がありません。"}
+                    {searching ? "条件に合う仕訳はありません。" : month ? "この月の仕訳はありません。" : "まだ仕訳がありません。"}
                   </td>
                 </tr>
               )}
