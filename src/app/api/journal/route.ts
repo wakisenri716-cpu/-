@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCompanyId } from "@/lib/auth/session";
 import { ensureChartOfAccounts } from "@/lib/accounting/accounts";
 import { createManualJournal, getJournalBook, JournalError } from "@/lib/accounting/journal";
+import { audit } from "@/lib/audit";
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
         memo: l.memo ? String(l.memo) : null,
       })),
     });
+    await audit("仕訳を入力", `${entry.date.toISOString().slice(0, 10)} ${entry.description}`);
     return NextResponse.json(entry, { status: 201 });
   } catch (error) {
     if (error instanceof JournalError) {

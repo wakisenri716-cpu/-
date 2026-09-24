@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, passwordProblem } from "@/lib/auth/password";
 import { adminOr403, PUBLIC_USER_FIELDS, ROLES, toPublicUser } from "@/lib/auth/users";
+import { audit } from "@/lib/audit";
+
+const ROLE_LABELS = { ADMIN: "管理者", ACCOUNTANT: "経理担当", EMPLOYEE: "従業員" } as const;
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await adminOr403();
@@ -39,5 +42,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (active === false || password !== undefined) await tx.session.deleteMany({ where: { userId: id } });
     return updated;
   });
+  const changes = [
+    role ? `権限を${ROLE_LABELS[role]}に変更` : null,
+    active === false ? "利用停止" : active === true ? "利用再開" : null,
+    password !== undefined ? "パスワード再設定" : null,
+  ].filter(Boolean);
+  if (changes.length) await audit("ユーザー変更", `${target.name}: ${changes.join("・")}`);
   return NextResponse.json(toPublicUser(user));
 }

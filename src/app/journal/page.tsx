@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { formatDate, formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
@@ -28,6 +29,8 @@ const SOURCE_LABELS: Record<string, string> = {
   BANK: "銀行明細",
   PAYROLL: "給料",
   REIMBURSEMENT: "立替経費の精算",
+  RECURRING: "定期取引",
+  IMPORT: "CSV取込",
 };
 
 const CATEGORY_LABELS: [string, string][] = [
@@ -148,7 +151,15 @@ export default function JournalPage() {
             すべての仕訳を日付順に確認できます。資本金・借入金・給料など、ほかの画面を通らない取引はここから直接入力します。
           </p>
         </div>
-        <CsvDownloadLink href={`/api/journal/export${month ? `?month=${month}` : ""}`} />
+        <div className="flex gap-2 self-start">
+          <Link
+            href="/journal/import"
+            className="rounded-md border border-indigo-600 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-indigo-700 hover:bg-indigo-50"
+          >
+            CSVから取込
+          </Link>
+          <CsvDownloadLink href={`/api/journal/export${month ? `?month=${month}` : ""}`} />
+        </div>
       </div>
 
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
@@ -370,7 +381,7 @@ export default function JournalPage() {
                       {entry.status === "PENDING_REVIEW" && <span className="ml-1 text-xs text-amber-700">レビュー待ち</span>}
                     </td>
                     <td className="px-4 py-2 text-right whitespace-nowrap">
-                      {entry.sourceType === "MANUAL" && !isVoid && (
+                      {["MANUAL", "RECURRING", "IMPORT"].includes(entry.sourceType) && !isVoid && (
                         <button type="button" onClick={() => handleVoid(entry)} className="text-xs text-rose-600 hover:underline">
                           取消
                         </button>

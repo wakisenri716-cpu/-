@@ -257,3 +257,33 @@ export function SearchIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function RepeatIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M17 3.5 20 6.5l-3 3" />
+      <path d="M4 11.5v-1a4 4 0 0 1 4-4h12" />
+      <path d="M7 20.5 4 17.5l3-3" />
+      <path d="M20 12.5v1a4 4 0 0 1-4 4H4" />
+    </svg>
+  );
+}
+
+export function CashflowIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M7 4v15M3.5 15.5 7 19l3.5-3.5" />
+      <path d="M17 20V5M13.5 8.5 17 5l3.5 3.5" />
+    </svg>
+  );
+}
+
+export function HistoryIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
+      <path d="M3.5 4.5v4h4" />
+      <path d="M12 7.5V12l3 2" />
+    </svg>
+  );
+}

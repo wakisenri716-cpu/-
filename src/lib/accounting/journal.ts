@@ -12,6 +12,8 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
   BANK: "銀行明細",
   PAYROLL: "給料",
   REIMBURSEMENT: "立替経費の精算",
+  RECURRING: "定期取引",
+  IMPORT: "CSV取込",
 };
 
 export type ManualLineInput = { accountId: string; debit: number; credit: number; memo?: string | null };
@@ -22,15 +24,9 @@ function isAmount(n: number) {
   return Number.isInteger(n) && n >= 0;
 }
 
-export async function createManualJournal(
-  companyId: string,
-  input: { date: Date; description: string; lines: ManualLineInput[] },
-) {
-  const description = input.description.trim();
-  if (!description) throw new JournalError("摘要を入力してください");
-  if (Number.isNaN(input.date.getTime())) throw new JournalError("日付を正しく入力してください");
-
-  const lines = input.lines.filter((l) => l.accountId || l.debit || l.credit);
+// 仕訳の行の入力チェック(借方・貸方のどちらか一方に金額、貸借一致、自社の勘定科目)。空の行は無視する。
+export async function validateJournalLines(companyId: string, input: ManualLineInput[]) {
+  const lines = input.filter((l) => l.accountId || l.debit || l.credit);
   if (lines.length < 2) throw new JournalError("仕訳は2行以上入力してください");
   for (const [i, line] of lines.entries()) {
     if (!line.accountId) throw new JournalError(`${i + 1}行目の勘定科目を選択してください`);
@@ -51,6 +47,17 @@ export async function createManualJournal(
   const accountIds = [...new Set(lines.map((l) => l.accountId))];
   const found = await prisma.account.count({ where: { companyId, id: { in: accountIds } } });
   if (found !== accountIds.length) throw new JournalError("存在しない勘定科目が含まれています");
+  return lines;
+}
+
+export async function createManualJournal(
+  companyId: string,
+  input: { date: Date; description: string; lines: ManualLineInput[] },
+) {
+  const description = input.description.trim();
+  if (!description) throw new JournalError("摘要を入力してください");
+  if (Number.isNaN(input.date.getTime())) throw new JournalError("日付を正しく入力してください");
+  const lines = await validateJournalLines(companyId, input.lines);
 
   return prisma.journalEntry.create({
     data: {
@@ -67,12 +74,14 @@ export async function createManualJournal(
   });
 }
 
-// 手入力の仕訳だけを取り消せる。経費・請求書・POS・在庫などの仕訳は元の記録と
+// 手入力・定期取引・CSV取込の仕訳だけを取り消せる。経費・請求書・POS・在庫などの仕訳は元の記録と
 // 紐づいているため、ここで消すと元データと帳簿が食い違ってしまう。
+export const VOIDABLE_SOURCES = ["MANUAL", "RECURRING", "IMPORT"];
+
 export async function voidManualJournal(companyId: string, id: string) {
   const entry = await prisma.journalEntry.findFirst({ where: { id, companyId } });
   if (!entry) throw new JournalError("仕訳が見つかりません");
-  if (entry.sourceType !== "MANUAL") throw new JournalError("手入力した仕訳だけ取り消せます");
+  if (!VOIDABLE_SOURCES.includes(entry.sourceType)) throw new JournalError("手入力・定期取引・CSV取込の仕訳だけ取り消せます");
   if (entry.status === "VOID") throw new JournalError("この仕訳はすでに取り消されています");
   return prisma.journalEntry.update({ where: { id }, data: { status: "VOID" } });
 }
