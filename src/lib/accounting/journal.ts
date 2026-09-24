@@ -11,6 +11,7 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
   MANUAL: "手入力",
   BANK: "銀行明細",
   PAYROLL: "給料",
+  REIMBURSEMENT: "立替経費の精算",
 };
 
 export type ManualLineInput = { accountId: string; debit: number; credit: number; memo?: string | null };

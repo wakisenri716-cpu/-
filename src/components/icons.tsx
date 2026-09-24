@@ -207,3 +207,53 @@ export function PercentIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function QuoteIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M14 3.5H7a1.5 1.5 0 0 0-1.5 1.5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8L14 3.5Z" />
+      <path d="M14 3.5V8h4.5M9 13h6M9 16.5h3.5" />
+    </svg>
+  );
+}
+
+export function TrendIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3.5 20.5h17" />
+      <path d="m4.5 15 4.5-4.5 3.5 3 7-7" />
+      <path d="M15 6.5h4.5V11" />
+    </svg>
+  );
+}
+
+export function CoinsIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <ellipse cx="9" cy="7" rx="5.5" ry="2.5" />
+      <path d="M3.5 7v4c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5V7" />
+      <path d="M9.5 16.4c.8.1 1.6.1 2.5.1 3 0 5.5-1.1 5.5-2.5" />
+      <ellipse cx="15" cy="12" rx="5.5" ry="2.5" />
+      <path d="M9.5 13.9V17c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5v-5" />
+    </svg>
+  );
+}
+
+export function WalletIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18v2.5" />
+      <path d="M4 7.5v10A2.5 2.5 0 0 0 6.5 20h13a1 1 0 0 0 1-1v-9.5a1 1 0 0 0-1-1h-13A2.5 2.5 0 0 1 4 7.5Z" />
+      <path d="M16.5 14h.01" />
+    </svg>
+  );
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="10.5" cy="10.5" r="6" />
+      <path d="m15 15 5.5 5.5" />
+    </svg>
+  );
+}

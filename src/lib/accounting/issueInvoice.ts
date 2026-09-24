@@ -31,12 +31,21 @@ export type IssueInvoiceInput = {
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+export function validDate(value: string) {
+  return DATE.test(value) && !Number.isNaN(Date.parse(value));
+}
+
 function validate(input: IssueInvoiceInput) {
   if (!input.customerName.trim()) throw new InvoiceError("請求先を入力してください");
-  if (!DATE.test(input.issueDate) || Number.isNaN(Date.parse(input.issueDate))) throw new InvoiceError("請求日を正しく入力してください");
-  if (!DATE.test(input.dueDate) || Number.isNaN(Date.parse(input.dueDate))) throw new InvoiceError("支払期限を正しく入力してください");
+  if (!validDate(input.issueDate)) throw new InvoiceError("請求日を正しく入力してください");
+  if (!validDate(input.dueDate)) throw new InvoiceError("支払期限を正しく入力してください");
   if (input.dueDate < input.issueDate) throw new InvoiceError("支払期限は請求日以降にしてください");
-  const lines = input.lines.filter((l) => l.description.trim() || l.unitPrice);
+  return validateLines(input.lines);
+}
+
+// 明細の入力チェック。品目も単価も空の行は無視する(入力画面の空行)。
+export function validateLines(input: InvoiceLineInput[]) {
+  const lines = input.filter((l) => l.description.trim() || l.unitPrice);
   if (lines.length === 0) throw new InvoiceError("明細を1行以上入力してください");
   if (lines.length > 50) throw new InvoiceError("明細は50行までです");
   lines.forEach((l, i) => {
@@ -188,4 +197,27 @@ export async function cancelIssuedInvoice(companyId: string, id: string) {
     }
     return tx.invoice.findUniqueOrThrow({ where: { id } });
   });
+}
+
+// APIで受け取った明細(文字列の数値なども来る)を InvoiceLineInput に揃える
+export function parseLines(raw: unknown): InvoiceLineInput[] {
+  const lines = Array.isArray(raw) ? raw : [];
+  return lines.map((l: Record<string, unknown>) => ({
+    description: String(l?.description ?? ""),
+    quantity: Number(l?.quantity),
+    unit: l?.unit ? String(l.unit) : null,
+    unitPrice: Number(l?.unitPrice),
+    taxRate: Number(l?.taxRate),
+  }));
+}
+
+// 既存の請求書・見積書の明細を、入力画面の初期値(文字列)に変換する(複製用)
+export function toFormLines(lines: { description: string; quantity: number; unit: string | null; unitPrice: number; taxRate: number }[]) {
+  return lines.map((l) => ({
+    description: l.description,
+    quantity: String(l.quantity),
+    unit: l.unit ?? "",
+    unitPrice: String(l.unitPrice),
+    taxRate: String(l.taxRate),
+  }));
 }

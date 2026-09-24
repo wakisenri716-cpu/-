@@ -19,6 +19,7 @@ type ExpenseReport = {
   status: string;
   totalAmount: number;
   createdAt: string;
+  reimbursedAt: string | null;
   employee: { name: string };
   items: ExpenseItem[];
 };
@@ -109,6 +110,9 @@ export default function ExpensesPage() {
               <div className="flex items-center gap-3">
                 <span className="text-sm font-semibold">{formatYen(report.totalAmount)}</span>
                 <StatusBadge status={report.status} />
+                {report.reimbursedAt && (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-emerald-800">精算済み</span>
+                )}
               </div>
             </div>
 
@@ -145,23 +149,29 @@ export default function ExpensesPage() {
               </div>
             )}
 
-            <form onSubmit={(e) => addItem(report.id, e)} className="mt-4 flex flex-wrap items-end gap-3 border-t pt-3">
-              <div>
-                <label className="block text-xs text-slate-500">レシート画像</label>
-                <input type="file" name="receipt" accept="image/*" required className="text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500">金額(任意・上書き)</label>
-                <input type="number" name="amount" className="w-28 rounded border px-2 py-1 text-sm" />
-              </div>
-              <button
-                type="submit"
-                disabled={uploadingFor === report.id}
-                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {uploadingFor === report.id ? "AI解析中..." : "レシートを追加"}
-              </button>
-            </form>
+            {report.reimbursedAt ? (
+              <p className="mt-4 border-t pt-3 text-xs text-slate-500">
+                この経費精算は支払済み({formatDate(report.reimbursedAt)})です。新しいレシートは新しい経費精算に追加してください。
+              </p>
+            ) : (
+              <form onSubmit={(e) => addItem(report.id, e)} className="mt-4 flex flex-wrap items-end gap-3 border-t pt-3">
+                <div>
+                  <label className="block text-xs text-slate-500">レシート画像</label>
+                  <input type="file" name="receipt" accept="image/*" required className="text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500">金額(任意・上書き)</label>
+                  <input type="number" name="amount" className="w-28 rounded border px-2 py-1 text-sm" />
+                </div>
+                <button
+                  type="submit"
+                  disabled={uploadingFor === report.id}
+                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {uploadingFor === report.id ? "AI解析中..." : "レシートを追加"}
+                </button>
+              </form>
+            )}
           </div>
         ))}
       </div>
