@@ -1,5 +1,6 @@
 import { requireCompanyId } from "@/lib/auth/session";
-import { getMonthlyPayroll, postPayroll, voidPayroll } from "@/lib/shifts/service";
+import { getMonthlyPayroll, voidPayroll } from "@/lib/shifts/service";
+import { postPayrollWithDeductions } from "@/lib/payroll/service";
 import { respond } from "@/lib/shifts/http";
 import { audit } from "@/lib/audit";
 
@@ -16,7 +17,8 @@ export async function POST(request: Request) {
   const companyId = await requireCompanyId();
   const body = await request.json().catch(() => ({}));
   return respond(async () => {
-    const result = await postPayroll(companyId, String(body.month ?? ""));
+    // 源泉所得税・社会保険料などの控除を分けて計上する
+    const result = await postPayrollWithDeductions(companyId, String(body.month ?? ""));
     await audit("給料を計上", String(body.month ?? ""));
     return result;
   }, 201);

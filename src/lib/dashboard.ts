@@ -131,9 +131,9 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
     {
       key: "payroll",
       label: `${ly}年${lm}月分の給料が未計上`,
-      detail: "シフト管理から給料として計上してください",
+      detail: "給与計算で控除を確認して、給料として計上してください",
       count: !payroll && lastMonthShifts + lastMonthRecords > 0 ? 1 : 0,
-      href: "/shifts",
+      href: "/payroll",
       tone: "amber",
     },
     { key: "files", label: "期限が近い書類", detail: "契約の更新・満了などの期限が30日以内か、過ぎた書類があります", count: expiringFiles, href: "/files", tone: "amber" },

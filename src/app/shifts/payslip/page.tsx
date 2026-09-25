@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyId } from "@/lib/auth/session";
 import { getPayslip, ShiftError } from "@/lib/shifts/service";
+import { getPayrollSheet } from "@/lib/payroll/service";
 import { formatClock, formatMinutes } from "@/lib/shifts/pay";
 import { formatYen } from "@/lib/format";
 import { PrintButton } from "@/components/PrintButton";
@@ -31,6 +32,8 @@ export default async function PayslipPage({ searchParams }: { searchParams: Prom
   if (!slip) notFound();
   const [y, m] = month.split("-").map(Number);
   const t = slip.total;
+  // 控除(社会保険料・源泉所得税など)と差引支給額。計上済みなら計上したときの金額
+  const d = (await getPayrollSheet(companyId, month)).rows.find((r) => r.staffId === staffId) ?? null;
 
   return (
     <div className="space-y-4">
@@ -88,13 +91,58 @@ export default async function PayslipPage({ searchParams }: { searchParams: Prom
                   <td className="px-2 py-1.5 text-right tabular-nums">{formatYen(Number(value))}</td>
                 </tr>
               ))}
+              {d && d.commute > 0 && (
+                <tr>
+                  <th className="bg-slate-50 px-2 py-1.5 text-left font-medium print:bg-slate-100">通勤手当(非課税)</th>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{formatYen(d.commute)}</td>
+                </tr>
+              )}
               <tr className="border-t-2 border-slate-900">
                 <th className="px-2 py-2 text-left font-semibold">総支給額</th>
-                <td className="px-2 py-2 text-right text-base font-bold tabular-nums">{formatYen(t.total)}</td>
+                <td className="px-2 py-2 text-right text-base font-bold tabular-nums">{formatYen(d ? d.gross : t.total)}</td>
               </tr>
             </tbody>
           </table>
         </div>
+
+        {d && (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 print:grid-cols-2">
+            <table className="w-full text-xs">
+              <caption className="mb-1 text-left text-xs font-semibold text-slate-600">控除</caption>
+              <tbody className="divide-y border-y">
+                {[
+                  ["健康保険料", d.health],
+                  ["介護保険料", d.care],
+                  ["厚生年金保険料", d.pension],
+                  ["雇用保険料", d.employment],
+                  ["所得税", d.incomeTax],
+                  ["住民税", d.residentTax],
+                ].map(([label, value]) => (
+                  <tr key={label}>
+                    <th className="bg-slate-50 px-2 py-1.5 text-left font-medium print:bg-slate-100">{label}</th>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{formatYen(Number(value))}</td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-slate-900">
+                  <th className="px-2 py-2 text-left font-semibold">控除合計</th>
+                  <td className="px-2 py-2 text-right font-bold tabular-nums">{formatYen(d.totalDeductions)}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="flex flex-col justify-end">
+              <div className="rounded-lg border-2 border-slate-900 px-4 py-3">
+                <div className="text-xs text-slate-600">差引支給額(お振込額)</div>
+                <div className="mt-1 text-right text-2xl font-bold tabular-nums">{formatYen(d.netPay)}</div>
+              </div>
+              {d.standardMonthly !== null && (
+                <p className="mt-2 text-[11px] text-slate-500">
+                  標準報酬月額 {formatYen(d.standardMonthly)}
+                  {d.standardEstimated && "(目安)"}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         <table className="mt-8 w-full border-collapse text-xs">
           <caption className="mb-1 text-left text-xs font-semibold text-slate-600">勤務の内訳</caption>
@@ -131,7 +179,7 @@ export default async function PayslipPage({ searchParams }: { searchParams: Prom
           </tbody>
         </table>
         <p className="mt-4 text-[11px] text-slate-500">
-          ※ 源泉所得税・社会保険料・雇用保険料などの控除は含まれていません(総支給額)。日ごとの支給額は四捨五入のため、合計と1円程度ずれることがあります。
+          ※ 日ごとの支給額は四捨五入のため、合計と1円程度ずれることがあります。{!slip.posted && "この月の給料はまだ計上していないため、控除は計算中の金額です。"}
         </p>
       </article>
     </div>
