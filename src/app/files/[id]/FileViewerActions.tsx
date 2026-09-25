@@ -8,6 +8,7 @@ export function FileViewerActions({
   id,
   name,
   memo,
+  expiresOn,
   viewable,
   src,
   back,
@@ -16,6 +17,7 @@ export function FileViewerActions({
   id: string;
   name: string;
   memo: string;
+  expiresOn: string;
   viewable: "pdf" | "image" | null;
   src: string;
   back: string;
@@ -23,6 +25,7 @@ export function FileViewerActions({
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [expiry, setExpiry] = useState(expiresOn);
 
   function print() {
     if (viewable === "pdf") {
@@ -113,6 +116,33 @@ export function FileViewerActions({
           削除
         </button>
       </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          patch({ expiresOn: expiry });
+        }}
+        className="flex flex-wrap items-center gap-2 text-xs text-slate-600"
+      >
+        <label className="flex items-center gap-1">
+          期限
+          <input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} className="rounded border px-1.5 py-1 text-xs text-slate-900" aria-label="書類の期限" />
+        </label>
+        <button type="submit" disabled={expiry === expiresOn} className="rounded border px-2 py-1 hover:bg-slate-50 disabled:opacity-40">
+          保存
+        </button>
+        {expiresOn && (
+          <button
+            type="button"
+            onClick={() => {
+              setExpiry("");
+              patch({ expiresOn: "" });
+            }}
+            className="text-slate-500 hover:underline"
+          >
+            期限をなくす
+          </button>
+        )}
+      </form>
       {viewable === "pdf" && <p className="text-xs text-slate-500">印刷画面が出ないときは「ダウンロード」してから印刷してください。</p>}
       {error && <p className="text-xs text-rose-700">{error}</p>}
     </div>

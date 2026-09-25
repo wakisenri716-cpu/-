@@ -18,6 +18,8 @@ export type DocumentRow = {
   description: string;
   hasFile: boolean;
   href: string | null;
+  // 書類フォルダにコピーできる画像・PDFがあるとき、その種類
+  copyKind: "receipt" | "invoice" | null;
 };
 
 function parse(q: DocumentQuery) {
@@ -87,6 +89,7 @@ export async function searchDocuments(companyId: string, query: DocumentQuery) {
       description: r.description,
       hasFile: !!r.receiptImageUrl,
       href: r.receiptImageUrl ? `/api/documents/file?kind=receipt&id=${r.id}` : null,
+      copyKind: r.receiptImageUrl ? ("receipt" as const) : null,
     })),
     ...invoices.map((i) => ({
       kind: i.direction === "ISSUED" ? ("issued" as const) : ("received" as const),
@@ -97,6 +100,7 @@ export async function searchDocuments(companyId: string, query: DocumentQuery) {
       description: `${i.invoiceNumber ?? "(番号なし)"}${i.status === "CANCELLED" ? "(取消)" : ""}`,
       hasFile: !!i.sourceFileUrl || i._count.lines > 0,
       href: i.sourceFileUrl ? `/api/documents/file?kind=invoice&id=${i.id}` : i._count.lines > 0 ? `/invoices/${i.id}/print` : null,
+      copyKind: i.sourceFileUrl ? ("invoice" as const) : null,
     })),
   ].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
 

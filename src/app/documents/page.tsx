@@ -2,6 +2,7 @@ import { requireCompanyId } from "@/lib/auth/session";
 import { KIND_LABELS, searchDocuments, type DocumentQuery } from "@/lib/documents";
 import { formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
+import { SaveToFolder } from "./SaveToFolder";
 
 export const dynamic = "force-dynamic";
 
@@ -105,9 +106,16 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
                   <td className="min-w-[10rem] px-4 py-2">{r.description}</td>
                   <td className="px-4 py-2 whitespace-nowrap">
                     {r.href ? (
-                      <a href={r.href} target="_blank" rel="noopener noreferrer" className="text-indigo-700 hover:underline">
-                        表示
-                      </a>
+                      <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <a href={r.href} target="_blank" rel="noopener noreferrer" className="text-indigo-700 hover:underline">
+                          表示
+                        </a>
+                        {r.copyKind && (
+                          <span className="print:hidden">
+                            <SaveToFolder kind={r.copyKind} id={r.id} />
+                          </span>
+                        )}
+                      </span>
                     ) : (
                       <span className="text-xs text-slate-400">なし</span>
                     )}

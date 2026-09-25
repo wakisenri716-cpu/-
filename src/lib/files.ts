@@ -62,11 +62,18 @@ export async function folderPath(companyId: string, id: string | null) {
   return path;
 }
 
-const FILE_FIELDS = { id: true, name: true, mimeType: true, size: true, memo: true, uploadedByName: true, createdAt: true, folderId: true } as const;
+const FILE_FIELDS = { id: true, name: true, mimeType: true, size: true, memo: true, uploadedByName: true, createdAt: true, folderId: true, expiresOn: true } as const;
 
-export async function listFolder(companyId: string, folderId: string | null) {
+// 期限が近い(30日以内・過ぎたもの)と知らせる日数
+export const EXPIRY_NOTICE_DAYS = 30;
+
+export function expiringWhere(companyId: string, today: string) {
+  return { companyId, expiresOn: { lt: new Date(Date.parse(`${today}T00:00:00Z`) + (EXPIRY_NOTICE_DAYS + 1) * 86_400_000) } };
+}
+
+export async function listFolder(companyId: string, folderId: string | null, today = new Date().toISOString().slice(0, 10)) {
   const folder = await findFolder(companyId, folderId);
-  const [path, folders, files, usage] = await Promise.all([
+  const [path, folders, files, usage, expiring, labels] = await Promise.all([
     folderPath(companyId, folderId),
     prisma.folder.findMany({
       where: { companyId, parentId: folderId },
@@ -75,13 +82,18 @@ export async function listFolder(companyId: string, folderId: string | null) {
     }),
     prisma.storedFile.findMany({ where: { companyId, folderId }, orderBy: { createdAt: "desc" }, select: FILE_FIELDS }),
     prisma.storedFile.aggregate({ where: { companyId }, _sum: { size: true }, _count: true }),
+    // いちばん上の階層では、期限が近い書類をまとめて出す
+    folderId ? Promise.resolve([]) : prisma.storedFile.findMany({ where: expiringWhere(companyId, today), orderBy: { expiresOn: "asc" }, select: FILE_FIELDS }),
+    folderId ? Promise.resolve([]) : allFolders(companyId),
   ]);
+  const folderLabel = new Map(labels.map((f) => [f.id, f.label]));
   return {
     folder: folder && { id: folder.id, name: folder.name, parentId: folder.parentId },
     path,
     folders: folders.map((f) => ({ id: f.id, name: f.name, folderCount: f._count.children, fileCount: f._count.files })),
     files: files.map((f) => ({ ...f, viewable: viewableOf(f.mimeType) })),
     usage: { bytes: usage._sum.size ?? 0, files: usage._count },
+    expiring: expiring.map((f) => ({ ...f, viewable: viewableOf(f.mimeType), folderLabel: f.folderId ? (folderLabel.get(f.folderId) ?? "") : "" })),
   };
 }
 
@@ -176,6 +188,52 @@ export async function saveFile(companyId: string, input: { file: File; folderId:
   });
 }
 
+const EXTENSIONS: Record<string, string> = { "application/pdf": ".pdf", "image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp" };
+
+// 証憑(経費のレシート・受け取った請求書の画像)を書類フォルダにコピーする。
+// ファイル名は「日付_取引先_金額円」にして、フォルダで見分けやすくする。
+export async function copyDocumentToFolder(companyId: string, input: { kind: string; id: string; folderId: string | null; uploadedByName: string }) {
+  await findFolder(companyId, input.folderId);
+  const source =
+    input.kind === "receipt"
+      ? await prisma.expenseItem.findFirst({
+          where: { id: input.id, expenseReport: { companyId } },
+          select: { receiptImageUrl: true, expenseDate: true, amount: true, description: true, vendor: { select: { name: true } } },
+        })
+      : input.kind === "invoice"
+        ? await prisma.invoice.findFirst({
+            where: { id: input.id, companyId },
+            select: { sourceFileUrl: true, issueDate: true, totalAmount: true, invoiceNumber: true, direction: true, vendor: { select: { name: true } }, customer: { select: { name: true } } },
+          })
+        : null;
+  const uri = source && ("receiptImageUrl" in source ? source.receiptImageUrl : source.sourceFileUrl);
+  const match = uri?.match(/^data:([\w.+-]+\/[\w.+-]+);base64,([A-Za-z0-9+/=\s]+)$/);
+  if (!source || !match) throw new FileError("保存できる証憑の画像が見つかりません");
+  const data = new Uint8Array(Buffer.from(match[2], "base64"));
+  if (data.byteLength > MAX_FILE_BYTES) throw new FileError("証憑の画像が大きすぎるため保存できません(4MBまで)");
+  const mimeType = sniffType(data) ?? "application/octet-stream";
+
+  const date = ("expenseDate" in source ? source.expenseDate : source.issueDate)?.toISOString().slice(0, 10) ?? "日付なし";
+  const party = "expenseDate" in source ? source.vendor?.name : source.direction === "RECEIVED" ? source.vendor?.name : source.customer?.name;
+  const amount = "amount" in source ? source.amount : source.totalAmount;
+  const label = "expenseDate" in source ? "領収書" : `請求書${source.invoiceNumber ? ` ${source.invoiceNumber}` : ""}`;
+  const name = cleanName(`${date}_${party ?? label}_${amount}円${EXTENSIONS[mimeType] ?? ""}`);
+
+  return prisma.storedFile.create({
+    data: {
+      companyId,
+      folderId: input.folderId,
+      name: await uniqueFileName(companyId, input.folderId, name),
+      mimeType,
+      size: data.byteLength,
+      data,
+      memo: `証憑からコピー(${label})`,
+      uploadedByName: input.uploadedByName,
+    },
+    select: FILE_FIELDS,
+  });
+}
+
 export async function getFileMeta(companyId: string, id: string) {
   const file = await prisma.storedFile.findFirst({ where: { id, companyId }, select: FILE_FIELDS });
   return file && { ...file, viewable: viewableOf(file.mimeType), path: await folderPath(companyId, file.folderId) };
@@ -185,7 +243,16 @@ export async function getFileContent(companyId: string, id: string) {
   return prisma.storedFile.findFirst({ where: { id, companyId }, select: { name: true, mimeType: true, data: true } });
 }
 
-export async function updateFile(companyId: string, id: string, input: { name?: unknown; folderId?: unknown; memo?: unknown }) {
+function parseExpiry(value: unknown) {
+  if (value === null || value === "") return null;
+  const text = String(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text) || Number.isNaN(Date.parse(`${text}T00:00:00Z`)) || new Date(`${text}T00:00:00Z`).toISOString().slice(0, 10) !== text) {
+    throw new FileError("期限の日付を正しく入力してください");
+  }
+  return new Date(`${text}T00:00:00Z`);
+}
+
+export async function updateFile(companyId: string, id: string, input: { name?: unknown; folderId?: unknown; memo?: unknown; expiresOn?: unknown }) {
   const file = await prisma.storedFile.findFirst({ where: { id, companyId }, select: { name: true, folderId: true } });
   if (!file) throw new FileError("ファイルが見つかりません");
   const folderId = input.folderId === undefined ? file.folderId : input.folderId ? String(input.folderId) : null;
@@ -195,7 +262,12 @@ export async function updateFile(companyId: string, id: string, input: { name?: 
   const name = requested === file.name && folderId === file.folderId ? file.name : await uniqueFileName(companyId, folderId, requested, id);
   return prisma.storedFile.update({
     where: { id },
-    data: { name, folderId, ...(input.memo !== undefined ? { memo: String(input.memo ?? "").trim().slice(0, 200) || null } : {}) },
+    data: {
+      name,
+      folderId,
+      ...(input.memo !== undefined ? { memo: String(input.memo ?? "").trim().slice(0, 200) || null } : {}),
+      ...(input.expiresOn !== undefined ? { expiresOn: parseExpiry(input.expiresOn) } : {}),
+    },
     select: FILE_FIELDS,
   });
 }

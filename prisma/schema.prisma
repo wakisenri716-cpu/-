@@ -117,6 +117,8 @@ model Company {
   consumptionTaxMethod  String  @default("GENERAL")
   // 簡易課税の事業区分(1〜6種)
   simplifiedBusinessType Int    @default(5)
+  // 経費1件あたりの上限額(これを超える明細は精算・承認の画面で「上限超え」と表示する)。空なら上限なし
+  expenseItemLimit       Int?
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -788,6 +790,8 @@ model StoredFile {
   data           Bytes
   memo           String?
   uploadedByName String
+  // 契約の満了日・更新日など(近づいたらダッシュボードとカレンダーでお知らせ)
+  expiresOn      DateTime?
   createdAt      DateTime @default(now())
 
   @@index([companyId, folderId])

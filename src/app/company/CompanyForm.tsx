@@ -26,6 +26,7 @@ const inputClass = "w-full rounded-md border px-3 py-2 text-sm";
 export function CompanyForm() {
   const [info, setInfo] = useState<Info | null>(null);
   const [approval, setApproval] = useState(false);
+  const [limit, setLimit] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -34,6 +35,7 @@ export function CompanyForm() {
       const body = res.ok ? await res.json() : null;
       setInfo(Object.fromEntries(Object.keys(EMPTY).map((k) => [k, body?.[k] ?? ""])) as Info);
       setApproval(body?.expenseApprovalRequired === true);
+      setLimit(body?.expenseItemLimit ? String(body.expenseItemLimit) : "");
     });
   }, []);
 
@@ -44,7 +46,7 @@ export function CompanyForm() {
     const res = await fetch("/api/company", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...info, expenseApprovalRequired: approval }),
+      body: JSON.stringify({ ...info, expenseApprovalRequired: approval, expenseItemLimit: limit.trim() === "" ? null : Number(limit) }),
     });
     const body = await res.json();
     setSaving(false);
@@ -102,6 +104,19 @@ export function CompanyForm() {
                 オンにすると、従業員が「申請する」を押し、管理者・経理担当が承認した経費精算だけを精算(支払)できます。差戻しもできます。
               </span>
             </span>
+          </label>
+          <label className="block text-sm text-slate-700">
+            経費1件あたりの上限(円)
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={limit}
+              onChange={(e) => setLimit(e.target.value)}
+              placeholder="例: 30000(空欄なら上限なし)"
+              className={`${inputClass} mt-1 sm:w-64`}
+            />
+            <span className="mt-1 block text-xs text-slate-500">この金額を超えるレシートは、経費精算・立替経費の精算の画面に「上限超え」と表示します(精算は止めません。承認のときの確認に使います)。</span>
           </label>
           <div className="flex justify-end">
             <button type="submit" disabled={saving} className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">

@@ -14,6 +14,7 @@ type Row = {
   state: "PAID" | "REVIEWING" | "READY" | "NOTHING" | "AWAITING_APPROVAL";
   approvalStatus: "DRAFT" | "SUBMITTED" | "APPROVED" | "RETURNED";
   approvedByName: string | null;
+  overLimit: number;
   returnComment: string | null;
   reimbursedOn: string | null;
 };
@@ -166,6 +167,7 @@ export default function ReimbursementsPage() {
                     <td className="px-4 py-2 whitespace-nowrap">{formatDate(r.createdAt)}</td>
                     <td className="px-4 py-2 text-right whitespace-nowrap">
                       {r.itemCount}件{r.pending > 0 && <span className="text-xs text-amber-700">(レビュー待ち{r.pending})</span>}
+                      {r.overLimit > 0 && <span className="ml-1 rounded bg-amber-100 px-1 text-[11px] font-medium text-amber-800">上限超え{r.overLimit}件</span>}
                     </td>
                     <td className="px-4 py-2 text-right font-medium tabular-nums whitespace-nowrap">{formatYen(r.amount)}</td>
                     <td className="px-4 py-2 whitespace-nowrap">

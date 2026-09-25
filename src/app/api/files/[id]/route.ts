@@ -28,7 +28,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const body = await request.json().catch(() => ({}));
   try {
     const file = await updateFile(companyId, id, body);
-    await audit(body.folderId !== undefined ? "ファイルを移動" : "ファイルの情報を変更", file.name);
+    await audit(body.folderId !== undefined ? "ファイルを移動" : body.expiresOn !== undefined ? "書類の期限を設定" : "ファイルの情報を変更", file.name);
     return NextResponse.json(file);
   } catch (error) {
     if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 400 });
