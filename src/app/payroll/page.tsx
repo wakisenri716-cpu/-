@@ -64,7 +64,7 @@ function shift(month: string, delta: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-const cell = "px-3 py-2 text-right tabular-nums whitespace-nowrap";
+const cell = "px-2.5 py-2 text-right tabular-nums whitespace-nowrap";
 const RATE_LABELS: [keyof Rates, string][] = [
   ["health", "健康保険"],
   ["care", "介護保険(40〜64歳)"],
@@ -154,11 +154,8 @@ export default function PayrollPage() {
               <thead className="bg-slate-50 text-xs whitespace-nowrap text-slate-500">
                 <tr>
                   <th className="px-3 py-2 text-left">スタッフ</th>
-                  <th className={cell}>給与</th>
-                  <th className={cell}>通勤手当</th>
-                  <th className={cell}>健康保険</th>
-                  <th className={cell}>介護保険</th>
-                  <th className={cell}>厚生年金</th>
+                  <th className={cell}>総支給額</th>
+                  <th className={cell}>社会保険料</th>
                   <th className={cell}>雇用保険</th>
                   <th className={cell}>源泉所得税</th>
                   <th className={cell}>住民税</th>
@@ -170,18 +167,31 @@ export default function PayrollPage() {
               <tbody className="divide-y">
                 {sheet.rows.map((r) => (
                   <tr key={r.staffId} className="align-top">
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <div className="font-medium">{r.name}</div>
+                    <td className="min-w-[8rem] px-3 py-2">
+                      <div className="font-medium whitespace-nowrap">{r.name}</div>
                       <div className="text-xs text-slate-500">
                         {r.days}日・{r.taxColumn === "OTSU" ? "乙欄" : `甲欄 扶養${r.dependents}人`}
-                        {r.standardMonthly !== null && ` ・標準報酬 ${(r.standardMonthly / 1000).toLocaleString("ja-JP")}千円${r.standardEstimated ? "(目安)" : ""}`}
+                        {r.standardMonthly !== null && (
+                          <span className="block">
+                            標準報酬 {(r.standardMonthly / 1000).toLocaleString("ja-JP")}千円{r.standardEstimated ? "(目安)" : ""}
+                          </span>
+                        )}
                       </div>
                     </td>
-                    <td className={cell}>{formatYen(r.wages)}</td>
-                    <td className={cell}>{r.commute ? formatYen(r.commute) : "-"}</td>
-                    <td className={cell}>{r.health ? formatYen(r.health) : "-"}</td>
-                    <td className={cell}>{r.care ? formatYen(r.care) : "-"}</td>
-                    <td className={cell}>{r.pension ? formatYen(r.pension) : "-"}</td>
+                    <td className={cell}>
+                      {formatYen(r.gross)}
+                      {r.commute > 0 && <div className="text-[11px] text-slate-500">うち通勤 {r.commute.toLocaleString("ja-JP")}</div>}
+                    </td>
+                    <td className={cell}>
+                      {r.health + r.care + r.pension ? formatYen(r.health + r.care + r.pension) : "-"}
+                      {r.health + r.care + r.pension > 0 && (
+                        <div className="text-[11px] leading-tight text-slate-500">
+                          <div>健保 {r.health.toLocaleString("ja-JP")}</div>
+                          {r.care > 0 && <div>介護 {r.care.toLocaleString("ja-JP")}</div>}
+                          <div>年金 {r.pension.toLocaleString("ja-JP")}</div>
+                        </div>
+                      )}
+                    </td>
                     <td className={cell}>{r.employment ? formatYen(r.employment) : "-"}</td>
                     <td className={cell}>
                       {sheet.posted ? (
@@ -237,7 +247,7 @@ export default function PayrollPage() {
                 ))}
                 {sheet.rows.length === 0 && (
                   <tr>
-                    <td colSpan={12} className="px-4 py-6 text-center text-slate-400">
+                    <td colSpan={9} className="px-4 py-6 text-center text-slate-400">
                       この月のシフト・打刻がありません。シフト管理で登録してください。
                     </td>
                   </tr>
@@ -247,7 +257,9 @@ export default function PayrollPage() {
                 <tfoot className="border-t-2 bg-slate-50 font-semibold">
                   <tr>
                     <td className="px-3 py-2">合計</td>
-                    {(["wages", "commute", "health", "care", "pension", "employment", "incomeTax", "residentTax", "totalDeductions", "netPay"] as const).map((k) => (
+                    <td className={cell}>{formatYen(t.gross)}</td>
+                    <td className={cell}>{formatYen(t.health + t.care + t.pension)}</td>
+                    {(["employment", "incomeTax", "residentTax", "totalDeductions", "netPay"] as const).map((k) => (
                       <td key={k} className={cell}>
                         {formatYen(t[k])}
                       </td>
