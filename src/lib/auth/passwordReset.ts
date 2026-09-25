@@ -18,11 +18,14 @@ export async function requestPasswordReset(emailInput: unknown, baseUrl: string)
   if (!email || mailMode() === "test") return;
   const user = await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" }, active: true } });
   if (!user) return;
-  const recent = await prisma.passwordReset.count({ where: { userId: user.id, createdAt: { gte: new Date(Date.now() - 3_600_000) } } });
-  if (recent >= MAX_PER_HOUR) return;
-
   const token = randomBytes(32).toString("base64url");
-  await prisma.passwordReset.create({ data: { userId: user.id, tokenHash: hash(token), expiresAt: new Date(Date.now() + VALID_MINUTES * 60_000) } });
+  const created = await prisma.passwordReset.create({ data: { userId: user.id, tokenHash: hash(token), expiresAt: new Date(Date.now() + VALID_MINUTES * 60_000) } });
+  // 1時間に送れる数を超えたら取り消す(作ってから数えるので、同時に何回押されても上限を超えない)
+  const recent = await prisma.passwordReset.count({ where: { userId: user.id, createdAt: { gte: new Date(Date.now() - 3_600_000) } } });
+  if (recent > MAX_PER_HOUR) {
+    await prisma.passwordReset.delete({ where: { id: created.id } });
+    return;
+  }
   const intro = [`${user.name} さん`, "", "経理AIのパスワード再設定のご依頼を受け付けました。", `下記のリンクから、${VALID_MINUTES}分以内に新しいパスワードを設定してください。`, ""];
   const outro = ["", "このメールに心当たりがない場合は、何もしなくて大丈夫です(パスワードは変わりません)。"];
   await sendMail({
