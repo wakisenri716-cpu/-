@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { formatDate, formatYen } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PrintButton } from "@/components/PrintButton";
 
 type Invoice = {
   id: string;
@@ -104,7 +105,10 @@ export default function InvoicesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">請求書</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-semibold">請求書</h1>
+          <PrintButton variant="outline" />
+        </div>
         <p className="mt-1 text-sm text-slate-600">{activeTab.hint}</p>
       </div>
 
@@ -138,7 +142,7 @@ export default function InvoicesPage() {
         </Link>
       )}
 
-      <form onSubmit={handleUpload} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white shadow-sm p-4">
+      <form onSubmit={handleUpload} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white shadow-sm p-4 print:hidden">
         <div>
           <label className="block text-xs text-slate-500">請求書ファイル(画像)</label>
           <input type="file" name="file" accept="image/*" required className="text-sm" />

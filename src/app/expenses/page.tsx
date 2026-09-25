@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { formatDate, formatYen } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PrintButton } from "@/components/PrintButton";
 
 type ExpenseItem = {
   id: string;
@@ -104,7 +105,10 @@ export default function ExpensesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">経費精算</h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-semibold">経費精算</h1>
+            <PrintButton variant="outline" />
+          </div>
           <p className="mt-1 text-sm text-slate-600">
             レシート画像をアップロードすると、AIが勘定科目・金額を読み取り、信頼度が高ければ自動で仕訳を記帳します。
           </p>
@@ -134,6 +138,9 @@ export default function ExpensesPage() {
                 <span className="text-sm font-semibold">{formatYen(report.totalAmount)}</span>
                 {/* 承認フローを使う会社では、申請・承認の状態だけを出す(記帳の状態と紛らわしいため) */}
                 {!approvalRequired && <StatusBadge status={report.status} />}
+                <a href={`/expenses/${report.id}/print`} className="text-xs whitespace-nowrap text-indigo-700 hover:underline print:hidden">
+                  精算書を印刷
+                </a>
                 {report.reimbursedAt && (
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-emerald-800">精算済み</span>
                 )}
@@ -203,7 +210,7 @@ export default function ExpensesPage() {
                 この経費精算は支払済み({formatDate(report.reimbursedAt)})です。新しいレシートは新しい経費精算に追加してください。
               </p>
             ) : (
-              <form onSubmit={(e) => addItem(report.id, e)} className="mt-4 flex flex-wrap items-end gap-3 border-t pt-3">
+              <form onSubmit={(e) => addItem(report.id, e)} className="mt-4 flex flex-wrap items-end gap-3 border-t pt-3 print:hidden">
                 <div>
                   <label className="block text-xs text-slate-500">レシート画像</label>
                   <input type="file" name="receipt" accept="image/*" required className="text-sm" />

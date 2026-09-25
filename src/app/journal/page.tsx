@@ -244,14 +244,14 @@ export default function JournalPage() {
           >
             CSVから取込
           </Link>
-          <CsvDownloadLink href={`/api/journal/export${query ? `?${query}` : ""}`} />
+          <CsvDownloadLink href={`/api/journal/export${query ? `?${query}` : ""}`} print />
         </div>
       </div>
 
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
       {message && <div className="rounded-md bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{message}</div>}
 
-      <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm print:hidden">
         <h2 className="font-semibold">仕訳を入力</h2>
         <div className="flex flex-wrap gap-2">
           <span className="self-center text-xs text-slate-500">よく使う仕訳:</span>
@@ -470,7 +470,7 @@ export default function JournalPage() {
             e.preventDefault();
             setApplied(search);
           }}
-          className="grid gap-2 border-b bg-slate-50/60 px-4 py-3 sm:grid-cols-2 lg:grid-cols-[2fr_2fr_1.4fr_1.4fr_auto]"
+          className="grid gap-2 border-b bg-slate-50/60 px-4 py-3 sm:grid-cols-2 lg:grid-cols-[2fr_2fr_1.4fr_1.4fr_auto] print:hidden"
         >
           <input
             value={search.q}

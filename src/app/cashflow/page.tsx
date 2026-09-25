@@ -1,6 +1,7 @@
 import { requireCompanyId } from "@/lib/auth/session";
 import { getCashflow, type CashItem, type CashMonth } from "@/lib/accounting/cashflow";
 import { formatYen } from "@/lib/format";
+import { PrintButton } from "@/components/PrintButton";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,10 @@ export default async function CashflowPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">資金繰り予測</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-semibold">資金繰り予測</h1>
+          <PrintButton variant="outline" />
+        </div>
         <p className="mt-1 text-sm text-slate-600">
           今日の現預金(現金+普通預金)に、請求書の入金予定・支払予定、定期取引、立替経費の精算を足し引きして、この先3か月の残高を見込みます。
         </p>

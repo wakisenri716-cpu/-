@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatDate, formatYen } from "@/lib/format";
+import { PrintButton } from "@/components/PrintButton";
 
 type Row = {
   id: string;
@@ -101,7 +102,10 @@ export default function ReimbursementsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">立替経費の精算</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-semibold">立替経費の精算</h1>
+          <PrintButton variant="outline" />
+        </div>
         <p className="mt-1 text-sm text-slate-600">
           従業員が立て替えた経費(経費精算で記帳済みのもの)を本人に支払ったら「精算する」を押します。「未払金 / 普通預金(または現金)」の仕訳を記帳します。
         </p>
@@ -124,7 +128,7 @@ export default function ReimbursementsPage() {
         </section>
       )}
 
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm print:hidden">
         <label className="text-xs text-slate-500">
           支払日
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 block rounded-md border px-2 py-1.5 text-sm text-slate-900" />

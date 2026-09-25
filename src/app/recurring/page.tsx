@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { formatYen } from "@/lib/format";
+import { PrintButton } from "@/components/PrintButton";
 
 type Account = { id: string; code: string; name: string };
 type Entry = {
@@ -138,7 +139,10 @@ export default function RecurringPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">定期取引</h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-semibold">定期取引</h1>
+            <PrintButton variant="outline" />
+          </div>
           <p className="mt-1 text-sm text-slate-600">
             家賃・リース料・借入金の返済など、毎月同じ金額の取引を登録しておくと、記帳日が来たらボタン1つで仕訳を記帳できます。
           </p>
