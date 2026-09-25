@@ -26,6 +26,8 @@ export function BillingDocument(props: {
   lines: Line[];
   calc: ReturnType<typeof calcInvoice>;
   notes: string | null;
+  // 訂正版の請求書なら、訂正した元の請求書
+  correction?: { originalNumber: string; originalDate: Date | null; reason: string | null } | null;
 }) {
   const { kind, company, lines, calc } = props;
   const invoice = kind === "invoice";
@@ -35,7 +37,10 @@ export function BillingDocument(props: {
   return (
     <article className="mx-auto max-w-[210mm] bg-white p-5 text-[13px] leading-relaxed text-slate-900 shadow-sm ring-1 ring-slate-200 sm:p-12 print:max-w-none print:p-0 print:shadow-none print:ring-0">
       <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <h1 className="text-2xl font-bold tracking-[0.3em] whitespace-nowrap sm:text-3xl">{text.title}</h1>
+        <h1 className="text-2xl font-bold tracking-[0.3em] whitespace-nowrap sm:text-3xl">
+          {text.title}
+          {props.correction && <span className="ml-2 align-middle text-sm font-semibold tracking-normal">(訂正版)</span>}
+        </h1>
         <dl className="text-right text-xs whitespace-nowrap">
           <div>
             <dt className="inline text-slate-500">{text.number} </dt>
@@ -47,6 +52,13 @@ export function BillingDocument(props: {
           </div>
         </dl>
       </header>
+
+      {props.correction && (
+        <p className="mt-4 border border-slate-400 px-3 py-2 text-xs">
+          本書は、{jpDate(props.correction.originalDate)}付 請求書(No. {props.correction.originalNumber})を訂正したものです。先にお送りした請求書は破棄してください。
+          {props.correction.reason && <span className="block">訂正の理由: {props.correction.reason}</span>}
+        </p>
+      )}
 
       <section className="mt-8 flex flex-col gap-6 sm:flex-row sm:justify-between print:flex-row print:justify-between">
         <div>
