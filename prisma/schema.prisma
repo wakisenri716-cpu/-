@@ -119,6 +119,10 @@ model Company {
   simplifiedBusinessType Int    @default(5)
   // 経費1件あたりの上限額(これを超える明細は精算・承認の画面で「上限超え」と表示する)。空なら上限なし
   expenseItemLimit       Int?
+  // メールの返信先(請求書などを送るときの Reply-To と、本文の署名に使う)
+  email                  String?
+  // 毎朝、管理者に「やること」をメールで知らせる
+  dailyDigest            Boolean @default(false)
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -144,6 +148,7 @@ model Company {
   recurringInvoices RecurringInvoice[]
   departments      Department[]
   journalTemplates JournalTemplate[]
+  emailLogs        EmailLog[]
   folders          Folder[]
   storedFiles      StoredFile[]
   recurringEntries RecurringEntry[]
@@ -173,6 +178,7 @@ model User {
 
   expenseReports ExpenseReport[]
   sessions       Session[]
+  passwordResets PasswordReset[]
 }
 
 // ログインセッション。ブラウザのクッキーには推測できないランダムなトークンだけを入れ、
@@ -230,6 +236,8 @@ model Customer {
   companyId  String
   company    Company  @relation(fields: [companyId], references: [id])
   name       String
+  // 請求書・見積書をメールで送るときの宛先(前回入力したものを覚えておく)
+  email      String?
   createdAt  DateTime @default(now())
 
   invoices   Invoice[]
@@ -286,6 +294,8 @@ model Invoice {
   direction       InvoiceDirection
   status          InvoiceStatus     @default(DRAFT)
   invoiceNumber   String?
+  // メールで送った相手がログインせずに見られる共有リンクの鍵(送るときに作る)
+  shareToken      String?           @unique
   vendorId        String?
   vendor          Vendor?           @relation(fields: [vendorId], references: [id])
   customerId      String?
@@ -350,6 +360,7 @@ model Quote {
   companyId      String
   company        Company     @relation(fields: [companyId], references: [id])
   quoteNumber    String
+  shareToken     String?     @unique
   customerId     String
   customer       Customer    @relation(fields: [customerId], references: [id])
   issueDate      DateTime
@@ -795,4 +806,37 @@ model StoredFile {
   createdAt      DateTime @default(now())
 
   @@index([companyId, folderId])
+}
+
+// 送ったメールの記録(テストモードで送らなかったものも残す)
+model EmailLog {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id])
+  // INVOICE / QUOTE / REMINDER / PASSWORD_RESET / DIGEST / TEST
+  kind       String
+  to         String
+  subject    String
+  body       String
+  // SENT(送信済み) / FAILED(失敗) / TEST(テストモードのため送っていない)
+  status     String
+  error      String?
+  relatedId  String?
+  sentByName String
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, createdAt])
+}
+
+// パスワード再設定のリンク。鍵そのものは保存せず、ハッシュだけ持つ(1時間・1回だけ有効)
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }

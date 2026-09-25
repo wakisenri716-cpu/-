@@ -130,6 +130,11 @@ function LoginFormInner({ mode }: Props) {
         >
           {submitting ? "処理中..." : setup ? "管理者を作成してはじめる" : "ログイン"}
         </button>
+        {!setup && (
+          <a href="/forgot-password" className="block text-center text-xs text-indigo-700 hover:underline">
+            パスワードを忘れた方
+          </a>
+        )}
       </form>
       )}
     </div>

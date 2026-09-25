@@ -4,7 +4,21 @@ import { NextResponse, type NextRequest } from "next/server";
 // データを読み書きする直前の requireUser()/requireCompanyId() でデータベースと照合する。
 const SESSION_COOKIE = "session";
 // ホーム画面に追加するためのマニフェストとアイコンも、ログイン前に読めるようにする
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/setup", "/api/seed", "/manifest.webmanifest", "/pwa-icon"];
+// メールで送った書類の共有リンク(/share)とパスワード再設定、毎朝のお知らせ(CRON_SECRET で守る)もログインなしで使う
+const PUBLIC_PATHS = [
+  "/login",
+  "/api/auth/login",
+  "/api/auth/setup",
+  "/api/seed",
+  "/manifest.webmanifest",
+  "/pwa-icon",
+  "/share",
+  "/forgot-password",
+  "/reset-password",
+  "/api/auth/forgot",
+  "/api/auth/reset",
+  "/api/cron",
+];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

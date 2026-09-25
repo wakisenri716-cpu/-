@@ -4,6 +4,7 @@ import { requireCompanyId } from "@/lib/auth/session";
 import { getQuote } from "@/lib/accounting/quotes";
 import { BillingDocument } from "@/components/BillingDocument";
 import { QuoteActions } from "@/components/QuoteActions";
+import { SendMailButton } from "@/components/SendMailButton";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,12 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
         <Link href="/quotes" className="text-sm text-indigo-700 hover:underline">
           ← 見積書一覧
         </Link>
-        <div className="flex-1">
+        <div className="flex-1 space-y-2">
+          {quote.status !== "CANCELLED" && (
+            <div className="flex justify-end">
+              <SendMailButton kind="quote" id={quote.id} />
+            </div>
+          )}
           <QuoteActions quoteId={quote.id} status={quote.status} />
         </div>
       </div>

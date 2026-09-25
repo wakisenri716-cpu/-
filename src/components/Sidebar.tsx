@@ -32,6 +32,7 @@ import {
   GaugeIcon,
   FolderIcon,
   FileIcon,
+  MailIcon,
   SearchIcon,
   ShieldIcon,
   StoreIcon,
@@ -128,6 +129,7 @@ function sectionsFor(role: Role): NavSection[] {
               { href: "/accounts", label: "勘定科目", icon: BookIcon },
               { href: "/closing", label: "締め処理", icon: LockIcon },
               { href: "/backup", label: "データのバックアップ", icon: DownloadIcon },
+              { href: "/email", label: "メール設定・送信履歴", icon: MailIcon },
             ]),
         ...(role === "ADMIN"
           ? [
