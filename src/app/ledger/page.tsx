@@ -77,7 +77,7 @@ export default async function LedgerPage({
                   {ledger.entries.map((entry) => (
                     <tr key={entry.id}>
                       <td className="px-4 py-2 whitespace-nowrap">{formatDate(entry.date)}</td>
-                      <td className="px-4 py-2">{entry.description}</td>
+                      <td className="min-w-[10rem] px-4 py-2">{entry.description}</td>
                       <td className="px-4 py-2 text-right">{entry.debit > 0 ? formatYen(entry.debit) : ""}</td>
                       <td className="px-4 py-2 text-right">{entry.credit > 0 ? formatYen(entry.credit) : ""}</td>
                       <td className="px-4 py-2 text-right font-medium">{formatYen(entry.balance)}</td>
