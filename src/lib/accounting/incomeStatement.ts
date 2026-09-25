@@ -15,7 +15,7 @@ export async function getIncomeStatement(companyId: string, range: DateRange = {
 }
 
 // 1年前の同じ日(2/29 は 2/28 にする)
-function lastYear(key: string) {
+export function lastYear(key: string) {
   const [y, m, d] = key.split("-").map(Number);
   const last = new Date(Date.UTC(y - 1, m, 0)).getUTCDate();
   return `${y - 1}-${String(m).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;

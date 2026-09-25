@@ -42,7 +42,7 @@ export default async function DepartmentsPage({ searchParams }: { searchParams: 
           <p className="mt-1 text-sm text-slate-600">店舗・事業部などの部門ごとに、売上・費用・利益を並べます。仕訳に部門を付けておくと集計されます。</p>
           <p className="mt-1 text-sm font-medium text-slate-800">{period.label}</p>
         </div>
-        <CsvDownloadLink href={`/api/departments/export?${periodQuery(period)}`} />
+        <CsvDownloadLink href={`/api/departments/export?${periodQuery(period)}`} print />
       </div>
 
       <PeriodPicker path="/departments" period={period} />

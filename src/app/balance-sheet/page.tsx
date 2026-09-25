@@ -40,7 +40,7 @@ export default async function BalanceSheetPage({ searchParams }: { searchParams:
           >
             {balanced ? "資産 = 負債+純資産" : "資産 ≠ 負債+純資産"}
           </span>
-          <CsvDownloadLink href={`/api/balance-sheet/export?asOf=${asOf}`} />
+          <CsvDownloadLink href={`/api/balance-sheet/export?asOf=${asOf}`} print />
         </div>
       </div>
 

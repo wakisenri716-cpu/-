@@ -111,6 +111,12 @@ model Company {
   invoiceNote      String?
   // この日までの帳簿は締め済み(この日以前の日付の仕訳は、データベースのトリガーで追加・変更・削除できない)
   booksClosedThrough DateTime?
+  // 経費精算を「申請→承認」してから精算する(オンにすると、承認されていない経費精算は精算できない)
+  expenseApprovalRequired Boolean @default(false)
+  // 消費税の計算方法: GENERAL(原則課税) / SIMPLIFIED(簡易課税) / TWENTY_PERCENT(2割特例)
+  consumptionTaxMethod  String  @default("GENERAL")
+  // 簡易課税の事業区分(1〜6種)
+  simplifiedBusinessType Int    @default(5)
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -135,6 +141,7 @@ model Company {
   budgets          Budget[]
   recurringInvoices RecurringInvoice[]
   departments      Department[]
+  journalTemplates JournalTemplate[]
   recurringEntries RecurringEntry[]
   auditLogs        AuditLog[]
 }
@@ -238,6 +245,11 @@ model ExpenseReport {
   reimbursedAt         DateTime?
   reimbursementEntryId String?       @unique
   reimbursementEntry   JournalEntry? @relation("ExpenseReimbursement", fields: [reimbursementEntryId], references: [id])
+  // 承認フロー: DRAFT(作成中) / SUBMITTED(申請中) / APPROVED(承認済み) / RETURNED(差戻し)
+  approvalStatus String    @default("DRAFT")
+  approvedAt     DateTime?
+  approvedByName String?
+  returnComment  String?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
@@ -729,6 +741,19 @@ model Department {
   createdAt DateTime @default(now())
 
   journalEntries JournalEntry[]
+
+  @@unique([companyId, name])
+}
+
+// よく使う仕訳のひな形(会社ごとに登録)。lines は [{ accountId, debit, credit, memo }] の JSON。
+model JournalTemplate {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  name        String
+  description String
+  lines       Json
+  createdAt   DateTime @default(now())
 
   @@unique([companyId, name])
 }

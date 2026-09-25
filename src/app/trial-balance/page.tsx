@@ -50,7 +50,7 @@ export default async function TrialBalancePage({ searchParams }: { searchParams:
           >
             {balanced ? "借方・貸方 一致" : "借方・貸方 不一致"}
           </span>
-          <CsvDownloadLink href={`/api/trial-balance/export?asOf=${asOf}`} />
+          <CsvDownloadLink href={`/api/trial-balance/export?asOf=${asOf}`} print />
         </div>
       </div>
 

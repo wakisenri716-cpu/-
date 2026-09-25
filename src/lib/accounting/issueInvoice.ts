@@ -157,6 +157,7 @@ export type CompanyInfoInput = {
   phone: string;
   bankAccount: string;
   invoiceNote: string;
+  expenseApprovalRequired?: boolean;
 };
 
 export async function updateCompanyInfo(companyId: string, input: CompanyInfoInput) {
@@ -176,6 +177,7 @@ export async function updateCompanyInfo(companyId: string, input: CompanyInfoInp
       phone: clean(input.phone),
       bankAccount: clean(input.bankAccount),
       invoiceNote: clean(input.invoiceNote),
+      ...(typeof input.expenseApprovalRequired === "boolean" ? { expenseApprovalRequired: input.expenseApprovalRequired } : {}),
     },
   });
 }

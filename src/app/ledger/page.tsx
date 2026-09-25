@@ -3,6 +3,7 @@ import { getAccountBalances, getAccountLedger } from "@/lib/accounting/ledger";
 import { requireCompanyId } from "@/lib/auth/session";
 import { formatDate, formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
+import { BalanceChart } from "@/components/BalanceChart";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,10 @@ export default async function LedgerPage({
   const accounts = await getAccountBalances(companyId);
   const selectedAccountId = accountId ?? accounts.find((row) => row.totalDebit > 0 || row.totalCredit > 0)?.account.id;
   const ledger = selectedAccountId ? await getAccountLedger(companyId, selectedAccountId) : null;
+  // 日ごとの最終残高(グラフ用)
+  const daily = new Map<string, number>();
+  for (const e of ledger?.entries ?? []) daily.set(e.date.toISOString().slice(0, 10), e.balance);
+  const points = [...daily].map(([date, balance]) => ({ date, balance }));
 
   return (
     <div className="space-y-6">
@@ -25,7 +30,7 @@ export default async function LedgerPage({
       </div>
 
       <div className="flex flex-col gap-6 sm:flex-row">
-        <aside className="flex gap-1 overflow-x-auto sm:w-56 sm:shrink-0 sm:flex-col sm:space-y-1 sm:overflow-visible">
+        <aside className="flex gap-1 overflow-x-auto sm:w-56 sm:shrink-0 sm:flex-col sm:space-y-1 sm:overflow-visible print:hidden">
           {accounts.map((row) => (
             <Link
               key={row.account.id}
@@ -44,18 +49,19 @@ export default async function LedgerPage({
             <p className="text-sm text-slate-400">勘定科目を選択してください。</p>
           ) : (
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
                 <h2 className="font-medium">
                   {ledger.account.code} {ledger.account.name}
                 </h2>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <span className="text-sm">
                     残高: <span className="font-semibold">{formatYen(ledger.closingBalance)}</span>{" "}
                     <span className="text-xs text-slate-400">({ledger.normalSide === "DEBIT" ? "借方" : "貸方"})</span>
                   </span>
-                  <CsvDownloadLink href={`/api/ledger/export?accountId=${ledger.account.id}`} />
+                  <CsvDownloadLink href={`/api/ledger/export?accountId=${ledger.account.id}`} print />
                 </div>
               </div>
+              <BalanceChart points={points} label={`${ledger.account.code} ${ledger.account.name}`} />
               <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
@@ -71,7 +77,7 @@ export default async function LedgerPage({
                   {ledger.entries.map((entry) => (
                     <tr key={entry.id}>
                       <td className="px-4 py-2 whitespace-nowrap">{formatDate(entry.date)}</td>
-                      <td className="px-4 py-2">{entry.description}</td>
+                      <td className="min-w-[10rem] px-4 py-2">{entry.description}</td>
                       <td className="px-4 py-2 text-right">{entry.debit > 0 ? formatYen(entry.debit) : ""}</td>
                       <td className="px-4 py-2 text-right">{entry.credit > 0 ? formatYen(entry.credit) : ""}</td>
                       <td className="px-4 py-2 text-right font-medium">{formatYen(entry.balance)}</td>

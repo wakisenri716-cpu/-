@@ -33,3 +33,17 @@ tbody tr:hover {
   size: A4;
   margin: 15mm;
 }
+
+/* 帳票を印刷するとき、横スクロールの表が途中で切れないようにする */
+@media print {
+  .overflow-x-auto,
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+  table {
+    font-size: 11px;
+  }
+  tr {
+    break-inside: avoid;
+  }
+}
