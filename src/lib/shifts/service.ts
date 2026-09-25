@@ -214,11 +214,12 @@ export async function getWeek(companyId: string, weekStart: string) {
 }
 
 // 退勤まで打刻された日は打刻の実績で、打刻のない日はシフトの予定で人件費を計算する
-export async function getMonthlyPayroll(companyId: string, month: string) {
+// その月のスタッフ×日の勤務。退勤まで打刻された日は打刻の実績、打刻のない日はシフトの予定を使う。
+async function collectMonthDays(companyId: string, month: string, staffId?: string) {
   const range = monthRange(month);
   const [shifts, records] = await Promise.all([
-    prisma.shift.findMany({ where: { companyId, date: range }, include: { staff: true } }),
-    prisma.timeRecord.findMany({ where: { companyId, date: range, clockOut: { not: null } }, include: { staff: true } }),
+    prisma.shift.findMany({ where: { companyId, date: range, ...(staffId ? { staffId } : {}) }, include: { staff: true } }),
+    prisma.timeRecord.findMany({ where: { companyId, date: range, clockOut: { not: null }, ...(staffId ? { staffId } : {}) }, include: { staff: true } }),
   ]);
   const days = groupShifts(shifts);
   const actualKeys = new Set<string>();
@@ -230,6 +231,30 @@ export async function getMonthlyPayroll(companyId: string, month: string) {
     }
     days.get(key)!.times.push(recordTimes(r));
   }
+  return { days, actualKeys };
+}
+
+// 給与明細: 1人・1か月の日ごとの勤務時間と支給額(源泉所得税・社会保険料などの控除は含まない)
+export async function getPayslip(companyId: string, staffId: string, month: string) {
+  const staff = await prisma.staff.findFirst({ where: { id: staffId, companyId } });
+  if (!staff) throw new ShiftError("スタッフが見つかりません");
+  const { days, actualKeys } = await collectMonthDays(companyId, month, staffId);
+  const rows = [...days.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, day]) => {
+      const pay = dailyPay(day.times, staff.hourlyWage);
+      const first = Math.min(...day.times.map((t) => t.startMinutes));
+      const last = Math.max(...day.times.map((t) => t.endMinutes));
+      const breakMinutes = day.times.reduce((s, t) => s + t.breakMinutes, 0);
+      return { date: day.date, actual: actualKeys.has(key), startMinutes: first, endMinutes: last, breakMinutes, ...pay };
+    });
+  const total = roundPay(rows.reduce<PayBreakdown>((sum, r) => addPay(sum, r), EMPTY_PAY));
+  const run = await prisma.payrollRun.findUnique({ where: { companyId_month: { companyId, month } } });
+  return { staff: { id: staff.id, name: staff.name, hourlyWage: staff.hourlyWage }, month, rows, total, posted: !!run };
+}
+
+export async function getMonthlyPayroll(companyId: string, month: string) {
+  const { days, actualKeys } = await collectMonthDays(companyId, month);
   const { perStaff } = summarize(days.values());
   const countDays = (staffId: string, actual: boolean) =>
     [...days.keys()].filter((k) => k.startsWith(`${staffId}|`) && actualKeys.has(k) === actual).length;

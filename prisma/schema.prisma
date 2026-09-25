@@ -134,6 +134,7 @@ model Company {
   quotes           Quote[]
   budgets          Budget[]
   recurringInvoices RecurringInvoice[]
+  departments      Department[]
   recurringEntries RecurringEntry[]
   auditLogs        AuditLog[]
 }
@@ -618,6 +619,9 @@ model JournalEntry {
   sourceType   SourceType
   status       JournalEntryStatus @default(PENDING_REVIEW)
   createdByAi  Boolean            @default(false)
+  // 部門・店舗(任意)。部門別の損益を出すために仕訳ごとに付ける。
+  departmentId String?
+  department   Department?        @relation(fields: [departmentId], references: [id])
   createdAt    DateTime           @default(now())
 
   lines             JournalLine[]
@@ -713,4 +717,18 @@ model AutomationRule {
   createdAt      DateTime   @default(now())
 
   @@unique([companyId, sourceType])
+}
+
+// 部門・店舗。仕訳に付けておくと、部門別の損益計算書を出せる。
+model Department {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  journalEntries JournalEntry[]
+
+  @@unique([companyId, name])
 }

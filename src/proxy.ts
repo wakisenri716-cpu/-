@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 // ここではクッキーの有無と形だけを見る(楽観的チェック)。セッションが本当に有効かは、
 // データを読み書きする直前の requireUser()/requireCompanyId() でデータベースと照合する。
 const SESSION_COOKIE = "session";
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/setup", "/api/seed"];
+// ホーム画面に追加するためのマニフェストとアイコンも、ログイン前に読めるようにする
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/setup", "/api/seed", "/manifest.webmanifest", "/pwa-icon"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

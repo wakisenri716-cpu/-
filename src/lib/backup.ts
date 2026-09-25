@@ -17,7 +17,7 @@ export async function buildBackup(companyId: string) {
       prisma.account.findMany({ where: { companyId }, orderBy: { code: "asc" } }),
       prisma.journalEntry.findMany({
         where: { companyId },
-        include: { lines: { include: { account: true } } },
+        include: { lines: { include: { account: true } }, department: { select: { name: true } } },
         orderBy: [{ date: "asc" }, { createdAt: "asc" }],
       }),
       prisma.vendor.findMany({ where: { companyId }, orderBy: { name: "asc" } }),
@@ -49,7 +49,7 @@ export async function buildBackup(companyId: string) {
     {
       name: "仕訳帳.csv",
       rows: [
-        ["日付", "伝票番号", "借方勘定科目", "借方金額", "貸方勘定科目", "貸方金額", "摘要", "種類", "状態"],
+        ["日付", "伝票番号", "借方勘定科目", "借方金額", "貸方勘定科目", "貸方金額", "摘要", "部門", "種類", "状態"],
         ...entries.flatMap((e, i) =>
           e.lines.map((l) => [
             d(e.date),
@@ -59,6 +59,7 @@ export async function buildBackup(companyId: string) {
             l.credit ? l.account.code : "",
             l.credit || "",
             e.description,
+            e.department?.name ?? "",
             SOURCE_LABELS[e.sourceType],
             STATUS[e.status] ?? e.status,
           ]),
@@ -138,7 +139,7 @@ export async function buildBackup(companyId: string) {
     `${company.name} のバックアップ(${t(new Date())} 作成)`,
     "",
     "・各ファイルは Excel で開ける CSV(UTF-8)です。",
-    "・仕訳帳.csv は「仕訳のCSV取込」と同じ形式です(取消・レビュー待ちの仕訳も含むので、取り込み直すときは「状態」が記帳済みの行だけ残してください)。",
+    "・仕訳帳.csv は「仕訳のCSV取込」と同じ形式です(取消・レビュー待ちの仕訳も含むので、取り込み直すときは「状態」が記帳済みの行だけ残し、部門を使っていれば同じ名前の部門を先に登録してください)。",
     "・領収書・請求書の画像は含まれていません(「証憑の検索」から1件ずつ表示・保存できます)。",
     "",
   ].join("\r\n");

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { formatYen } from "@/lib/format";
 import { dailyPay, formatClock, formatMinutes, parseTime } from "@/lib/shifts/pay";
@@ -392,7 +393,12 @@ export default function ShiftsPage() {
               <tbody className="divide-y">
                 {payroll?.rows.map((r) => (
                   <tr key={r.staffId}>
-                    <td className="py-1.5 pr-2 whitespace-nowrap">{r.name}</td>
+                    <td className="py-1.5 pr-2 whitespace-nowrap">
+                      {r.name}
+                      <Link href={`/shifts/payslip?staffId=${r.staffId}&month=${month}`} className="ml-2 text-xs text-indigo-700 hover:underline">
+                        明細
+                      </Link>
+                    </td>
                     <td className="py-1.5 pr-2 text-right whitespace-nowrap text-slate-500">
                       {r.actualDays}日/{r.plannedDays}日
                     </td>

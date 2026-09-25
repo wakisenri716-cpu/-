@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ensureAccount } from "./accounts";
 import { findOrCreateCustomer } from "./parties";
+import { resolveDepartmentId } from "./departments";
 import { UserError } from "@/lib/errors";
 
 export class InvoiceError extends UserError {}
@@ -28,6 +29,7 @@ export type IssueInvoiceInput = {
   dueDate: string;
   lines: InvoiceLineInput[];
   notes?: string | null;
+  departmentId?: string | null;
 };
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -73,6 +75,7 @@ export async function issueInvoice(companyId: string, input: IssueInvoiceInput) 
   const lines = validate(input);
   const calc = calcInvoice(lines);
   if (calc.total <= 0) throw new InvoiceError("合計金額が0円の請求書は作成できません");
+  const departmentId = await resolveDepartmentId(companyId, input.departmentId);
   const customer = await findOrCreateCustomer(companyId, input.customerName.trim());
 
   // 同時に作成されて番号が重複した場合に備え、数回まで採番し直す
@@ -91,6 +94,7 @@ export async function issueInvoice(companyId: string, input: IssueInvoiceInput) 
           companyId,
           date: new Date(`${input.issueDate}T00:00:00Z`),
           description: `売上請求書発行: ${invoiceNumber} ${customer.name}`,
+          departmentId,
           sourceType: "INVOICE",
           status: "AUTO_POSTED",
           createdByAi: false,

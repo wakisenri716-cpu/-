@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { getCashBalance, getDashboardSummary, getMonthlyTrend, getRankings, getTodos } from "@/lib/dashboard";
+import { getCashBalance, getDashboardSummary, getMonthlyTrend, getRankings, getSetupSteps, getTodos } from "@/lib/dashboard";
+import { SetupGuide } from "@/components/SetupGuide";
 import { RankList } from "@/components/RankList";
-import { requireCompanyId } from "@/lib/auth/session";
+import { requireCompanyId, requireUser } from "@/lib/auth/session";
 import { TrendChart } from "@/components/TrendChart";
 import { formatDate, formatPercent, formatYen } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -17,12 +18,14 @@ const TODO_TONES = {
 
 export default async function DashboardPage() {
   const companyId = await requireCompanyId();
-  const [summary, trend, cash, todos, rankings] = await Promise.all([
+  const user = await requireUser();
+  const [summary, trend, cash, todos, rankings, setupSteps] = await Promise.all([
     getDashboardSummary(),
     getMonthlyTrend(companyId),
     getCashBalance(companyId),
     getTodos(companyId),
     getRankings(companyId),
+    user.role === "ADMIN" ? getSetupSteps(companyId, user) : Promise.resolve(null),
   ]);
   const thisMonth = trend[trend.length - 1];
   const lastMonth = trend[trend.length - 2];
@@ -53,6 +56,8 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-semibold">ダッシュボード</h1>
         <p className="mt-1 text-sm text-slate-600">今月の数字、直近12か月の推移、対応が必要なことをまとめて確認できます。</p>
       </div>
+
+      {setupSteps && <SetupGuide steps={setupSteps} />}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {kpis.map((k) => {

@@ -17,6 +17,7 @@ const COLUMNS = {
   creditAccount: ["貸方勘定科目", "貸方科目"],
   creditAmount: ["貸方金額", "貸方金額(円)"],
   description: ["摘要", "取引内容", "内容"],
+  department: ["部門", "店舗", "部門名"],
 } as const;
 
 function norm(s: string) {
@@ -37,6 +38,8 @@ export type ImportedEntry = {
   lines: { accountId: string; accountLabel: string; debit: number; credit: number }[];
   total: number;
   duplicate: boolean;
+  departmentId: string | null;
+  departmentName: string | null;
 };
 
 export async function parseJournalCsv(companyId: string, text: string) {
@@ -54,7 +57,11 @@ export async function parseJournalCsv(companyId: string, text: string) {
   if (body.length > MAX_ROWS) throw new ImportError(`一度に取り込めるのは${MAX_ROWS}行までです`);
 
   // 勘定科目はコード(例: 5060)でも名前(例: 地代家賃)でも指定できる
-  const accounts = await prisma.account.findMany({ where: { companyId }, select: { id: true, code: true, name: true } });
+  const [accounts, departments] = await Promise.all([
+    prisma.account.findMany({ where: { companyId }, select: { id: true, code: true, name: true } }),
+    prisma.department.findMany({ where: { companyId, active: true }, select: { id: true, name: true } }),
+  ]);
+  const departmentByName = new Map(departments.map((d) => [norm(d.name), d]));
   const byKey = new Map<string, (typeof accounts)[number]>();
   for (const a of accounts) {
     byKey.set(norm(a.code), a);
@@ -78,9 +85,21 @@ export async function parseJournalCsv(companyId: string, text: string) {
     }
     const entry =
       group ??
-      ({ key, rowNumbers: [], date: date!.toISOString().slice(0, 10), description: "", lines: [], total: 0, duplicate: false } satisfies ImportedEntry);
+      ({ key, rowNumbers: [], date: date!.toISOString().slice(0, 10), description: "", lines: [], total: 0, duplicate: false, departmentId: null, departmentName: null } satisfies ImportedEntry);
     entry.rowNumbers.push(rowNumber);
     if (!entry.description && cell("description")) entry.description = cell("description");
+    // 部門は名前で指定する(伝票の中で最初に書かれたもの)
+    const deptName = cell("department");
+    if (deptName && !entry.departmentId) {
+      const dept = departmentByName.get(norm(deptName));
+      if (dept) {
+        entry.departmentId = dept.id;
+        entry.departmentName = dept.name;
+      } else {
+        errors.push(`${rowNumber}行目: 部門「${deptName}」が見つかりません(「部門別損益」で先に登録してください)`);
+        broken.add(key);
+      }
+    }
 
     for (const side of ["debit", "credit"] as const) {
       const name = cell(side === "debit" ? "debitAccount" : "creditAccount");
@@ -146,6 +165,7 @@ export async function importJournalCsv(companyId: string, text: string) {
           companyId,
           date: new Date(`${e.date}T00:00:00Z`),
           description: e.description,
+          departmentId: e.departmentId,
           sourceType: "IMPORT",
           status: "POSTED_MANUALLY",
           lines: { create: e.lines.map((l) => ({ accountId: l.accountId, debit: l.debit, credit: l.credit })) },
@@ -157,7 +177,7 @@ export async function importJournalCsv(companyId: string, text: string) {
 }
 
 export const SAMPLE_CSV = [
-  ["日付", "伝票番号", "借方勘定科目", "借方金額", "貸方勘定科目", "貸方金額", "摘要"],
+  ["日付", "伝票番号", "借方勘定科目", "借方金額", "貸方勘定科目", "貸方金額", "摘要", "部門"],
   ["2026/04/01", "1", "普通預金", "1000000", "資本金", "1000000", "資本金の払込"],
   ["2026/04/25", "2", "地代家賃", "100000", "普通預金", "100000", "4月分 事務所家賃"],
   ["2026/04/30", "3", "借入金", "50000", "", "", "借入金の返済"],

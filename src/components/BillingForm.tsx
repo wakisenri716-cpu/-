@@ -60,12 +60,21 @@ export function BillingForm({ kind, initial }: { kind: "invoice" | "quote"; init
   const [dueDate, setDueDate] = useState(() => (kind === "invoice" ? endOfNextMonth(new Date()) : oneMonthLater(new Date())));
   const [lines, setLines] = useState<Line[]>(initial?.lines.length ? initial.lines : [emptyLine()]);
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [departmentId, setDepartmentId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/customers").then(async (res) => setCustomers(res.ok ? await res.json() : []));
-  }, []);
+    // 請求書は売上の仕訳を作るので、部門を付けられる
+    if (kind === "invoice") {
+      fetch("/api/departments").then(async (res) => {
+        const list: { id: string; name: string; active: boolean }[] = res.ok ? await res.json() : [];
+        setDepartments(list.filter((d) => d.active));
+      });
+    }
+  }, [kind]);
 
   const priced = lines.map((l) => {
     const amount = Math.floor(Math.round(Number(l.quantity || 0) * Number(l.unitPrice || 0) * 1e6) / 1e6);
@@ -92,7 +101,7 @@ export function BillingForm({ kind, initial }: { kind: "invoice" | "quote"; init
       const res = await fetch(text.endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customerName, issueDate, dueDate, validUntil: dueDate, notes, lines }),
+        body: JSON.stringify({ customerName, issueDate, dueDate, validUntil: dueDate, notes, lines, departmentId: departmentId || null }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "作成に失敗しました");
@@ -134,6 +143,19 @@ export function BillingForm({ kind, initial }: { kind: "invoice" | "quote"; init
             <label className="mb-1 block text-xs text-slate-500">{text.deadline}</label>
             <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} required className={inputClass} />
           </div>
+          {departments.length > 0 && (
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">部門(任意)</label>
+              <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className={inputClass}>
+                <option value="">なし</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="overflow-x-auto">

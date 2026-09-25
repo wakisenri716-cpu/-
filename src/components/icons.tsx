@@ -305,3 +305,13 @@ export function DownloadIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function StoreIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 9.5 5.5 4.5h13L20 9.5" />
+      <path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0" />
+      <path d="M5.5 11.5v8h13v-8M10 19.5v-4.5h4v4.5" />
+    </svg>
+  );
+}

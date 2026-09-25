@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { SourceType } from "@prisma/client";
+import { resolveDepartmentId } from "./departments";
 import { UserError } from "@/lib/errors";
 
 export const SOURCE_LABELS: Record<SourceType, string> = {
@@ -53,18 +54,20 @@ export async function validateJournalLines(companyId: string, input: ManualLineI
 
 export async function createManualJournal(
   companyId: string,
-  input: { date: Date; description: string; lines: ManualLineInput[] },
+  input: { date: Date; description: string; lines: ManualLineInput[]; departmentId?: string | null },
 ) {
   const description = input.description.trim();
   if (!description) throw new JournalError("摘要を入力してください");
   if (Number.isNaN(input.date.getTime())) throw new JournalError("日付を正しく入力してください");
   const lines = await validateJournalLines(companyId, input.lines);
+  const departmentId = await resolveDepartmentId(companyId, input.departmentId);
 
   return prisma.journalEntry.create({
     data: {
       companyId,
       date: input.date,
       description,
+      departmentId,
       sourceType: "MANUAL",
       status: "POSTED_MANUALLY",
       createdByAi: false,
@@ -134,6 +137,7 @@ export async function getJournalBook(companyId: string, options: { month?: strin
         : {}),
     },
     include: {
+      department: { select: { id: true, name: true } },
       lines: {
         include: { account: { select: { code: true, name: true } } },
         orderBy: [{ credit: "asc" }, { id: "asc" }],

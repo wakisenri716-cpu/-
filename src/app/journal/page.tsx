@@ -13,6 +13,7 @@ type Entry = {
   description: string;
   sourceType: string;
   status: string;
+  department: { id: string; name: string } | null;
   lines: { id: string; debit: number; credit: number; memo: string | null; account: { code: string; name: string } }[];
 };
 
@@ -63,6 +64,8 @@ const inputClass = "w-full rounded-md border px-2 py-1.5 text-sm";
 export default function JournalPage() {
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [departmentId, setDepartmentId] = useState("");
   const [month, setMonth] = useState("");
   // 検索条件(入力中の値と、実際に検索に使う値を分ける)
   const [search, setSearch] = useState({ q: "", accountId: "", min: "", max: "", source: "" });
@@ -84,6 +87,7 @@ export default function JournalPage() {
     const body = await res.json();
     setEntries(body.entries);
     setAccounts(body.accounts);
+    setDepartments(body.departments ?? []);
   }, [query]);
 
   useEffect(() => {
@@ -121,7 +125,7 @@ export default function JournalPage() {
       const res = await fetch("/api/journal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, description, lines }),
+        body: JSON.stringify({ date, description, lines, departmentId: departmentId || null }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "登録に失敗しました");
@@ -134,6 +138,19 @@ export default function JournalPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function changeDepartment(entry: Entry, id: string) {
+    setError(null);
+    setMessage(null);
+    const res = await fetch(`/api/journal/${entry.id}/department`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ departmentId: id || null }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) setError(body.error || "部門を変更できませんでした");
+    await load();
   }
 
   async function handleVoid(entry: Entry) {
@@ -190,7 +207,7 @@ export default function JournalPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
+          <div className={`grid gap-3 ${departments.length > 0 ? "sm:grid-cols-[10rem_1fr_12rem]" : "sm:grid-cols-[10rem_1fr]"}`}>
             <div>
               <label className="mb-1 block text-xs text-slate-500">日付</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className={inputClass} />
@@ -206,6 +223,19 @@ export default function JournalPage() {
                 className={inputClass}
               />
             </div>
+            {departments.length > 0 && (
+              <div>
+                <label className="mb-1 block text-xs text-slate-500">部門(任意)</label>
+                <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className={inputClass}>
+                  <option value="">なし</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="overflow-x-auto">
@@ -433,7 +463,27 @@ export default function JournalPage() {
                 return (
                   <tr key={entry.id} className={`align-top ${isVoid ? "text-slate-400 line-through" : ""}`}>
                     <td className="px-4 py-2 whitespace-nowrap">{formatDate(entry.date)}</td>
-                    <td className="min-w-[10rem] px-4 py-2">{entry.description}</td>
+                    <td className="min-w-[10rem] px-4 py-2">
+                      {entry.description}
+                      {(departments.length > 0 || entry.department) && !isVoid && (
+                        <select
+                          value={entry.department?.id ?? ""}
+                          onChange={(e) => changeDepartment(entry, e.target.value)}
+                          className="mt-1 block max-w-[10rem] rounded border px-1 py-0.5 text-xs text-slate-600"
+                          aria-label="部門"
+                        >
+                          <option value="">部門なし</option>
+                          {entry.department && !departments.some((d) => d.id === entry.department!.id) && (
+                            <option value={entry.department.id}>{entry.department.name}(停止中)</option>
+                          )}
+                          {departments.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
                     <td className="px-4 py-2">{side("debit")}</td>
                     <td className="px-4 py-2">{side("credit")}</td>
                     <td className="px-4 py-2 whitespace-nowrap">

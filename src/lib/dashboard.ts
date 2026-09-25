@@ -177,3 +177,26 @@ export async function getRankings(companyId: string, today = jstDateKey(new Date
     ),
   };
 }
+
+export type SetupStep = { key: string; label: string; detail: string; href: string; done: boolean };
+
+// 管理者向け「はじめにやること」。それぞれ実際のデータから済んだかどうかを判定する。
+export async function getSetupSteps(companyId: string, user: { id: string; totpEnabled: boolean }): Promise<SetupStep[]> {
+  const [company, users, invoices, bank, expenses, backups] = await Promise.all([
+    prisma.company.findUnique({ where: { id: companyId }, select: { address: true, registrationNumber: true, bankAccount: true } }),
+    prisma.user.count({ where: { companyId, passwordHash: { not: null } } }),
+    prisma.invoice.count({ where: { companyId } }),
+    prisma.bankTransaction.count({ where: { companyId } }),
+    prisma.expenseItem.count({ where: { expenseReport: { companyId } } }),
+    prisma.auditLog.count({ where: { companyId, action: "データをバックアップ" } }),
+  ]);
+  return [
+    { key: "company", label: "会社情報を登録する", detail: "住所・振込先・インボイスの登録番号(請求書に印字されます)", href: "/company", done: !!(company?.address || company?.registrationNumber || company?.bankAccount) },
+    { key: "totp", label: "2段階認証を設定する", detail: "パスワードが漏れても、スマホがなければログインできなくなります", href: "/account", done: user.totpEnabled },
+    { key: "users", label: "メンバーを招待する", detail: "経理担当・従業員のアカウントを作ります", href: "/users", done: users > 1 },
+    { key: "expense", label: "レシートを登録してみる", detail: "経費精算で写真をアップロードすると、AIが仕訳します", href: "/expenses", done: expenses > 0 },
+    { key: "invoice", label: "請求書を作る・取り込む", detail: "作成すると売上の仕訳も自動で記帳されます", href: "/invoices", done: invoices > 0 },
+    { key: "bank", label: "銀行明細を取り込む", detail: "ネットバンキングのCSVから入出金をまとめて記帳します", href: "/bank", done: bank > 0 },
+    { key: "backup", label: "データをバックアップする", detail: "全データをZIPで手元に保存します(月1回がおすすめ)", href: "/backup", done: backups > 0 },
+  ];
+}
