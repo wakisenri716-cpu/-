@@ -110,6 +110,14 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
     { key: "recurringInvoices", label: "定期請求の作成", detail: "請求日が来た毎月の請求書を作成してください", count: recurringInvoicesDue, href: "/recurring-invoices", tone: "amber" },
     { key: "recurring", label: "定期取引の記帳", detail: "記帳日が来た家賃などを記帳してください", count: recurringDue, href: "/recurring", tone: "amber" },
     {
+      key: "approve",
+      label: "承認待ちの経費精算",
+      detail: "申請された経費精算を確認して、承認か差戻しをしてください",
+      count: reimbursements.filter((r) => r.state === "AWAITING_APPROVAL" && r.approvalStatus === "SUBMITTED").length,
+      href: "/reimbursements",
+      tone: "amber",
+    },
+    {
       key: "reimburse",
       label: "立替経費の精算待ち",
       detail: "従業員が立て替えた経費を支払って「精算する」を押してください",

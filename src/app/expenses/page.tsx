@@ -20,8 +20,18 @@ type ExpenseReport = {
   totalAmount: number;
   createdAt: string;
   reimbursedAt: string | null;
+  approvalStatus: "DRAFT" | "SUBMITTED" | "APPROVED" | "RETURNED";
+  approvedByName: string | null;
+  returnComment: string | null;
   employee: { name: string };
   items: ExpenseItem[];
+};
+
+const APPROVAL_BADGE: Record<ExpenseReport["approvalStatus"], { label: string; className: string } | null> = {
+  DRAFT: { label: "未申請", className: "bg-slate-100 text-slate-600" },
+  SUBMITTED: { label: "申請中", className: "bg-sky-100 text-sky-800" },
+  APPROVED: { label: "承認済み", className: "bg-indigo-100 text-indigo-800" },
+  RETURNED: { label: "差戻し", className: "bg-rose-100 text-rose-700" },
 };
 
 export default function ExpensesPage() {
@@ -30,11 +40,24 @@ export default function ExpensesPage() {
   const [creating, setCreating] = useState(false);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [approvalRequired, setApprovalRequired] = useState(false);
+  const [submitting, setSubmitting] = useState<string | null>(null);
 
   async function loadReports() {
-    const res = await fetch("/api/expense-reports");
+    const [res, setting] = await Promise.all([fetch("/api/expense-reports"), fetch("/api/expense-reports/approval-setting")]);
     setReports(await res.json());
+    if (setting.ok) setApprovalRequired((await setting.json()).required === true);
     setLoading(false);
+  }
+
+  async function submitReport(id: string) {
+    setSubmitting(id);
+    setError(null);
+    const res = await fetch(`/api/expense-reports/${id}/submit`, { method: "POST" });
+    const body = await res.json().catch(() => ({}));
+    setSubmitting(null);
+    if (!res.ok) setError(body.error || "申請できませんでした");
+    await loadReports();
   }
 
   useEffect(() => {
@@ -113,8 +136,19 @@ export default function ExpensesPage() {
                 {report.reimbursedAt && (
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-emerald-800">精算済み</span>
                 )}
+                {approvalRequired && !report.reimbursedAt && APPROVAL_BADGE[report.approvalStatus] && (
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${APPROVAL_BADGE[report.approvalStatus]!.className}`}>
+                    {APPROVAL_BADGE[report.approvalStatus]!.label}
+                  </span>
+                )}
               </div>
             </div>
+            {report.approvalStatus === "RETURNED" && report.returnComment && !report.reimbursedAt && (
+              <p className="mt-2 rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-800">差戻しの理由: {report.returnComment}</p>
+            )}
+            {report.approvalStatus === "APPROVED" && report.approvedByName && !report.reimbursedAt && (
+              <p className="mt-2 text-xs text-slate-500">{report.approvedByName}さんが承認しました。精算(支払)をお待ちください。</p>
+            )}
 
             {report.items.length > 0 && (
               <div className="mt-3 overflow-x-auto">
@@ -149,7 +183,21 @@ export default function ExpensesPage() {
               </div>
             )}
 
-            {report.reimbursedAt ? (
+            {approvalRequired && !report.reimbursedAt && (report.approvalStatus === "DRAFT" || report.approvalStatus === "RETURNED") && report.items.length > 0 && (
+              <div className="mt-3 flex items-center justify-end gap-3">
+                <span className="text-xs text-slate-500">レシートがそろったら申請してください</span>
+                <button
+                  onClick={() => submitReport(report.id)}
+                  disabled={submitting === report.id}
+                  className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {report.approvalStatus === "RETURNED" ? "もう一度申請する" : "申請する"}
+                </button>
+              </div>
+            )}
+            {report.approvalStatus === "SUBMITTED" || report.approvalStatus === "APPROVED" ? (
+              !report.reimbursedAt && <p className="mt-4 border-t pt-3 text-xs text-slate-500">申請中・承認済みの経費精算にはレシートを追加できません。</p>
+            ) : report.reimbursedAt ? (
               <p className="mt-4 border-t pt-3 text-xs text-slate-500">
                 この経費精算は支払済み({formatDate(report.reimbursedAt)})です。新しいレシートは新しい経費精算に追加してください。
               </p>

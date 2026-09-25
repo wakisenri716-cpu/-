@@ -24,6 +24,7 @@ export async function PUT(request: Request) {
       phone: field("phone"),
       bankAccount: field("bankAccount"),
       invoiceNote: field("invoiceNote"),
+      ...(typeof body.expenseApprovalRequired === "boolean" ? { expenseApprovalRequired: body.expenseApprovalRequired } : {}),
     });
     await audit("会社情報を変更", company.name);
     return NextResponse.json(company);

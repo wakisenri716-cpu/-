@@ -12,7 +12,10 @@ export type PayFrom = keyof typeof PAY_FROM;
 
 // 経費精算ごとの精算状況。記帳済みの明細の合計が本人に払う金額。
 // レビュー待ちの明細が残っていると金額が確定しないので、精算できない。
+// 承認フローを使う会社では、承認されていない経費精算は精算できない(AWAITING_APPROVAL)。
 export async function getReimbursements(companyId: string) {
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { expenseApprovalRequired: true } });
+  const approvalRequired = company?.expenseApprovalRequired ?? false;
   const reports = await prisma.expenseReport.findMany({
     where: { companyId, items: { some: {} } },
     include: {
@@ -26,7 +29,15 @@ export async function getReimbursements(companyId: string) {
     const posted = r.items.filter((i) => i.journalEntry && POSTED.has(i.journalEntry.status));
     const pending = r.items.filter((i) => i.journalEntry?.status === "PENDING_REVIEW").length;
     const amount = posted.reduce((s, i) => s + i.amount, 0);
-    const state = r.reimbursedAt ? "PAID" : pending > 0 ? "REVIEWING" : amount > 0 ? "READY" : "NOTHING";
+    const state = r.reimbursedAt
+      ? "PAID"
+      : pending > 0
+        ? "REVIEWING"
+        : amount <= 0
+          ? "NOTHING"
+          : approvalRequired && r.approvalStatus !== "APPROVED"
+            ? "AWAITING_APPROVAL"
+            : "READY";
     return {
       id: r.id,
       employee: r.employee,
@@ -35,6 +46,9 @@ export async function getReimbursements(companyId: string) {
       pending,
       amount,
       state,
+      approvalStatus: r.approvalStatus,
+      approvedByName: r.approvedByName,
+      returnComment: r.returnComment,
       reimbursedOn: r.reimbursementEntry ? r.reimbursementEntry.date.toISOString().slice(0, 10) : null,
     } as const;
   });
@@ -51,6 +65,7 @@ export async function reimburse(companyId: string, reportId: string, input: { da
   if (report.state === "PAID") throw new ReimbursementError("この経費精算はすでに精算済みです");
   if (report.state === "REVIEWING") throw new ReimbursementError("レビュー待ちの明細があります。先にレビューキューで確定してください");
   if (report.state === "NOTHING") throw new ReimbursementError("精算する金額がありません");
+  if (report.state === "AWAITING_APPROVAL") throw new ReimbursementError("承認されていない経費精算は精算できません。先に承認してください");
 
   return prisma.$transaction(async (tx) => {
     // 2回押されても二重に支払仕訳ができないよう、未精算であることを条件に先に確保する
@@ -90,4 +105,38 @@ export async function undoReimbursement(companyId: string, reportId: string) {
       await tx.journalEntry.update({ where: { id: report.reimbursementEntryId }, data: { status: "VOID" } });
     }
   });
+}
+
+// ---- 承認フロー(申請 → 承認 / 差戻し) ----
+
+// 本人が申請する(作成中・差戻しのものだけ)。レシートが1枚もなければ申請できない。
+export async function submitExpenseReport(user: { id: string; companyId: string }, reportId: string) {
+  const report = await prisma.expenseReport.findFirst({ where: { id: reportId, companyId: user.companyId, employeeId: user.id }, include: { _count: { select: { items: true } } } });
+  if (!report) throw new ReimbursementError("経費精算が見つかりません");
+  if (report._count.items === 0) throw new ReimbursementError("レシートを1枚以上登録してから申請してください");
+  const updated = await prisma.expenseReport.updateMany({
+    where: { id: reportId, approvalStatus: { in: ["DRAFT", "RETURNED"] }, reimbursedAt: null },
+    data: { approvalStatus: "SUBMITTED", submittedAt: new Date(), returnComment: null },
+  });
+  if (updated.count !== 1) throw new ReimbursementError("この経費精算はすでに申請済みです");
+}
+
+// 管理者・経理担当が承認する(申請中のものだけ)
+export async function approveExpenseReport(companyId: string, reportId: string, approverName: string) {
+  const updated = await prisma.expenseReport.updateMany({
+    where: { id: reportId, companyId, approvalStatus: "SUBMITTED" },
+    data: { approvalStatus: "APPROVED", approvedAt: new Date(), approvedByName: approverName },
+  });
+  if (updated.count !== 1) throw new ReimbursementError("申請中の経費精算ではありません");
+}
+
+// 差戻す(理由つき)。本人はレシートを直して、もう一度申請できる。精算済みのものは差戻せない。
+export async function returnExpenseReport(companyId: string, reportId: string, comment: string) {
+  const text = comment.trim();
+  if (!text) throw new ReimbursementError("差戻しの理由を入力してください");
+  const updated = await prisma.expenseReport.updateMany({
+    where: { id: reportId, companyId, approvalStatus: { in: ["SUBMITTED", "APPROVED"] }, reimbursedAt: null },
+    data: { approvalStatus: "RETURNED", returnComment: text.slice(0, 300), approvedAt: null, approvedByName: null },
+  });
+  if (updated.count !== 1) throw new ReimbursementError("申請中・承認済み(未精算)の経費精算だけ差戻せます");
 }
