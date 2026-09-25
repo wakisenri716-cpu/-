@@ -123,6 +123,12 @@ model Company {
   email                  String?
   // 毎朝、管理者に「やること」をメールで知らせる
   dailyDigest            Boolean @default(false)
+  // 給与計算の保険料率(単位: 0.001%。9910 = 9.910%)。都道府県・年度で変わるので画面から直せる
+  payrollPrefecture      String  @default("東京都")
+  payrollHealthRate      Int     @default(9910)
+  payrollCareRate        Int     @default(1590)
+  payrollPensionRate     Int     @default(18300)
+  payrollEmploymentRate  Int     @default(550)
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -564,6 +570,15 @@ model Staff {
   pinHash     String?
   pinFailures Int      @default(0)
   pinLockedUntil DateTime?
+  // 給与計算の設定(源泉所得税・社会保険料の控除に使う)
+  dependents          Int      @default(0)      // 扶養親族等の数(源泉所得税)
+  taxColumn           String   @default("KOU")  // KOU(甲欄: 扶養控除等申告書あり) / OTSU(乙欄)
+  socialInsurance     Boolean  @default(false)  // 健康保険・厚生年金に加入
+  careInsurance       Boolean  @default(false)  // 介護保険(40〜64歳)
+  employmentInsurance Boolean  @default(false)  // 雇用保険に加入
+  standardMonthly     Int?                      // 標準報酬月額(空なら毎月の支給額から目安で決める)
+  commuteAllowance    Int      @default(0)      // 通勤手当(月額・非課税)
+  residentTax         Int      @default(0)      // 住民税(特別徴収の月額)
   createdAt   DateTime @default(now())
 
   shifts      Shift[]
@@ -615,6 +630,8 @@ model PayrollRun {
   company        Company      @relation(fields: [companyId], references: [id])
   month          String
   totalAmount    Int
+  // 計上したときの控除の計算結果(あとで設定を変えても、計上済みの明細は変わらないように残す)
+  details        Json?
   journalEntryId String       @unique
   journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id])
   createdAt      DateTime     @default(now())
@@ -839,4 +856,17 @@ model PasswordReset {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+// 源泉所得税を手で直したとき(税額表と違う・乙欄など)の値。計上前だけ変えられる
+model PayrollOverride {
+  id        String   @id @default(cuid())
+  companyId String
+  staffId   String
+  month     String
+  incomeTax Int
+  createdAt DateTime @default(now())
+
+  @@unique([staffId, month])
+  @@index([companyId, month])
 }

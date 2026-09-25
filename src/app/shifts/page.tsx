@@ -446,8 +446,10 @@ export default function ShiftsPage() {
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-slate-500">
-                打刻がある日は実績、ない日はシフトの予定で計算した総支給額を「給料手当 / 未払金」で計上します。振込を銀行明細から取り込むと、未払金の支払いとして判定されます。
-                源泉所得税・社会保険料などの控除は含みません。
+                打刻がある日は実績、ない日はシフトの予定で計算します。計上すると、社会保険料・源泉所得税などの控除を「預り金」、手取りを「未払金」に分けて記帳します。
+                <Link href={`/payroll`} className="ml-1 text-indigo-700 hover:underline">
+                  給与計算で控除・手取りを確認する
+                </Link>
               </p>
               <button
                 onClick={() => call("/api/payroll", { method: "POST", body: JSON.stringify({ month }) }, "給料を計上しました")}

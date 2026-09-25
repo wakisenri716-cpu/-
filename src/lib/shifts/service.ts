@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import type { Shift, Staff } from "@prisma/client";
-import { ensureAccount } from "@/lib/accounting/accounts";
 import { hashPassword } from "@/lib/auth/password";
 import { recordTimes } from "@/lib/attendance/times";
 import { addPay, dailyPay, EMPTY_PAY, parseTime, roundPay, type PayBreakdown, type ShiftTimes } from "./pay";
@@ -8,8 +7,6 @@ import { UserError } from "@/lib/errors";
 
 export class ShiftError extends UserError {}
 
-const SALARY_ACCOUNT = "5110"; // 給料手当
-const ACCRUED_ACCOUNT = "2020"; // 未払金
 const MAX_SHIFT_MINUTES = 16 * 60;
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -272,42 +269,7 @@ export async function getMonthlyPayroll(companyId: string, month: string) {
   return { month, rows, total: rows.reduce((sum, r) => sum + r.total, 0), run };
 }
 
-export async function postPayroll(companyId: string, month: string) {
-  const { rows, total, run } = await getMonthlyPayroll(companyId, month);
-  if (run) throw new ShiftError("この月の給料はすでに計上しています");
-  if (total <= 0) throw new ShiftError("この月のシフトがないため計上できません");
-  const [y, m] = month.split("-").map(Number);
-  const lastDay = new Date(Date.UTC(y, m, 0));
-
-  try {
-    return await prisma.$transaction(async (tx) => {
-      const [salary, accrued] = await Promise.all([
-        ensureAccount(tx, companyId, SALARY_ACCOUNT),
-        ensureAccount(tx, companyId, ACCRUED_ACCOUNT),
-      ]);
-      const entry = await tx.journalEntry.create({
-        data: {
-          companyId,
-          date: lastDay,
-          description: `給料計上 ${y}年${m}月分(シフトより ${rows.length}名)`,
-          sourceType: "PAYROLL",
-          status: "AUTO_POSTED",
-          createdByAi: false,
-          lines: {
-            create: [
-              { accountId: salary.id, debit: total, credit: 0, memo: "シフトから計算した総支給額" },
-              { accountId: accrued.id, debit: 0, credit: total, memo: "給料の未払い分" },
-            ],
-          },
-        },
-      });
-      return tx.payrollRun.create({ data: { companyId, month, totalAmount: total, journalEntryId: entry.id } });
-    });
-  } catch (error) {
-    if ((error as { code?: string }).code === "P2002") throw new ShiftError("この月の給料はすでに計上しています");
-    throw error;
-  }
-}
+// 給料の計上(控除つき)は src/lib/payroll/service.ts の postPayrollWithDeductions
 
 export async function voidPayroll(companyId: string, month: string) {
   const run = await prisma.payrollRun.findUnique({ where: { companyId_month: { companyId, month } } });

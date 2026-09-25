@@ -83,6 +83,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/shifts", label: "シフト管理", icon: CalendarIcon },
       { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
       { href: "/attendance", label: "勤怠一覧", icon: ChecklistIcon },
+      { href: "/payroll", label: "給与計算", icon: CoinsIcon },
     ],
   },
   {
