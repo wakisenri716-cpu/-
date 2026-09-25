@@ -96,12 +96,14 @@ export async function buildDraft(companyId: string, kind: DocumentMailKind, id: 
 
   return {
     to: invoice.customer?.email ?? "",
-    subject: `【請求書】${invoice.invoiceNumber ?? ""} ${invoice.company.name}`,
+    subject: `【${invoice.correctsInvoice ? "訂正版 請求書" : "請求書"}】${invoice.invoiceNumber ?? ""} ${invoice.company.name}`,
     body: [
       `${customer} 御中`,
       "",
       `いつもお世話になっております。${invoice.company.name}です。`,
-      `${jp(invoice.issueDate)}付の請求書をお送りします。下記のリンクからご確認ください。`,
+      invoice.correctsInvoice
+        ? `先にお送りした請求書(${invoice.correctsInvoice.invoiceNumber ?? ""})に誤りがあったため、訂正した請求書をお送りします。お手数ですが、先の請求書は破棄してください。${invoice.correctionReason ? `\n(訂正の理由: ${invoice.correctionReason})` : ""}`
+        : `${jp(invoice.issueDate)}付の請求書をお送りします。下記のリンクからご確認ください。`,
       "",
       `ご請求金額: ${formatYen(calc.total)}(税込)`,
       invoice.dueDate ? `お支払期限: ${jp(invoice.dueDate)}` : "",

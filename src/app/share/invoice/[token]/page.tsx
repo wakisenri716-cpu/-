@@ -36,6 +36,11 @@ export default async function SharedInvoicePage({ params }: { params: Promise<{ 
           lines={invoice.lines}
           calc={calc}
           notes={invoice.notes}
+          correction={
+            invoice.correctsInvoice
+              ? { originalNumber: invoice.correctsInvoice.invoiceNumber ?? "", originalDate: invoice.correctsInvoice.issueDate, reason: invoice.correctionReason }
+              : null
+          }
         />
       )}
     </div>

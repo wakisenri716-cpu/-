@@ -7,7 +7,9 @@ import { formatYen } from "@/lib/format";
 
 export type FormLine = { description: string; quantity: string; unit: string; unitPrice: string; taxRate: string };
 type Line = FormLine;
-export type BillingFormInitial = { customerName: string; lines: FormLine[]; notes: string };
+export type BillingFormInitial = { customerName: string; lines: FormLine[]; notes: string; issueDate?: string; dueDate?: string; departmentId?: string | null };
+// 請求書の訂正(元の請求書の番号・入金済みの額)
+export type BillingCorrection = { id: string; number: string; nextNumber: string; paid: number };
 
 const emptyLine = (): Line => ({ description: "", quantity: "1", unit: "", unitPrice: "", taxRate: "10" });
 
@@ -51,17 +53,26 @@ const TEXT = {
 
 const inputClass = "w-full rounded-md border px-2 py-1.5 text-sm";
 
-export function BillingForm({ kind, initial }: { kind: "invoice" | "quote"; initial?: BillingFormInitial | null }) {
-  const text = TEXT[kind];
+export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "quote"; initial?: BillingFormInitial | null; correction?: BillingCorrection | null }) {
+  const text = correction
+    ? {
+        ...TEXT.invoice,
+        title: "請求書を訂正",
+        back: { href: `/invoices/${correction.id}/print`, label: "← 元の請求書に戻る" },
+        lead: `請求書 ${correction.number} を訂正します。元の請求書は「取消」になり(売上の仕訳も取り消し)、直した内容で訂正版(${correction.nextNumber})を発行します。入金の記録と、お客さまに送った共有リンクは訂正版に引き継ぎます。`,
+        endpoint: `/api/invoices/${correction.id}/correct`,
+      }
+    : TEXT[kind];
+  const [reason, setReason] = useState("");
   const router = useRouter();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [customerName, setCustomerName] = useState(initial?.customerName ?? "");
-  const [issueDate, setIssueDate] = useState(() => dateKey(new Date()));
-  const [dueDate, setDueDate] = useState(() => (kind === "invoice" ? endOfNextMonth(new Date()) : oneMonthLater(new Date())));
+  const [issueDate, setIssueDate] = useState(() => initial?.issueDate ?? dateKey(new Date()));
+  const [dueDate, setDueDate] = useState(() => initial?.dueDate ?? (kind === "invoice" ? endOfNextMonth(new Date()) : oneMonthLater(new Date())));
   const [lines, setLines] = useState<Line[]>(initial?.lines.length ? initial.lines : [emptyLine()]);
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
-  const [departmentId, setDepartmentId] = useState("");
+  const [departmentId, setDepartmentId] = useState(initial?.departmentId ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,7 +112,7 @@ export function BillingForm({ kind, initial }: { kind: "invoice" | "quote"; init
       const res = await fetch(text.endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customerName, issueDate, dueDate, validUntil: dueDate, notes, lines, departmentId: departmentId || null }),
+        body: JSON.stringify({ customerName, issueDate, dueDate, validUntil: dueDate, notes, lines, departmentId: departmentId || null, ...(correction ? { reason } : {}) }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "作成に失敗しました");
@@ -234,9 +245,23 @@ export function BillingForm({ kind, initial }: { kind: "invoice" | "quote"; init
           </dl>
         </div>
 
+        {correction && (
+          <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
+            <label className="block text-xs text-slate-500">
+              訂正の理由(任意・訂正版の請求書に記載します)
+              <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={200} placeholder="例: 数量の誤りのため" className={`${inputClass} mt-1 text-slate-900`} />
+            </label>
+            {correction.paid > 0 && (
+              <p className="self-end rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                この請求書には {formatYen(correction.paid)} の入金が記録されています。入金は訂正版に引き継ぐので、合計はこの金額以上にしてください。
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex justify-end">
           <button type="submit" disabled={saving} className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
-            {saving ? "作成中..." : text.title}
+            {saving ? "作成中..." : correction ? "訂正版を発行する" : text.title}
           </button>
         </div>
       </form>

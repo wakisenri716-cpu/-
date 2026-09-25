@@ -60,6 +60,11 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           <Link href={`/invoices/new?from=${invoice.id}`} className="rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
             複製して作成
           </Link>
+          {!cancelled && (
+            <Link href={`/invoices/new?correct=${invoice.id}`} className="rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              訂正する
+            </Link>
+          )}
           {!cancelled && paid === 0 && <CancelInvoiceButton invoiceId={invoice.id} />}
           {!cancelled && <PrintButton />}
         </div>
@@ -67,7 +72,16 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
       {cancelled && (
         <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700 print:hidden">
-          この請求書は取り消されています(売上の仕訳も取り消し済み)。
+          {invoice.correctedBy ? (
+            <>
+              この請求書は訂正されました(売上の仕訳も取り消し済み)。訂正版:{" "}
+              <Link href={`/invoices/${invoice.correctedBy.id}/print`} className="font-medium underline">
+                {invoice.correctedBy.invoiceNumber}
+              </Link>
+            </>
+          ) : (
+            "この請求書は取り消されています(売上の仕訳も取り消し済み)。"
+          )}
         </div>
       )}
 
@@ -81,6 +95,11 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         lines={invoice.lines}
         calc={calc}
         notes={invoice.notes}
+        correction={
+          invoice.correctsInvoice
+            ? { originalNumber: invoice.correctsInvoice.invoiceNumber ?? "", originalDate: invoice.correctsInvoice.issueDate, reason: invoice.correctionReason }
+            : null
+        }
       />
 
       {paid > 0 && (

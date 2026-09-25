@@ -302,6 +302,11 @@ model Invoice {
   invoiceNumber   String?
   // メールで送った相手がログインせずに見られる共有リンクの鍵(送るときに作る)
   shareToken      String?           @unique
+  // 訂正版の請求書なら、訂正した元の請求書(元の請求書は「取消」になり、入金・共有リンクは訂正版に引き継ぐ)
+  correctsInvoiceId String?         @unique
+  correctsInvoice   Invoice?        @relation("InvoiceCorrection", fields: [correctsInvoiceId], references: [id])
+  correctedBy       Invoice?        @relation("InvoiceCorrection")
+  correctionReason  String?
   vendorId        String?
   vendor          Vendor?           @relation(fields: [vendorId], references: [id])
   customerId      String?
