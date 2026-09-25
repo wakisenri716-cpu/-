@@ -77,7 +77,7 @@ export default async function IncomeStatementPage({ searchParams }: { searchPara
             </p>
           )}
         </div>
-        <CsvDownloadLink href={`/api/income-statement/export?${periodQuery(period)}`} />
+        <CsvDownloadLink href={`/api/income-statement/export?${periodQuery(period)}`} print />
       </div>
 
       <PeriodPicker path="/income-statement" period={period} />

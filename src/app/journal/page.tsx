@@ -14,8 +14,10 @@ type Entry = {
   sourceType: string;
   status: string;
   department: { id: string; name: string } | null;
-  lines: { id: string; debit: number; credit: number; memo: string | null; account: { code: string; name: string } }[];
+  lines: { id: string; accountId: string; debit: number; credit: number; memo: string | null; account: { code: string; name: string } }[];
 };
+
+type SavedTemplate = { id: string; name: string; description: string; lines: { accountId: string; debit: number; credit: number; memo: string }[] };
 
 type LineDraft = { accountId: string; debit: string; credit: string; memo: string };
 
@@ -76,6 +78,7 @@ export default function JournalPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState<SavedTemplate[]>([]);
 
   const query = new URLSearchParams(
     Object.entries({ month, ...applied }).filter(([, v]) => v !== "") as [string, string][],
@@ -89,6 +92,17 @@ export default function JournalPage() {
     setAccounts(body.accounts);
     setDepartments(body.departments ?? []);
   }, [query]);
+
+  const loadTemplates = useCallback(async () => {
+    const res = await fetch("/api/journal/templates");
+    if (res.ok) setSaved(await res.json());
+  }, []);
+
+  useEffect(() => {
+    // Fetch-on-mount: setState always lands after the fetch's await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadTemplates();
+  }, [loadTemplates]);
 
   useEffect(() => {
     // Fetch-on-mount/month change: the resulting setState always lands after
@@ -114,6 +128,53 @@ export default function JournalPage() {
     ]);
     setError(null);
     setMessage("科目を入れました。金額を借方・貸方の両方に入力してください。");
+  }
+
+  // 保存したひな形・既存の仕訳の内容を入力欄に入れる(金額もそのまま入る)
+  function fillForm(text: string, source: { accountId: string; debit: number; credit: number; memo: string | null }[], note: string) {
+    const known = new Set(accounts.map((a) => a.id));
+    const rows = source
+      .filter((l) => known.has(l.accountId))
+      .map((l) => ({ accountId: l.accountId, debit: l.debit ? String(l.debit) : "", credit: l.credit ? String(l.credit) : "", memo: l.memo ?? "" }));
+    while (rows.length < 2) rows.push(emptyLine());
+    setDescription(text);
+    setLines(rows);
+    setError(null);
+    setMessage(note);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function applySaved(template: SavedTemplate) {
+    fillForm(template.description, template.lines, `ひな形「${template.name}」を入れました。日付と金額を確認して登録してください。`);
+  }
+
+  function duplicate(entry: Entry) {
+    setDepartmentId(entry.department && departments.some((d) => d.id === entry.department!.id) ? entry.department.id : "");
+    fillForm(entry.description, entry.lines, `「${entry.description}」の内容をコピーしました。日付を確認して登録してください。`);
+  }
+
+  async function saveAsTemplate() {
+    const name = window.prompt("ひな形の名前(例: 毎月の家賃)", description.slice(0, 30));
+    if (!name?.trim()) return;
+    setError(null);
+    setMessage(null);
+    const res = await fetch("/api/journal/templates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, description, lines }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) return setError(body.error || "ひな形を保存できませんでした");
+    setMessage(`ひな形「${body.name}」を保存しました。次からは上のボタンで呼び出せます。`);
+    loadTemplates();
+  }
+
+  async function deleteTemplate(template: SavedTemplate) {
+    if (!window.confirm(`ひな形「${template.name}」を削除しますか?`)) return;
+    const res = await fetch(`/api/journal/templates/${template.id}`, { method: "DELETE" });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) return setError(body.error || "削除できませんでした");
+    loadTemplates();
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -205,6 +266,21 @@ export default function JournalPage() {
             </button>
           ))}
         </div>
+        {saved.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <span className="self-center text-xs text-slate-500">保存したひな形:</span>
+            {saved.map((t) => (
+              <span key={t.id} className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 text-xs font-medium text-indigo-800">
+                <button type="button" onClick={() => applySaved(t)} className="py-1 pr-1 pl-3 hover:underline">
+                  {t.name}
+                </button>
+                <button type="button" onClick={() => deleteTemplate(t)} aria-label={`ひな形「${t.name}」を削除`} className="px-2 py-1 text-indigo-400 hover:text-rose-600">
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className={`grid gap-3 ${departments.length > 0 ? "sm:grid-cols-[10rem_1fr_12rem]" : "sm:grid-cols-[10rem_1fr]"}`}>
@@ -350,7 +426,15 @@ export default function JournalPage() {
             </table>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={saveAsTemplate}
+              disabled={lines.filter((l) => l.accountId).length < 2}
+              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              ひな形として保存
+            </button>
             <button
               type="submit"
               disabled={saving || !balanced}
@@ -493,7 +577,12 @@ export default function JournalPage() {
                       {isVoid && <span className="ml-1 text-xs text-rose-600">取消済み</span>}
                       {entry.status === "PENDING_REVIEW" && <span className="ml-1 text-xs text-amber-700">レビュー待ち</span>}
                     </td>
-                    <td className="px-4 py-2 text-right whitespace-nowrap">
+                    <td className="space-x-3 px-4 py-2 text-right whitespace-nowrap">
+                      {!isVoid && (
+                        <button type="button" onClick={() => duplicate(entry)} className="text-xs text-indigo-700 hover:underline">
+                          複製
+                        </button>
+                      )}
                       {["MANUAL", "RECURRING", "IMPORT"].includes(entry.sourceType) && !isVoid && (
                         <button type="button" onClick={() => handleVoid(entry)} className="text-xs text-rose-600 hover:underline">
                           取消

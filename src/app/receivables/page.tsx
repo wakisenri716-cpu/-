@@ -33,7 +33,7 @@ export default async function ReceivablesPage({ searchParams }: { searchParams: 
           <h1 className="text-2xl font-semibold">売掛金・買掛金</h1>
           <p className="mt-1 text-sm text-slate-600">{tab.hint}期日を過ぎた日数ごとに分けて表示します(年齢表)。</p>
         </div>
-        <CsvDownloadLink href={`/api/receivables/export?type=${tab.key}`} />
+        <CsvDownloadLink href={`/api/receivables/export?type=${tab.key}`} print />
       </div>
 
       <div className="flex gap-2 border-b">

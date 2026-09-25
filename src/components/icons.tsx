@@ -315,3 +315,14 @@ export function StoreIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function GaugeIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3.5 16.5a8.5 8.5 0 1 1 17 0" />
+      <path d="m12 16.5 4-5" />
+      <circle cx="12" cy="16.5" r="1.2" />
+      <path d="M3.5 20h17" />
+    </svg>
+  );
+}
