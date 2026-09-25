@@ -14,7 +14,7 @@ function jp(key: string) {
 
 const yen = (n: number) => (n < 0 ? `△${Math.abs(n).toLocaleString("ja-JP")}` : n.toLocaleString("ja-JP"));
 
-const page = "mx-auto max-w-[210mm] bg-white p-6 text-[13px] leading-relaxed text-slate-900 shadow-sm ring-1 ring-slate-200 sm:p-12 print:max-w-none print:p-0 print:shadow-none print:ring-0 break-after-page";
+const page = "mx-auto max-w-[210mm] bg-white p-4 text-[12px] sm:text-[13px] leading-relaxed text-slate-900 shadow-sm ring-1 ring-slate-200 sm:p-12 print:max-w-none print:p-0 print:shadow-none print:ring-0 break-after-page";
 
 function Rows({ rows, indent = 1 }: { rows: StatementRow[]; indent?: number }) {
   return (
@@ -123,8 +123,8 @@ export default async function FinancialStatementsPage({ searchParams }: { search
             <thead>
               <tr className="border-b border-slate-400 text-xs">
                 <th className="py-1 text-left">資産の部</th>
-                <th className="w-28" />
-                <th className="w-28" />
+                <th className="w-20 sm:w-28" />
+                <th className="w-20 sm:w-28" />
               </tr>
             </thead>
             <tbody>
@@ -143,8 +143,8 @@ export default async function FinancialStatementsPage({ searchParams }: { search
             <thead>
               <tr className="border-b border-slate-400 text-xs">
                 <th className="py-1 text-left">負債の部</th>
-                <th className="w-28" />
-                <th className="w-28" />
+                <th className="w-20 sm:w-28" />
+                <th className="w-20 sm:w-28" />
               </tr>
             </thead>
             <tbody>
@@ -186,8 +186,8 @@ export default async function FinancialStatementsPage({ searchParams }: { search
         <table className="mt-2 w-full border-t-2 border-slate-600">
           <colgroup>
             <col />
-            <col className="w-32" />
-            <col className="w-32" />
+            <col className="w-24 sm:w-32" />
+            <col className="w-24 sm:w-32" />
           </colgroup>
           <tbody>
             <Section title="売上高">
