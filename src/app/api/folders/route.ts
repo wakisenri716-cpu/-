@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCompanyId } from "@/lib/auth/session";
 import { allFolders, createFolder, listFolder } from "@/lib/files";
+import { jstDateKey } from "@/lib/jst";
 import { audit } from "@/lib/audit";
 import { UserError } from "@/lib/errors";
 
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
   const companyId = await requireCompanyId();
   const folderId = new URL(request.url).searchParams.get("folder") || null;
   try {
-    const [listing, folders] = await Promise.all([listFolder(companyId, folderId), allFolders(companyId)]);
+    const [listing, folders] = await Promise.all([listFolder(companyId, folderId, jstDateKey(new Date())), allFolders(companyId)]);
     return NextResponse.json({ ...listing, allFolders: folders });
   } catch (error) {
     if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 404 });

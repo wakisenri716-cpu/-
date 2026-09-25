@@ -15,6 +15,7 @@ type FileRow = {
   createdAt: string;
   viewable: "pdf" | "image" | null;
   folderLabel?: string;
+  expiresOn: string | null;
 };
 
 type Listing = {
@@ -28,6 +29,7 @@ type Listing = {
   }[];
   files: FileRow[];
   usage: { bytes: number; files: number };
+  expiring: FileRow[];
   allFolders: { id: string; label: string }[];
 };
 
@@ -44,6 +46,21 @@ function bytes(n: number) {
 function date(iso: string) {
   const d = new Date(iso);
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+// 期限(日付だけ保存しているので UTC のまま表示する)。30日以内・過ぎたものは目立たせる
+function Expiry({ value }: { value: string | null }) {
+  if (!value) return null;
+  const key = value.slice(0, 10);
+  const days = Math.round((Date.parse(`${key}T00:00:00Z`) - Date.parse(`${new Date().toLocaleDateString("sv-SE")}T00:00:00Z`)) / 86_400_000);
+  const [y, m, d] = key.split("-").map(Number);
+  const tone = days < 0 ? "text-rose-700 font-semibold" : days <= 30 ? "text-amber-700 font-semibold" : "text-slate-500";
+  return (
+    <div className={`mt-0.5 pl-6 text-xs ${tone}`}>
+      期限 {y}/{m}/{d}
+      {days < 0 ? "(過ぎています)" : days === 0 ? "(今日)" : days <= 30 ? `(あと${days}日)` : ""}
+    </div>
+  );
 }
 
 function kindLabel(f: FileRow) {
@@ -294,6 +311,7 @@ export function FileManager({ folderId }: { folderId: string | null }) {
                     {f.memo}
                   </div>
                 )}
+                <Expiry value={f.expiresOn} />
                 {/* スマホでは操作を名前の下に出す(横にスクロールしなくても押せるように) */}
                 <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 pl-6 sm:hidden print:hidden">
                   {actions(f)}
@@ -505,6 +523,14 @@ export function FileManager({ folderId }: { folderId: string | null }) {
         <p className="text-sm text-slate-500">読み込み中...</p>
       ) : (
         <>
+          {data.expiring.length > 0 && (
+            <section className="overflow-hidden rounded-xl border border-amber-200 bg-white shadow-sm">
+              <h2 className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900">
+                期限が近い書類({data.expiring.length}件・30日以内と期限切れ)
+              </h2>
+              {fileRows(data.expiring, true)}
+            </section>
+          )}
           {data.folders.length > 0 && (
             <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {data.folders.map((f) => (

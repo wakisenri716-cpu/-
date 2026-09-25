@@ -14,8 +14,9 @@ export type PayFrom = keyof typeof PAY_FROM;
 // レビュー待ちの明細が残っていると金額が確定しないので、精算できない。
 // 承認フローを使う会社では、承認されていない経費精算は精算できない(AWAITING_APPROVAL)。
 export async function getReimbursements(companyId: string) {
-  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { expenseApprovalRequired: true } });
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { expenseApprovalRequired: true, expenseItemLimit: true } });
   const approvalRequired = company?.expenseApprovalRequired ?? false;
+  const limit = company?.expenseItemLimit ?? null;
   const reports = await prisma.expenseReport.findMany({
     where: { companyId, items: { some: {} } },
     include: {
@@ -47,6 +48,8 @@ export async function getReimbursements(companyId: string) {
       amount,
       state,
       approvalStatus: r.approvalStatus,
+      // 会社で決めた1件あたりの上限を超える明細の数(承認するときの確認用)
+      overLimit: limit ? r.items.filter((i) => i.amount > limit).length : 0,
       approvedByName: r.approvedByName,
       returnComment: r.returnComment,
       reimbursedOn: r.reimbursementEntry ? r.reimbursementEntry.date.toISOString().slice(0, 10) : null,

@@ -5,6 +5,7 @@ import { requireCompanyId } from "@/lib/auth/session";
 import { getReimbursements } from "@/lib/accounting/reimbursement";
 import { countDueRecurring } from "@/lib/accounting/recurring";
 import { countDueRecurringInvoices } from "@/lib/accounting/recurringInvoices";
+import { expiringWhere } from "@/lib/files";
 
 export async function getDashboardSummary() {
   const companyId = await requireCompanyId();
@@ -83,7 +84,7 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -101,6 +102,7 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
     getReimbursements(companyId),
     countDueRecurring(companyId),
     countDueRecurringInvoices(companyId),
+    prisma.storedFile.count({ where: expiringWhere(companyId, today) }),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
@@ -134,6 +136,7 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
       href: "/shifts",
       tone: "amber",
     },
+    { key: "files", label: "期限が近い書類", detail: "契約の更新・満了などの期限が30日以内か、過ぎた書類があります", count: expiringFiles, href: "/files", tone: "amber" },
     { key: "stock", label: "発注が必要な商品", detail: "在庫切れ・発注点以下の商品があります", count: stockouts, href: "/inventory", tone: "slate" },
   ];
   return todos.filter((t) => t.count > 0);

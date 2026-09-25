@@ -25,6 +25,7 @@ export async function PUT(request: Request) {
       bankAccount: field("bankAccount"),
       invoiceNote: field("invoiceNote"),
       ...(typeof body.expenseApprovalRequired === "boolean" ? { expenseApprovalRequired: body.expenseApprovalRequired } : {}),
+      ...("expenseItemLimit" in body ? { expenseItemLimit: body.expenseItemLimit === null || body.expenseItemLimit === "" ? null : Number(body.expenseItemLimit) } : {}),
     });
     await audit("会社情報を変更", company.name);
     return NextResponse.json(company);

@@ -39,8 +39,18 @@ export default async function FileViewPage({ params, searchParams }: { params: P
               {formatBytes(file.size)}・{created} に {file.uploadedByName} さんが保存
             </p>
             {file.memo && <p className="mt-1 text-sm text-slate-700">メモ: {file.memo}</p>}
+            {file.expiresOn && <p className="mt-1 text-sm text-slate-700">期限: {file.expiresOn.toISOString().slice(0, 10).replaceAll("-", "/")}</p>}
           </div>
-          <FileViewerActions id={file.id} name={file.name} memo={file.memo ?? ""} viewable={file.viewable} src={src} back={back} autoPrint={print === "1"} />
+          <FileViewerActions
+            id={file.id}
+            name={file.name}
+            memo={file.memo ?? ""}
+            expiresOn={file.expiresOn ? file.expiresOn.toISOString().slice(0, 10) : ""}
+            viewable={file.viewable}
+            src={src}
+            back={back}
+            autoPrint={print === "1"}
+          />
         </div>
       </div>
 

@@ -42,12 +42,17 @@ export default function ExpensesPage() {
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [approvalRequired, setApprovalRequired] = useState(false);
+  const [limit, setLimit] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState<string | null>(null);
 
   async function loadReports() {
     const [res, setting] = await Promise.all([fetch("/api/expense-reports"), fetch("/api/expense-reports/approval-setting")]);
     setReports(await res.json());
-    if (setting.ok) setApprovalRequired((await setting.json()).required === true);
+    if (setting.ok) {
+      const body = await setting.json();
+      setApprovalRequired(body.required === true);
+      setLimit(typeof body.limit === "number" ? body.limit : null);
+    }
     setLoading(false);
   }
 
@@ -180,7 +185,10 @@ export default function ExpensesPage() {
                       <td className="py-1 whitespace-nowrap">
                         {item.account ? `${item.account.code} ${item.account.name}` : "-"}
                       </td>
-                      <td className="py-1 whitespace-nowrap">{formatYen(item.amount)}</td>
+                      <td className="py-1 whitespace-nowrap">
+                        {formatYen(item.amount)}
+                        {limit !== null && item.amount > limit && <span className="ml-1 rounded bg-amber-100 px-1 text-[11px] font-medium text-amber-800">上限超え</span>}
+                      </td>
                       <td className="py-1">
                         {item.aiExtraction ? `${(item.aiExtraction.confidence * 100).toFixed(0)}%` : "-"}
                       </td>

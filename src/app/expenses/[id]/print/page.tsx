@@ -24,7 +24,7 @@ export default async function ExpenseReportPrintPage({ params }: { params: Promi
   const report = await prisma.expenseReport.findFirst({
     where: { id, companyId: user.companyId, ...(user.role === "EMPLOYEE" ? { employeeId: user.id } : {}) },
     include: {
-      company: { select: { name: true, expenseApprovalRequired: true } },
+      company: { select: { name: true, expenseApprovalRequired: true, expenseItemLimit: true } },
       employee: { select: { name: true } },
       items: { include: { account: { select: { code: true, name: true } }, vendor: { select: { name: true } } }, orderBy: { expenseDate: "asc" } },
     },
@@ -111,7 +111,10 @@ export default async function ExpenseReportPrintPage({ params }: { params: Promi
                   <td className="min-w-[8rem] py-1.5 pr-2">{item.description}</td>
                   <td className="py-1.5 pr-2 whitespace-nowrap">{item.vendor?.name ?? "-"}</td>
                   <td className="py-1.5 pr-2 whitespace-nowrap">{item.account ? item.account.name : "-"}</td>
-                  <td className="py-1.5 text-right tabular-nums whitespace-nowrap">{formatYen(item.amount)}</td>
+                  <td className="py-1.5 text-right tabular-nums whitespace-nowrap">
+                    {report.company.expenseItemLimit && item.amount > report.company.expenseItemLimit ? "※" : ""}
+                    {formatYen(item.amount)}
+                  </td>
                 </tr>
               ))}
               {report.items.length === 0 && (
@@ -133,6 +136,9 @@ export default async function ExpenseReportPrintPage({ params }: { params: Promi
           </table>
         </div>
 
+        {report.company.expenseItemLimit && report.items.some((i) => i.amount > report.company.expenseItemLimit!) && (
+          <p className="mt-2 text-xs">※ 1件あたりの上限({formatYen(report.company.expenseItemLimit)})を超える明細です。</p>
+        )}
         {report.returnComment && report.approvalStatus === "RETURNED" && <p className="mt-4 text-xs">差戻しの理由: {report.returnComment}</p>}
 
         {images.length > 0 && (

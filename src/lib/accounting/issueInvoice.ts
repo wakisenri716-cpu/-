@@ -158,6 +158,8 @@ export type CompanyInfoInput = {
   bankAccount: string;
   invoiceNote: string;
   expenseApprovalRequired?: boolean;
+  // 経費1件あたりの上限額。null で上限なし、undefined なら変更しない
+  expenseItemLimit?: number | null;
 };
 
 export async function updateCompanyInfo(companyId: string, input: CompanyInfoInput) {
@@ -168,6 +170,10 @@ export async function updateCompanyInfo(companyId: string, input: CompanyInfoInp
     throw new InvoiceError("登録番号は「T」と13桁の数字で入力してください(例: T1234567890123)");
   }
   const clean = (v: string) => v.trim() || null;
+  const limit = input.expenseItemLimit;
+  if (limit !== undefined && limit !== null && (!Number.isInteger(limit) || limit <= 0 || limit > 100_000_000)) {
+    throw new InvoiceError("経費1件あたりの上限は、1円以上の整数で入力してください(上限なしなら空欄)");
+  }
   return prisma.company.update({
     where: { id: companyId },
     data: {
@@ -178,6 +184,7 @@ export async function updateCompanyInfo(companyId: string, input: CompanyInfoInp
       bankAccount: clean(input.bankAccount),
       invoiceNote: clean(input.invoiceNote),
       ...(typeof input.expenseApprovalRequired === "boolean" ? { expenseApprovalRequired: input.expenseApprovalRequired } : {}),
+      ...(limit !== undefined ? { expenseItemLimit: limit } : {}),
     },
   });
 }
