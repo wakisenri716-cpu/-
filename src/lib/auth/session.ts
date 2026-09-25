@@ -63,7 +63,7 @@ export async function requireUser() {
 }
 
 // 従業員が使える画面。これ以外(帳票・銀行・給料など)は管理者と経理担当だけ。
-export const EMPLOYEE_PATHS = ["/expenses", "/timeclock", "/account"];
+export const EMPLOYEE_PATHS = ["/expenses", "/timeclock", "/account", "/share"];
 
 // 従業員も使える機能(自分の経費精算・タイムカード)用
 export async function requireMember() {

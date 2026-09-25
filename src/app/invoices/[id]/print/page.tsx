@@ -7,6 +7,7 @@ import { jstDateKey } from "@/lib/jst";
 import { PrintButton } from "@/components/PrintButton";
 import { BillingDocument } from "@/components/BillingDocument";
 import { CancelInvoiceButton } from "@/components/CancelInvoiceButton";
+import { SendMailButton } from "@/components/SendMailButton";
 
 export const dynamic = "force-dynamic";
 
@@ -33,10 +34,14 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
             </Link>
           )}
           {!cancelled && calc.total - paid > 0 && invoice.dueDate && invoice.dueDate.toISOString().slice(0, 10) < jstDateKey(new Date()) && (
-            <Link href={`/invoices/${invoice.id}/reminder`} className="rounded-md border border-amber-300 px-3 py-2 text-sm text-amber-800 hover:bg-amber-50">
-              督促状を作成
-            </Link>
+            <>
+              <Link href={`/invoices/${invoice.id}/reminder`} className="rounded-md border border-amber-300 px-3 py-2 text-sm text-amber-800 hover:bg-amber-50">
+                督促状を作成
+              </Link>
+              <SendMailButton kind="reminder" id={invoice.id} tone="warning" />
+            </>
           )}
+          {!cancelled && <SendMailButton kind="invoice" id={invoice.id} />}
           {!cancelled && (
             <Link href={`/invoices/${invoice.id}/delivery`} className="rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
               納品書

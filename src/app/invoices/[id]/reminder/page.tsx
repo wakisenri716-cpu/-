@@ -5,6 +5,7 @@ import { requireCompanyId } from "@/lib/auth/session";
 import { formatYen } from "@/lib/format";
 import { jstDateKey } from "@/lib/jst";
 import { PrintButton } from "@/components/PrintButton";
+import { SendMailButton } from "@/components/SendMailButton";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,7 @@ export default async function ReminderPage({ params, searchParams }: { params: P
             反映
           </button>
           <PrintButton />
+          {open && <SendMailButton kind="reminder" id={invoice.id} tone="warning" />}
         </form>
       </div>
 
