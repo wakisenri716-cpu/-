@@ -9,7 +9,7 @@ export type FormLine = { description: string; quantity: string; unit: string; un
 type Line = FormLine;
 export type BillingFormInitial = { customerName: string; lines: FormLine[]; notes: string; issueDate?: string; dueDate?: string; departmentId?: string | null };
 // 請求書の訂正(元の請求書の番号・入金済みの額)
-export type BillingCorrection = { id: string; number: string; paid: number };
+export type BillingCorrection = { id: string; number: string; nextNumber: string; paid: number };
 
 const emptyLine = (): Line => ({ description: "", quantity: "1", unit: "", unitPrice: "", taxRate: "10" });
 
@@ -59,7 +59,7 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
         ...TEXT.invoice,
         title: "請求書を訂正",
         back: { href: `/invoices/${correction.id}/print`, label: "← 元の請求書に戻る" },
-        lead: `請求書 ${correction.number} を訂正します。元の請求書は「取消」になり(売上の仕訳も取り消し)、直した内容で訂正版(${correction.number}-R1 のような番号)を発行します。入金の記録と、お客さまに送った共有リンクは訂正版に引き継ぎます。`,
+        lead: `請求書 ${correction.number} を訂正します。元の請求書は「取消」になり(売上の仕訳も取り消し)、直した内容で訂正版(${correction.nextNumber})を発行します。入金の記録と、お客さまに送った共有リンクは訂正版に引き継ぎます。`,
         endpoint: `/api/invoices/${correction.id}/correct`,
       }
     : TEXT[kind];
