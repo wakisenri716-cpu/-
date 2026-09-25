@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { formatClock, formatMinutes } from "@/lib/shifts/pay";
+import { PrintButton } from "@/components/PrintButton";
 
 type Plan = { staffId: string; date: string; startMinutes: number; endMinutes: number; breakMinutes: number };
 type Rec = {
@@ -103,7 +104,10 @@ export default function AttendancePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">勤怠一覧</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-semibold">勤怠一覧</h1>
+          <PrintButton variant="outline" />
+        </div>
         <p className="mt-1 text-sm text-slate-600">
           シフトの予定(灰色)とタイムカードの打刻(太字)を並べて確認できます。打刻を押して修正したり、打刻忘れの日に追加したりできます。
           人件費は、打刻がある日は実績で、ない日は予定で計算されます。

@@ -22,7 +22,7 @@ export function CsvImportForm({ endpoint, title, hint, onDone }: { endpoint: str
   }
 
   return (
-    <details className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <details className="print:hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <summary className="cursor-pointer text-sm font-medium text-slate-700">{title}</summary>
       <p className="mt-2 text-xs text-slate-500">
         {hint}

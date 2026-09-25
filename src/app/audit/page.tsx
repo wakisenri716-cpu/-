@@ -28,7 +28,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           <h1 className="text-2xl font-semibold">操作ログ</h1>
           <p className="mt-1 text-sm text-slate-600">誰が・いつ・何をしたかの記録です(ログイン、仕訳の入力・取消、請求書の作成・取消、ユーザーの変更など)。</p>
         </div>
-        <CsvDownloadLink href={`/api/audit/export?${q({})}`} />
+        <CsvDownloadLink href={`/api/audit/export?${q({})}`} print />
       </div>
 
       <form method="get" className="flex flex-wrap items-end gap-2">

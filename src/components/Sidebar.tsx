@@ -30,6 +30,7 @@ import {
   RepeatIcon,
   ScaleIcon,
   GaugeIcon,
+  FolderIcon,
   SearchIcon,
   ShieldIcon,
   StoreIcon,
@@ -48,6 +49,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/", label: "ダッシュボード", icon: DashboardIcon },
       { href: "/review", label: "レビューキュー", icon: InboxIcon },
+      { href: "/files", label: "書類フォルダ", icon: FolderIcon },
     ],
   },
   {

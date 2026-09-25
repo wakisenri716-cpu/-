@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { buildCsv } from "@/lib/csv";
 import { buildZip } from "@/lib/zip";
 import { SOURCE_LABELS } from "@/lib/accounting/journal";
+import { allFolders } from "@/lib/files";
 
 const d = (date: Date | null | undefined) => (date ? date.toISOString().slice(0, 10) : "");
 const JST = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -45,6 +46,12 @@ export async function buildBackup(companyId: string) {
     ]);
 
   const minutes = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  const [storedFiles, folderList] = await Promise.all([
+    prisma.storedFile.findMany({ where: { companyId }, orderBy: { createdAt: "asc" }, select: { folderId: true, name: true, size: true, memo: true, uploadedByName: true, createdAt: true } }),
+    allFolders(companyId),
+  ]);
+  const folderLabels = new Map(folderList.map((f) => [f.id, f.label]));
+
   const files: { name: string; rows: (string | number)[][] }[] = [
     {
       name: "仕訳帳.csv",
@@ -132,6 +139,13 @@ export async function buildBackup(companyId: string) {
       ],
     },
     { name: "予算.csv", rows: [["年度", "勘定科目", "年間予算"], ...budgets.map((b) => [b.fiscalYear, `${b.account.code} ${b.account.name}`, b.amount])] },
+    {
+      name: "書類フォルダ.csv",
+      rows: [
+        ["フォルダ", "ファイル名", "サイズ(バイト)", "メモ", "保存した人", "保存日時"],
+        ...storedFiles.map((f) => [f.folderId ? (folderLabels.get(f.folderId) ?? "") : "(いちばん上)", f.name, f.size, f.memo ?? "", f.uploadedByName, t(f.createdAt)]),
+      ],
+    },
     { name: "操作ログ.csv", rows: [["日時", "ユーザー", "操作", "内容"], ...logs.map((l) => [t(l.createdAt), l.userName, l.action, l.detail ?? ""])] },
   ];
 
@@ -141,6 +155,7 @@ export async function buildBackup(companyId: string) {
     "・各ファイルは Excel で開ける CSV(UTF-8)です。",
     "・仕訳帳.csv は「仕訳のCSV取込」と同じ形式です(取消・レビュー待ちの仕訳も含むので、取り込み直すときは「状態」が記帳済みの行だけ残し、部門を使っていれば同じ名前の部門を先に登録してください)。",
     "・領収書・請求書の画像は含まれていません(「証憑の検索」から1件ずつ表示・保存できます)。",
+    "・書類フォルダ.csv はファイルの一覧です。ファイルそのものは「書類フォルダ」の画面から1件ずつダウンロードしてください。",
     "",
   ].join("\r\n");
 

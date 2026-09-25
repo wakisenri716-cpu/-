@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { formatDate, formatYen } from "@/lib/format";
+import { PrintButton } from "@/components/PrintButton";
 
 type FixedAsset = {
   id: string;
@@ -136,7 +137,10 @@ export default function AssetsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">固定資産管理</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-semibold">固定資産管理</h1>
+          <PrintButton variant="outline" />
+        </div>
         <p className="mt-1 text-sm text-slate-600">
           資産を登録すると取得の仕訳(固定資産/普通預金)が自動で記帳されます。「当月分を計上」を押すと
           定額法で計算した減価償却費(減価償却費/減価償却累計額)が記帳されます。同じ月に二重計上はできません。
@@ -158,7 +162,7 @@ export default function AssetsPage() {
         </div>
       )}
 
-      <form onSubmit={handleRegister} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white shadow-sm p-4">
+      <form onSubmit={handleRegister} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white shadow-sm p-4 print:hidden">
         <div>
           <label className="block text-xs text-slate-500">資産名</label>
           <input name="name" required className="mt-1 w-40 rounded border px-2 py-1.5 text-sm" placeholder="ノートPC" />

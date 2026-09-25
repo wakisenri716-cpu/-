@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CsvImportForm } from "@/components/CsvImportForm";
+import { PrintButton } from "@/components/PrintButton";
 
 type Account = { id: string; code: string; name: string };
 type Vendor = {
@@ -103,7 +104,10 @@ export default function VendorsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">取引先・顧客</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-semibold">取引先・顧客</h1>
+          <PrintButton variant="outline" />
+        </div>
         <p className="mt-1 text-sm text-slate-600">
           経費精算・請求書のAI処理で自動的に登録された取引先/顧客の一覧です。取引先に「既定の勘定科目」を
           設定しておくと、その取引先からの領収書・請求書はAIの判定よりも優先してその科目で仕訳されます。

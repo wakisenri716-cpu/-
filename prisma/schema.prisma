@@ -142,6 +142,8 @@ model Company {
   recurringInvoices RecurringInvoice[]
   departments      Department[]
   journalTemplates JournalTemplate[]
+  folders          Folder[]
+  storedFiles      StoredFile[]
   recurringEntries RecurringEntry[]
   auditLogs        AuditLog[]
 }
@@ -756,4 +758,37 @@ model JournalTemplate {
   createdAt   DateTime @default(now())
 
   @@unique([companyId, name])
+}
+
+// 書類フォルダ。会社の書類(契約書・見積書のPDF・写真など)を入れておく場所。フォルダの中にフォルダも作れる。
+model Folder {
+  id        String       @id @default(cuid())
+  companyId String
+  company   Company      @relation(fields: [companyId], references: [id])
+  parentId  String?
+  parent    Folder?      @relation("FolderTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  Folder[]     @relation("FolderTree")
+  files     StoredFile[]
+  name      String
+  createdAt DateTime     @default(now())
+
+  @@index([companyId, parentId])
+}
+
+// フォルダに入れたファイル。中身は DB に保存する(1ファイル 4MB まで)。folderId が空ならいちばん上の階層。
+model StoredFile {
+  id             String   @id @default(cuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id])
+  folderId       String?
+  folder         Folder?  @relation(fields: [folderId], references: [id], onDelete: Restrict)
+  name           String
+  mimeType       String
+  size           Int
+  data           Bytes
+  memo           String?
+  uploadedByName String
+  createdAt      DateTime @default(now())
+
+  @@index([companyId, folderId])
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { formatDate, formatYen } from "@/lib/format";
+import { PrintButton } from "@/components/PrintButton";
 
 type Account = { id: string; code: string; name: string; category: string };
 
@@ -133,7 +134,10 @@ export default function BankPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">銀行明細</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-semibold">銀行明細</h1>
+          <PrintButton variant="outline" />
+        </div>
         <p className="mt-1 text-sm text-slate-600">
           ネットバンキングからダウンロードした入出金明細のCSVを取り込むと、請求書と金額が一致するものは自動で消込み、
           それ以外は過去の記帳・キーワード・AIで勘定科目を判定して仕訳します。自信が低いものだけ「確認待ち」に残ります。
@@ -143,7 +147,7 @@ export default function BankPage() {
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
       {message && <div className="rounded-md bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{message}</div>}
 
-      <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm print:hidden">
         <h2 className="font-semibold">明細CSVを取り込む</h2>
         <p className="text-xs text-slate-500">
           「日付」「摘要(内容)」「出金(お引出し)」「入金(お預入れ)」「残高」の列があるCSVに対応しています(Shift_JIS/UTF-8どちらも可)。

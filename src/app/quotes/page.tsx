@@ -3,6 +3,7 @@ import { requireCompanyId } from "@/lib/auth/session";
 import { listQuotes } from "@/lib/accounting/quotes";
 import { formatDate, formatYen } from "@/lib/format";
 import { jstDateKey } from "@/lib/jst";
+import { PrintButton } from "@/components/PrintButton";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,10 @@ export default async function QuotesPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">見積書</h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-semibold">見積書</h1>
+            <PrintButton variant="outline" />
+          </div>
           <p className="mt-1 text-sm text-slate-600">
             見積書を作って印刷・PDF保存できます。受注したら「請求書にする」で、同じ内容の請求書を作れます(売上の仕訳も自動)。
           </p>

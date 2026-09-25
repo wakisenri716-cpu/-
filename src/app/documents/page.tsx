@@ -29,7 +29,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
             アップロードした領収書・請求書を、取引日・金額・取引先で探せます(電子帳簿保存法の検索要件に対応。日付と金額は範囲で指定でき、組み合わせて検索できます)。
           </p>
         </div>
-        <CsvDownloadLink href={`/api/documents/export?${qs}`} />
+        <CsvDownloadLink href={`/api/documents/export?${qs}`} print />
       </div>
 
       <form method="get" className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
