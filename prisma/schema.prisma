@@ -286,6 +286,8 @@ model ExpenseItem {
   accountId        String?
   account          Account?      @relation(fields: [accountId], references: [id])
   receiptImageUrl  String?
+  // 登録したときのレシート画像の SHA-256(DBのトリガーで自動で入れる。改ざんチェックに使う)
+  receiptSha256    String?
   aiExtractionId   String?       @unique
   aiExtraction     AiExtraction? @relation(fields: [aiExtractionId], references: [id])
   journalEntryId   String?       @unique
@@ -317,6 +319,7 @@ model Invoice {
   taxAmount       Int               @default(0)
   totalAmount     Int               @default(0)
   sourceFileUrl   String?
+  sourceSha256    String?
   aiExtractionId  String?           @unique
   aiExtraction    AiExtraction?     @relation(fields: [aiExtractionId], references: [id])
   journalEntryId  String?           @unique
@@ -821,6 +824,7 @@ model StoredFile {
   mimeType       String
   size           Int
   data           Bytes
+  sha256         String?
   memo           String?
   uploadedByName String
   // 契約の満了日・更新日など(近づいたらダッシュボードとカレンダーでお知らせ)
@@ -874,4 +878,21 @@ model PayrollOverride {
 
   @@unique([staffId, month])
   @@index([companyId, month])
+}
+
+// 訂正・削除の履歴(電子帳簿保存法の真実性の要件)。仕訳・証憑などが登録・変更・削除されるたびに、
+// データベースのトリガーが変更前と変更後を自動で書き込む。この表の書き換え・削除はトリガーで禁止している。
+model RecordHistory {
+  id        BigInt   @id @default(autoincrement())
+  companyId String?
+  tableName String
+  recordId  String
+  // INSERT / UPDATE / DELETE
+  action    String
+  oldData   Json?
+  newData   Json?
+  changedAt DateTime @default(now())
+
+  @@index([companyId, changedAt])
+  @@index([tableName, recordId])
 }

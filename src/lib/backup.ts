@@ -3,6 +3,7 @@ import { buildCsv } from "@/lib/csv";
 import { buildZip } from "@/lib/zip";
 import { SOURCE_LABELS } from "@/lib/accounting/journal";
 import { allFolders } from "@/lib/files";
+import { listRecordHistory } from "@/lib/compliance";
 
 const d = (date: Date | null | undefined) => (date ? date.toISOString().slice(0, 10) : "");
 const JST = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -51,6 +52,7 @@ export async function buildBackup(companyId: string) {
     allFolders(companyId),
   ]);
   const folderLabels = new Map(folderList.map((f) => [f.id, f.label]));
+  const history = await listRecordHistory(companyId, { take: 500, changesOnly: true });
 
   const files: { name: string; rows: (string | number)[][] }[] = [
     {
@@ -145,6 +147,10 @@ export async function buildBackup(companyId: string) {
         ["フォルダ", "ファイル名", "サイズ(バイト)", "メモ", "保存した人", "保存日時"],
         ...storedFiles.map((f) => [f.folderId ? (folderLabels.get(f.folderId) ?? "") : "(いちばん上)", f.name, f.size, f.memo ?? "", f.uploadedByName, t(f.createdAt)]),
       ],
+    },
+    {
+      name: "訂正・削除の履歴(直近500件).csv",
+      rows: [["日時", "操作", "種類", "内容", "変更点"], ...history.map((h) => [t(h.changedAt), h.action, h.table, h.summary, h.changes.map((c) => `${c.field}: ${c.before} → ${c.after}`).join(" / ")])],
     },
     { name: "操作ログ.csv", rows: [["日時", "ユーザー", "操作", "内容"], ...logs.map((l) => [t(l.createdAt), l.userName, l.action, l.detail ?? ""])] },
   ];
