@@ -7,8 +7,8 @@ import { recordInvoicePayment } from "@/lib/accounting/payments";
 import { hasPayrollRuns } from "@/lib/shifts/service";
 import type { StatementRow } from "./statement";
 import { UserError } from "@/lib/errors";
-
-const BANK_ACCOUNT_CODE = "1020"; // 普通預金
+import { createHash } from "crypto";
+import { cardsWithKeyword, ensureBankAccounts, getBankAccount, matchesKeyword } from "./accounts";
 const SETTLEABLE_INVOICE_STATUSES = ["CONFIRMED", "SENT", "PARTIALLY_PAID", "OVERDUE"] as const;
 
 export class BankError extends UserError {}
@@ -37,27 +37,31 @@ const RULES: Rule[] = [
   { pattern: /JR|SUICA|スイカ|PASMO|パスモ|タクシー|ETC/, out: "5010", confidence: 0.75, reason: "交通機関の利用" },
 ];
 
-function ruleSuggestion(row: BankTransaction): Suggestion | null {
+function ruleSuggestion(row: BankTransaction, isCard = false): Suggestion | null {
   const text = normalize(row.description);
-  const direction = row.withdrawal > 0 ? "out" : "in";
+  // カードの返品・取消は、買ったときの費用を取り消すので「支払い」側のルールで判定する
+  const refund = isCard && row.deposit > 0;
+  const direction = row.withdrawal > 0 || refund ? "out" : "in";
   for (const rule of RULES) {
     const code = rule[direction];
     if (code && rule.pattern.test(text)) {
-      return { accountCode: code, confidence: rule.confidence, source: "RULE", reason: rule.reason };
+      return refund
+        ? { accountCode: code, confidence: Math.min(rule.confidence, 0.75), source: "RULE", reason: `${rule.reason}の返品・取消` }
+        : { accountCode: code, confidence: rule.confidence, source: "RULE", reason: rule.reason };
     }
   }
   return null;
 }
 
 // 過去に人が確定した(または自動記帳された)同じ摘要・同じ向きの明細があれば、その科目を使う
-async function historySuggestion(row: BankTransaction): Promise<Suggestion | null> {
+async function historySuggestion(row: BankTransaction, ownCode: string): Promise<Suggestion | null> {
   const direction = row.withdrawal > 0 ? { withdrawal: { gt: 0 } } : { deposit: { gt: 0 } };
   const previous = await prisma.bankTransaction.findFirst({
     where: {
       companyId: row.companyId,
       description: row.description,
       status: "POSTED",
-      suggestedAccountCode: { not: null },
+      suggestedAccountCode: { not: null, notIn: [ownCode] },
       id: { not: row.id },
       ...direction,
     },
@@ -91,25 +95,37 @@ async function matchInvoice(row: BankTransaction) {
   return candidates.length === 1 ? candidates[0] : null;
 }
 
+// 明細の口座・カード(own)と相手科目で仕訳を作る。
+// 口座: 出金は「相手科目 / 普通預金(〇〇)」、入金は「普通預金(〇〇) / 相手科目」。
+// カード: 利用は「相手科目 / 未払金(〇〇カード)」、返品・取消は「未払金(〇〇カード) / 相手科目」。
+type Own = { code: string; name: string; kind: string };
+
+async function ownAccountOf(row: BankTransaction): Promise<Own> {
+  const bank = await getBankAccount(row.companyId, row.bankAccountId);
+  return { code: bank.account.code, name: bank.name, kind: bank.kind };
+}
+
 async function postBankJournal(
   row: BankTransaction,
   accountCode: string,
+  own: Own,
   options: { auto: boolean; suggestion?: Suggestion },
 ) {
   return prisma.$transaction(async (tx) => {
     const [bank, counter] = await Promise.all([
-      ensureAccount(tx, row.companyId, BANK_ACCOUNT_CODE),
+      ensureAccount(tx, row.companyId, own.code),
       ensureAccount(tx, row.companyId, accountCode),
     ]);
     const amount = row.withdrawal || row.deposit;
+    const isCard = own.kind === "CARD";
     const lines =
       row.withdrawal > 0
         ? [
             { accountId: counter.id, debit: amount, credit: 0, memo: row.description },
-            { accountId: bank.id, debit: 0, credit: amount, memo: "普通預金 出金" },
+            { accountId: bank.id, debit: 0, credit: amount, memo: isCard ? `${own.name} 利用` : `${own.name} 出金` },
           ]
         : [
-            { accountId: bank.id, debit: amount, credit: 0, memo: "普通預金 入金" },
+            { accountId: bank.id, debit: amount, credit: 0, memo: isCard ? `${own.name} 返品・取消` : `${own.name} 入金` },
             { accountId: counter.id, debit: 0, credit: amount, memo: row.description },
           ];
 
@@ -117,7 +133,7 @@ async function postBankJournal(
       data: {
         companyId: row.companyId,
         date: row.date,
-        description: `銀行明細: ${row.description}`,
+        description: `${isCard ? "カード明細" : "銀行明細"}(${own.name}): ${row.description}`,
         sourceType: "BANK",
         status: options.auto ? "AUTO_POSTED" : "POSTED_MANUALLY",
         createdByAi: true,
@@ -146,12 +162,20 @@ async function postBankJournal(
   });
 }
 
-export async function importBankStatement(companyId: string, rows: StatementRow[]) {
+export async function importBankStatement(companyId: string, rows: StatementRow[], bankAccountId?: string | null) {
   await ensureChartOfAccounts(companyId);
+  const first = await ensureBankAccounts(companyId);
+  const bank = await getBankAccount(companyId, bankAccountId);
+  if (!bank.active) throw new BankError("しまった口座・カードには取り込めません");
+  const own: Own = { code: bank.account.code, name: bank.name, kind: bank.kind };
+  const isCard = bank.kind === "CARD";
+  // 同じ内容の明細が別の口座にあっても重ならないよう、2つ目以降の口座は口座ごとの指紋にする
+  // (最初の口座はこれまでと同じ指紋のままにして、前に取り込んだCSVを入れ直しても二重にならないようにする)
+  const fingerprintOf = (fp: string) => (bank.id === first.id ? fp : createHash("sha256").update(`${bank.id}|${fp}`).digest("hex"));
   // createManyAndReturn は実際に作成した行だけを返すので、再アップロードした行や
   // 同時に別リクエストが作った行はここで処理されない
   const created = await prisma.bankTransaction.createManyAndReturn({
-    data: rows.map((r) => ({ companyId, ...r })),
+    data: rows.map((r) => ({ companyId, ...r, fingerprint: fingerprintOf(r.fingerprint), bankAccountId: bank.id })),
     skipDuplicates: true,
   });
   created.sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -161,11 +185,14 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
   const salaryAccrued = await hasPayrollRuns(companyId);
   const suggestions = new Map<string, Suggestion>();
   const needsAi: BankTransaction[] = [];
+  // 銀行口座の明細で、カード代金の引落しを見分ける
+  const cards = isCard ? [] : await cardsWithKeyword(companyId);
 
   for (const row of created) {
-    const invoice = await matchInvoice(row);
+    // 請求書の消込は銀行口座の明細だけ(カードの利用は請求書の入金・支払ではない)
+    const invoice = isCard ? null : await matchInvoice(row);
     if (invoice) {
-      const { payment } = await recordInvoicePayment(invoice.id, row.deposit || row.withdrawal, row.date);
+      const { payment } = await recordInvoicePayment(invoice.id, row.deposit || row.withdrawal, row.date, own.code);
       await prisma.bankTransaction.update({
         where: { id: row.id },
         data: {
@@ -180,7 +207,10 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
       summary.matched++;
       continue;
     }
-    let suggestion = (await historySuggestion(row)) ?? ruleSuggestion(row);
+    const card = row.withdrawal > 0 ? cards.find((c) => matchesKeyword(row.description, c.keyword)) : undefined;
+    let suggestion: Suggestion | null = card
+      ? { accountCode: card.code, confidence: 0.95, source: "RULE", reason: `${card.name}の代金の引落し(摘要に「${card.keyword}」)` }
+      : ((await historySuggestion(row, own.code)) ?? ruleSuggestion(row, isCard));
     if (suggestion?.source === "RULE" && suggestion.accountCode === "5110" && salaryAccrued) {
       suggestion = { ...suggestion, accountCode: "2020", reason: "給与の振込(シフトから計上済みの未払金の支払い)" };
     }
@@ -190,7 +220,7 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
 
   if (needsAi.length > 0) {
     const accounts = await prisma.account.findMany({
-      where: { companyId, code: { not: BANK_ACCOUNT_CODE }, hidden: false },
+      where: { companyId, code: { not: own.code }, hidden: false },
       orderBy: { code: "asc" },
       select: { code: true, name: true },
     });
@@ -207,7 +237,7 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
       const r = results[i];
       const valid = r && allowed.has(r.accountCode);
       suggestions.set(row.id, {
-        accountCode: valid ? r.accountCode : row.withdrawal > 0 ? "5990" : "4020",
+        accountCode: valid ? r.accountCode : row.withdrawal > 0 || isCard ? "5990" : "4020",
         confidence: valid ? r.confidence : 0,
         source: "AI",
         reason: valid ? r.reason : "AIが判定できませんでした",
@@ -220,7 +250,7 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
     if (!suggestion) continue;
     const decision = await evaluateAutomation(companyId, "BANK", suggestion.confidence, row.withdrawal || row.deposit);
     if (decision.auto) {
-      await postBankJournal(row, suggestion.accountCode, { auto: true, suggestion });
+      await postBankJournal(row, suggestion.accountCode, own, { auto: true, suggestion });
       summary.autoPosted++;
     } else {
       await prisma.bankTransaction.update({
@@ -252,8 +282,9 @@ export async function confirmBankTransaction(companyId: string, id: string, acco
   if (row.status !== "PENDING") throw new BankError("この明細はすでに処理されています");
   const account = await prisma.account.findFirst({ where: { id: accountId, companyId } });
   if (!account) throw new BankError("勘定科目を選択してください");
-  if (account.code === BANK_ACCOUNT_CODE) throw new BankError("普通預金以外の相手科目を選択してください");
-  return postBankJournal(row, account.code, { auto: false });
+  const own = await ownAccountOf(row);
+  if (account.code === own.code) throw new BankError(`「${account.name}」以外の相手科目を選択してください`);
+  return postBankJournal(row, account.code, own, { auto: false });
 }
 
 export async function ignoreBankTransaction(companyId: string, id: string) {
@@ -277,20 +308,21 @@ export async function reopenBankTransaction(companyId: string, id: string) {
   });
 }
 
-export async function getBankTransactions(companyId: string) {
+export async function getBankTransactions(companyId: string, bankAccountId?: string | null) {
+  const bank = await getBankAccount(companyId, bankAccountId);
   const [pending, processed, accounts] = await Promise.all([
-    prisma.bankTransaction.findMany({ where: { companyId, status: "PENDING" }, orderBy: [{ date: "asc" }, { createdAt: "asc" }] }),
+    prisma.bankTransaction.findMany({ where: { companyId, bankAccountId: bank.id, status: "PENDING" }, orderBy: [{ date: "asc" }, { createdAt: "asc" }] }),
     prisma.bankTransaction.findMany({
-      where: { companyId, status: { not: "PENDING" } },
+      where: { companyId, bankAccountId: bank.id, status: { not: "PENDING" } },
       include: { matchedInvoice: { select: { invoiceNumber: true } } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       take: 100,
     }),
     prisma.account.findMany({
-      where: { companyId, code: { not: BANK_ACCOUNT_CODE }, hidden: false },
+      where: { companyId, code: { not: bank.account.code }, hidden: false },
       orderBy: { code: "asc" },
       select: { id: true, code: true, name: true, category: true },
     }),
   ]);
-  return { pending, processed, accounts };
+  return { bankAccount: { id: bank.id, name: bank.name, kind: bank.kind, active: bank.active }, pending, processed, accounts };
 }

@@ -155,6 +155,7 @@ model Company {
   departments      Department[]
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
+  bankAccounts     BankAccount[]
   folders          Folder[]
   storedFiles      StoredFile[]
   recurringEntries RecurringEntry[]
@@ -220,6 +221,7 @@ model Account {
   vendorsAsDefault   Vendor[]        @relation("VendorDefaultAccount")
   budgets            Budget[]
   recurringLines     RecurringLine[]
+  bankAccount        BankAccount?
 
   @@unique([companyId, code])
 }
@@ -551,6 +553,9 @@ model BankTransaction {
   deposit              Int                   @default(0)
   balance              Int?
   fingerprint          String
+  // どの口座・カードの明細か(空なら最初の「普通預金」)
+  bankAccountId        String?
+  bankAccount          BankAccount?          @relation(fields: [bankAccountId], references: [id])
   status               BankTransactionStatus @default(PENDING)
   suggestedAccountCode String?
   confidence           Float?
@@ -895,4 +900,24 @@ model RecordHistory {
 
   @@index([companyId, changedAt])
   @@index([tableName, recordId])
+}
+
+// 明細を取り込む銀行口座・クレジットカード。それぞれ専用の勘定科目(普通預金(〇〇)・未払金(〇〇カード))を持つ。
+model BankAccount {
+  id           String            @id @default(cuid())
+  companyId    String
+  company      Company           @relation(fields: [companyId], references: [id])
+  name         String
+  // BANK(銀行口座) / CARD(クレジットカード)
+  kind         String
+  // この口座・カード専用の勘定科目
+  accountId    String            @unique
+  account      Account           @relation(fields: [accountId], references: [id])
+  // カード: 銀行明細の摘要にこの文字があれば、そのカードの代金の引落しとみなす(例: ミツイスミトモカード)
+  debitKeyword String?
+  active       Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  transactions BankTransaction[]
+
+  @@unique([companyId, name])
 }

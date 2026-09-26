@@ -1,6 +1,7 @@
 import { getAccountBalances } from "@/lib/accounting/ledger";
 import { lastYear } from "@/lib/accounting/incomeStatement";
 import { nextDay, toRange } from "./period";
+import { cashAccountCodes } from "@/lib/bank/accounts";
 
 // 経営分析: 損益計算書・貸借対照表の数字から、よく使われる指標を計算する。
 // 流動・固定の区分は勘定科目コードで判断する(資産 1000〜1499・負債 2000〜2199 を流動とみなす)。
@@ -9,7 +10,6 @@ const COST_OF_SALES = "5000"; // 売上原価
 const SALES = "4010"; // 売上高
 const NON_OPERATING_EXPENSE = new Set(["5150", "5160"]); // 支払利息・固定資産除売却損(営業外・特別)
 const PERSONNEL = new Set(["5110", "5120"]); // 給料手当・法定福利費
-const CASH = new Set(["1010", "1020"]);
 const RECEIVABLES = new Set(["1110", "1115"]);
 const ACCUMULATED_DEPRECIATION = "1519"; // 資産のマイナス(科目の区分上は負債に置いている)
 
@@ -34,7 +34,8 @@ function daysBetween(from: string, to: string) {
 }
 
 async function figures(companyId: string, from: string, to: string): Promise<Figures> {
-  const [pl, bs] = await Promise.all([getAccountBalances(companyId, toRange({ from, to })), getAccountBalances(companyId, { lt: nextDay(to) })]);
+  const [pl, bs, cashCodes] = await Promise.all([getAccountBalances(companyId, toRange({ from, to })), getAccountBalances(companyId, { lt: nextDay(to) }), cashAccountCodes(companyId)]);
+  const CASH = new Set(cashCodes); // 現金・普通預金と、登録した銀行口座
 
   const sum = (rows: typeof pl, pick: (r: (typeof pl)[number]) => boolean) => rows.filter(pick).reduce((s, r) => s + r.balance, 0);
   const sales = sum(pl, (r) => r.account.code === SALES);
