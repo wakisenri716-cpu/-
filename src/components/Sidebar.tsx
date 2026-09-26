@@ -100,6 +100,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/tax", label: "消費税集計", icon: PercentIcon },
       { href: "/analysis", label: "経営分析", icon: GaugeIcon },
       { href: "/documents", label: "証憑の検索", icon: SearchIcon },
+      { href: "/compliance", label: "電子帳簿保存法", icon: ShieldIcon },
     ],
   },
 ];
