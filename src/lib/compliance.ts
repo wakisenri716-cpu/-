@@ -50,8 +50,24 @@ const FIELD_LABELS: Record<string, string> = {
 // 画面に並べる必要のない列(内部の日時など)
 const HIDDEN = new Set(["updatedAt", "createdAt", "companyId", "id"]);
 
+// 状態などのコードは日本語にする
+const VALUE_LABELS: Record<string, string> = {
+  AUTO_POSTED: "記帳済み(自動)",
+  POSTED_MANUALLY: "記帳済み",
+  PENDING_REVIEW: "レビュー待ち",
+  VOID: "取消",
+  DRAFT: "下書き",
+  CONFIRMED: "確定",
+  SENT: "送付済み",
+  PARTIALLY_PAID: "一部入金",
+  PAID: "入金済み",
+  OVERDUE: "期限超過",
+  CANCELLED: "取消",
+};
+
 function short(value: unknown) {
   if (value === null || value === undefined) return "(なし)";
+  if (typeof value === "string" && VALUE_LABELS[value]) return VALUE_LABELS[value];
   const text = typeof value === "string" ? value : JSON.stringify(value);
   // 日時は日付だけ、長い値は切り詰める
   const date = text.match(/^(\d{4}-\d{2}-\d{2})T00:00:00(\.000)?Z?$/);
