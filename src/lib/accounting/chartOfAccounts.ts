@@ -41,6 +41,7 @@ export const CHART_OF_ACCOUNTS: SeedAccount[] = [
   { code: "5090", name: "外注費", category: "EXPENSE" },
   { code: "5100", name: "減価償却費", category: "EXPENSE" },
   { code: "5110", name: "給料手当", category: "EXPENSE" },
+  { code: "5115", name: "賞与", category: "EXPENSE" },
   { code: "5120", name: "法定福利費", category: "EXPENSE" },
   { code: "5130", name: "広告宣伝費", category: "EXPENSE" },
   { code: "5140", name: "租税公課", category: "EXPENSE" },

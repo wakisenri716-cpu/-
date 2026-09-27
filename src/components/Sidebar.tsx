@@ -91,6 +91,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/attendance", label: "勤怠一覧", icon: ChecklistIcon },
       { href: "/leave", label: "有給・残業", icon: SunIcon },
       { href: "/payroll", label: "給与計算", icon: CoinsIcon },
+      { href: "/bonus", label: "賞与", icon: CoinsIcon },
     ],
   },
   {

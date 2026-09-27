@@ -10,6 +10,7 @@ type Overview = {
   staff: { id: string; name: string; account: Account | null }[];
   vendors: { id: string; name: string; account: Account | null }[];
   payrollMonths: { month: string; people: number; total: number; hasDetails: boolean }[];
+  bonuses: { id: string; label: string; people: number; total: number }[];
   unpaid: { id: string; invoiceNumber: string | null; vendorId: string | null; vendorName: string; hasAccount: boolean; dueDate: string | null; remaining: number }[];
 };
 type Preview = { lines: { name: string; amount: number; account: Account | null; note: string }[]; total: number; missing: string[] };
@@ -28,8 +29,9 @@ function nextBusinessDay() {
 
 export default function TransfersPage() {
   const [data, setData] = useState<Overview | null>(null);
-  const [tab, setTab] = useState<"SALARY" | "GENERAL">("SALARY");
+  const [tab, setTab] = useState<"SALARY" | "BONUS" | "GENERAL">("SALARY");
   const [month, setMonth] = useState("");
+  const [bonusId, setBonusId] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [date, setDate] = useState(nextBusinessDay);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -44,6 +46,7 @@ export default function TransfersPage() {
     const body: Overview = await res.json();
     setData(body);
     setMonth((m) => m || body.payrollMonths[0]?.month || "");
+    setBonusId((b) => b || body.bonuses[0]?.id || "");
   }, []);
 
   useEffect(() => {
@@ -52,8 +55,8 @@ export default function TransfersPage() {
     load();
   }, [load]);
 
-  const request = tab === "SALARY" ? { kind: "SALARY", month } : { kind: "GENERAL", invoiceIds: selected };
-  const ready = tab === "SALARY" ? !!month : selected.length > 0;
+  const request = tab === "SALARY" ? { kind: "SALARY", month } : tab === "BONUS" ? { kind: "BONUS", bonusId } : { kind: "GENERAL", invoiceIds: selected };
+  const ready = tab === "SALARY" ? !!month : tab === "BONUS" ? !!bonusId : selected.length > 0;
   const requestKey = JSON.stringify(request);
 
   useEffect(() => {
@@ -169,6 +172,7 @@ export default function TransfersPage() {
         {(
           [
             ["SALARY", "給与振込"],
+            ["BONUS", "賞与振込"],
             ["GENERAL", "総合振込(請求書の支払い)"],
           ] as const
         ).map(([key, label]) => (
@@ -189,7 +193,19 @@ export default function TransfersPage() {
       {data && (
         <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-end gap-3">
-            {tab === "SALARY" ? (
+            {tab === "BONUS" ? (
+              <label className="text-sm">
+                <span className="text-slate-600">賞与(計上済み)</span>
+                <select value={bonusId} onChange={(e) => setBonusId(e.target.value)} className={`${inputClass} w-auto`}>
+                  {data.bonuses.length === 0 && <option value="">計上した賞与がありません</option>}
+                  {data.bonuses.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.label}({b.people}人・{formatYen(b.total)})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : tab === "SALARY" ? (
               <label className="text-sm">
                 <span className="text-slate-600">給料の月(計上済み)</span>
                 <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputClass} w-auto`}>

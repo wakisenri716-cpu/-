@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { UserError } from "@/lib/errors";
 import type { PayrollSheetRow } from "@/lib/payroll/service";
+import type { BonusRow } from "@/lib/payroll/bonus";
 import { buildZenginFile, isZenginKana, toZenginKana, type Account, type Source, type TransferKind } from "./zengin";
 
 // 振込データの作成: 給与振込(計上した給料の差引支給額)と総合振込(受け取った請求書の未払い分)。
@@ -68,7 +69,7 @@ export async function setPayeeAccount(companyId: string, kind: "staff" | "vendor
 }
 
 export async function getTransferOverview(companyId: string) {
-  const [company, staff, runs, invoices, vendors] = await Promise.all([
+  const [company, staff, runs, invoices, vendors, bonuses] = await Promise.all([
     prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { transferSource: true } }),
     prisma.staff.findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, payeeAccount: true } }),
     prisma.payrollRun.findMany({ where: { companyId }, orderBy: { month: "desc" }, take: 12, select: { month: true, details: true } }),
@@ -78,6 +79,7 @@ export async function getTransferOverview(companyId: string) {
       orderBy: [{ dueDate: "asc" }, { issueDate: "asc" }],
     }),
     prisma.vendor.findMany({ where: { companyId }, orderBy: { name: "asc" }, select: { id: true, name: true, payeeAccount: true } }),
+    prisma.bonusRun.findMany({ where: { companyId }, orderBy: { payDate: "desc" }, take: 12, select: { id: true, label: true, details: true } }),
   ]);
   return {
     source: asAccount(company.transferSource) as Source | null,
@@ -86,6 +88,10 @@ export async function getTransferOverview(companyId: string) {
     payrollMonths: runs.map((r) => {
       const rows = Array.isArray(r.details) ? (r.details as unknown as PayrollSheetRow[]) : [];
       return { month: r.month, people: rows.length, total: rows.reduce((s, x) => s + x.netPay, 0), hasDetails: Array.isArray(r.details) };
+    }),
+    bonuses: bonuses.map((b) => {
+      const rows = b.details as unknown as BonusRow[];
+      return { id: b.id, label: b.label, people: rows.length, total: rows.reduce((s, x) => s + x.netPay, 0) };
     }),
     unpaid: invoices
       .map((i) => ({
@@ -106,9 +112,17 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export type TransferPreview = { name: string; amount: number; account: Account | null; note: string };
 
 // 振込の中身を作る(ファイルにする前の一覧)
-async function transferLines(companyId: string, input: { kind?: unknown; month?: unknown; invoiceIds?: unknown }) {
-  const kind = input.kind === "GENERAL" ? "GENERAL" : input.kind === "SALARY" ? "SALARY" : null;
+async function transferLines(companyId: string, input: { kind?: unknown; month?: unknown; invoiceIds?: unknown; bonusId?: unknown }) {
+  const kind = input.kind === "GENERAL" ? "GENERAL" : input.kind === "SALARY" ? "SALARY" : input.kind === "BONUS" ? "BONUS" : null;
   if (!kind) throw new UserError("振込の種類を選んでください");
+  if (kind === "BONUS") {
+    const run = await prisma.bonusRun.findFirst({ where: { id: String(input.bonusId ?? ""), companyId } });
+    if (!run) throw new UserError("賞与を選んでください(「賞与」で計上したものから作れます)");
+    const rows = (run.details as unknown as BonusRow[]).filter((r) => r.netPay > 0);
+    const staff = await prisma.staff.findMany({ where: { companyId, id: { in: rows.map((r) => r.staffId) } }, select: { id: true, payeeAccount: true } });
+    const byId = new Map(staff.map((s) => [s.id, asAccount(s.payeeAccount)]));
+    return { kind: kind as TransferKind, lines: rows.map((r) => ({ name: r.name, amount: r.netPay, account: byId.get(r.staffId) ?? null, note: run.label })) };
+  }
   if (kind === "SALARY") {
     const month = String(input.month ?? "");
     const run = await prisma.payrollRun.findUnique({ where: { companyId_month: { companyId, month } } });
@@ -138,12 +152,12 @@ async function transferLines(companyId: string, input: { kind?: unknown; month?:
   return { kind: kind as TransferKind, lines: [...byVendor.values()] };
 }
 
-export async function previewTransfer(companyId: string, input: { kind?: unknown; month?: unknown; invoiceIds?: unknown }) {
+export async function previewTransfer(companyId: string, input: { kind?: unknown; month?: unknown; invoiceIds?: unknown; bonusId?: unknown }) {
   const { lines } = await transferLines(companyId, input);
   return { lines, total: lines.reduce((s, l) => s + l.amount, 0), missing: lines.filter((l) => !l.account).map((l) => l.name) };
 }
 
-export async function buildTransfer(companyId: string, input: { kind?: unknown; month?: unknown; invoiceIds?: unknown; date?: unknown }) {
+export async function buildTransfer(companyId: string, input: { kind?: unknown; month?: unknown; invoiceIds?: unknown; bonusId?: unknown; date?: unknown }) {
   const company = await prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { transferSource: true } });
   const source = asAccount(company.transferSource) as Source | null;
   if (!source?.requesterCode) throw new UserError("先に「振込元の口座」(委託者コード・口座)を登録してください");

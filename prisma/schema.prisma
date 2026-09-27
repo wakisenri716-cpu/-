@@ -181,6 +181,7 @@ model Company {
   approvalRoutes   ApprovalRoute[]
   members          CompanyMember[]
   taxRemittances   TaxRemittance[]
+  bonusRuns        BonusRun[]
   folders          Folder[]
   storedFiles      StoredFile[]
   recurringEntries RecurringEntry[]
@@ -743,6 +744,7 @@ model JournalEntry {
   stockMovement     StockMovement?
   bankTransaction   BankTransaction?
   payrollRun        PayrollRun?
+  bonusRun          BonusRun?
   reimbursedReport  ExpenseReport?     @relation("ExpenseReimbursement")
   disposedAsset     FixedAsset?        @relation("FixedAssetDisposal")
   recurringPosting  RecurringPosting?
@@ -1102,4 +1104,20 @@ model TaxRemittance {
   createdAt DateTime @default(now())
 
   @@unique([companyId, kind, period])
+}
+
+// 賞与(ボーナス)の計上。details には計算した結果(人ごとの支給額・控除・差引支給額)をそのまま残す
+model BonusRun {
+  id             String       @id @default(cuid())
+  companyId      String
+  company        Company      @relation(fields: [companyId], references: [id])
+  label          String
+  payDate        DateTime
+  total          Int
+  details        Json
+  journalEntryId String       @unique
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@index([companyId, payDate])
 }
