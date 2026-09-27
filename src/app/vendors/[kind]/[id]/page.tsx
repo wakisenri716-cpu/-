@@ -37,6 +37,8 @@ export default async function PartyPage({ params }: { params: Promise<{ kind: st
         <p className="mt-1 text-sm text-slate-600">
           {customer ? "顧客(売上の相手)" : "取引先(仕入・経費の支払先)"}
           {data.party.defaultAccount && ` ・ 既定の勘定科目: ${data.party.defaultAccount.code} ${data.party.defaultAccount.name}`}
+          {!customer &&
+            ` ・ インボイス登録: ${data.party.invoiceStatus === "REGISTERED" ? `あり${data.party.registrationNumber ? `(${data.party.registrationNumber})` : ""}` : data.party.invoiceStatus === "NOT_REGISTERED" ? "なし(消費税の差し引きは経過措置の割合だけ)" : "未確認"}`}
         </p>
       </div>
 

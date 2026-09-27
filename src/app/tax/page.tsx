@@ -5,6 +5,8 @@ import { TaxMethodForm } from "./TaxMethodForm";
 import { formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
 import { PeriodPicker } from "@/components/PeriodPicker";
+import { getTransitionalAdjustment, rateLabel } from "@/lib/accounting/invoiceRegistration";
+import Link from "next/link";
 import { getFiscalStartMonth, periodQuery, resolvePeriod, toRange, type PeriodParams } from "@/lib/accounting/period";
 
 export const dynamic = "force-dynamic";
@@ -12,19 +14,20 @@ export const dynamic = "force-dynamic";
 export default async function TaxPage({ searchParams }: { searchParams: Promise<PeriodParams> }) {
   const companyId = await requireCompanyId();
   const period = resolvePeriod(await searchParams, await getFiscalStartMonth(companyId));
-  const [{ rows, outputTotal, inputTotal }, company, user] = await Promise.all([
+  const [{ rows, outputTotal, inputTotal }, company, user, transitional] = await Promise.all([
     getConsumptionTax(companyId, toRange(period)),
     prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { consumptionTaxMethod: true, simplifiedBusinessType: true } }),
     requireUser(),
+    getTransitionalAdjustment(companyId, toRange(period)),
   ]);
   const method: TaxMethod = isTaxMethod(company.consumptionTaxMethod) ? company.consumptionTaxMethod : "GENERAL";
   const businessType = BUSINESS_TYPES[company.simplifiedBusinessType] ? company.simplifiedBusinessType : 5;
-  const estimates = estimateByMethod(outputTotal, inputTotal, businessType);
+  const estimates = estimateByMethod(outputTotal, inputTotal, businessType, transitional.notDeductible);
   const payable = estimates[method];
   const refund = payable < 0;
   const lowest = Math.min(...Object.values(estimates));
   const methodNotes: Record<TaxMethod, string> = {
-    GENERAL: "預かった消費税 − 支払った消費税",
+    GENERAL: transitional.notDeductible ? "預かった消費税 − 支払った消費税 + 経過措置で控除できない額" : "預かった消費税 − 支払った消費税",
     SIMPLIFIED: `預かった消費税 ×(1 − みなし仕入率${Math.round(BUSINESS_TYPES[businessType].rate * 100)}%)`,
     TWENTY_PERCENT: "預かった消費税 × 20%",
   };
@@ -96,6 +99,54 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
           <p className="text-xs text-slate-500 print:hidden">計算方式は管理者が変更できます。</p>
         )}
       </section>
+
+      {(transitional.rows.length > 0 || transitional.unknown.length > 0) && (
+        <section className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm">
+          <div>
+            <h2 className="font-medium">インボイス登録のない取引先からの仕入(経過措置)</h2>
+            <p className="mt-1 text-xs text-slate-600">
+              登録のない取引先(免税事業者など)への支払に含まれる消費税は、全額は差し引けません。2026年9月30日までは80%、2026年10月1日から2029年9月30日までは50%だけ差し引けます(原則課税のとき)。
+            </p>
+          </div>
+          {transitional.rows.length > 0 && (
+            <div className="overflow-x-auto rounded-lg border border-amber-200 bg-white">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs text-slate-500">
+                  <tr>
+                    <th className="px-3 py-2">支払った時期</th>
+                    <th className="px-3 py-2 text-right whitespace-nowrap">仮払消費税</th>
+                    <th className="px-3 py-2 text-right whitespace-nowrap">差し引ける額</th>
+                    <th className="px-3 py-2 text-right whitespace-nowrap">差し引けない額</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {transitional.rows.map((r) => (
+                    <tr key={r.rate}>
+                      <td className="px-3 py-2 whitespace-nowrap">{rateLabel(r.rate)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">{formatYen(r.tax)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">{formatYen(r.deductible)}</td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap text-rose-700">{formatYen(r.notDeductible)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="border-t px-3 py-2 text-xs text-slate-600">
+                登録なしの取引先: {transitional.notRegistered.map((v) => v.name).join("、")}。原則課税の納付見込みには、差し引けない額 {formatYen(transitional.notDeductible)} を足しています。
+              </p>
+            </div>
+          )}
+          {transitional.unknown.length > 0 && (
+            <p className="text-xs text-amber-900">
+              インボイス登録を確かめていない取引先が{transitional.unknown.length}件あります({transitional.unknown.slice(0, 5).map((v) => v.name).join("、")}
+              {transitional.unknown.length > 5 && " ほか"})。
+              <Link href="/vendors?invoice=unknown" className="ml-1 font-medium underline">
+                取引先・顧客で登録番号を入れてください
+              </Link>
+              (未確認の取引先は、いまは全額差し引ける扱いで計算しています)
+            </p>
+          )}
+        </section>
+      )}
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">

@@ -67,6 +67,12 @@ enum QuoteStatus {
   CANCELLED
 }
 
+// 取引先のインボイス登録: 登録あり / 登録なし(免税事業者など。仕入税額控除は経過措置の割合だけ)
+enum VendorInvoiceStatus {
+  REGISTERED
+  NOT_REGISTERED
+}
+
 // 発注書: 発注済み → 検収済み(受け取った請求書として買掛金を計上) / 取消
 enum PurchaseOrderStatus {
   OPEN
@@ -282,6 +288,9 @@ model Vendor {
   payeeAccount          Json?
   // 支払調書に載せる住所
   address               String?
+  // インボイス(適格請求書発行事業者)の登録。null は未確認
+  invoiceStatus         VendorInvoiceStatus?
+  registrationNumber    String?
   createdAt             DateTime @default(now())
 
   expenseItems  ExpenseItem[]

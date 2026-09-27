@@ -49,6 +49,8 @@ export async function getPartyDetail(companyId: string, kind: "vendor" | "custom
       id: party.id,
       name: party.name,
       defaultAccount: "defaultExpenseAccount" in party ? (party.defaultExpenseAccount as { code: string; name: string } | null) : null,
+      invoiceStatus: "invoiceStatus" in party ? party.invoiceStatus : null,
+      registrationNumber: "registrationNumber" in party ? party.registrationNumber : null,
     },
     invoices: rows,
     quotes,
