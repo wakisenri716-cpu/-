@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { pickMembership } from "@/lib/auth/companies";
 import { burnPasswordCheck, verifyPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
@@ -48,7 +49,9 @@ export async function POST(request: Request) {
   }
 
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user?.passwordHash || !user.active) {
+  // どの会社でも利用停止されている人はログインできない
+  const member = user ? await pickMembership(user, null) : null;
+  if (!user?.passwordHash || !user.active || !member) {
     await burnPasswordCheck(password);
     return NextResponse.json({ error: INVALID }, { status: 401 });
   }
@@ -80,6 +83,6 @@ export async function POST(request: Request) {
   await prisma.user.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null } });
   await prisma.session.deleteMany({ where: { userId: user.id, expiresAt: { lt: new Date() } } });
   await createSession(user.id);
-  await audit(usedRecovery ? "回復コードでログイン" : "ログイン", null, user);
+  await audit(usedRecovery ? "回復コードでログイン" : "ログイン", null, { ...user, companyId: member.companyId });
   return NextResponse.json({ ok: true });
 }

@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { EMPLOYEE_PATHS, getCurrentUser } from "@/lib/auth/session";
 import { Sidebar, MobileNav } from "@/components/Sidebar";
 import { LogoutButton } from "@/components/LogoutButton";
+import { CompanySwitcher } from "@/components/CompanySwitcher";
+import { listMyCompanies } from "@/lib/auth/companies";
 
 export const metadata: Metadata = {
   title: "AI経理オートメーション",
@@ -25,12 +27,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     if (!EMPLOYEE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) redirect("/expenses");
   }
 
+  const companies = user ? await listMyCompanies(user.id) : [];
+
   return (
     <html lang="ja" className="h-full antialiased">
       <body className="min-h-full bg-slate-50 text-slate-900 print:bg-white">
         {user ? (
           <div className="flex min-h-screen">
-            <Sidebar userName={user.name} role={user.role} />
+            <Sidebar userName={user.name} role={user.role} companies={companies} companyId={user.companyId} />
             <div className="flex min-w-0 flex-1 flex-col">
               <header className="border-b bg-white px-4 py-3 md:hidden print:hidden">
                 <div className="flex items-center justify-between gap-3">
@@ -42,6 +46,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                   </span>
                   <LogoutButton />
                 </div>
+                {companies.length > 1 && (
+                  <div className="mt-2">
+                    <CompanySwitcher companies={companies} current={user.companyId} compact />
+                  </div>
+                )}
                 <div className="mt-2">
                   <MobileNav role={user.role} />
                 </div>

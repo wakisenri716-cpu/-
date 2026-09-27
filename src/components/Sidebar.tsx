@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CompanySwitcher } from "./CompanySwitcher";
 import {
   ArchiveIcon,
   BankIcon,
@@ -166,7 +167,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-export function Sidebar({ userName, role }: { userName: string; role: Role }) {
+export function Sidebar({ userName, role, companies, companyId }: { userName: string; role: Role; companies: { id: string; name: string }[]; companyId: string }) {
   const pathname = usePathname();
 
   return (
@@ -176,6 +177,9 @@ export function Sidebar({ userName, role }: { userName: string; role: Role }) {
           AI
         </span>
         <span className="text-sm font-semibold text-slate-900">経理オートメーション</span>
+      </div>
+      <div className="px-2 pb-2">
+        <CompanySwitcher companies={companies} current={companyId} />
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-2">

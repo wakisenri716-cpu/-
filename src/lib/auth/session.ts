@@ -3,6 +3,7 @@ import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { pickMembership } from "./companies";
 
 export const SESSION_COOKIE = "session";
 const SESSION_DAYS = 30;
@@ -11,11 +12,12 @@ function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export async function createSession(userId: string) {
+// companyId: このログインで開く会社(パスワード変更のときに、開いていた会社を引き継ぐ)
+export async function createSession(userId: string, companyId: string | null = null) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86_400_000);
   const userAgent = (await headers()).get("user-agent")?.slice(0, 300) ?? null;
-  await prisma.session.create({ data: { tokenHash: hashToken(token), userId, expiresAt, userAgent, lastSeenAt: new Date() } });
+  await prisma.session.create({ data: { tokenHash: hashToken(token), userId, companyId, expiresAt, userAgent, lastSeenAt: new Date() } });
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -40,11 +42,14 @@ export const getCurrentUser = cache(async () => {
   if (!token) return null;
   const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: true } });
   if (!session || session.expiresAt < new Date() || !session.user.active) return null;
+  // 開いている会社と、その会社での権限。どの会社でも利用停止されていればログインしていない扱い
+  const member = await pickMembership(session.user, session.companyId);
+  if (!member) return null;
   // 「ログイン中の端末」に最終利用日時を出すため、10分に1回だけ更新する(毎回書き込まない)
-  if (!session.lastSeenAt || Date.now() - session.lastSeenAt.getTime() > 10 * 60_000) {
-    await prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } }).catch(() => {});
+  if (!session.lastSeenAt || Date.now() - session.lastSeenAt.getTime() > 10 * 60_000 || session.companyId !== member.companyId) {
+    await prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date(), companyId: member.companyId } }).catch(() => {});
   }
-  return session.user;
+  return { ...session.user, companyId: member.companyId, role: member.role };
 });
 
 // 今使っているセッション(この端末)の ID
