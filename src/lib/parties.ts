@@ -10,7 +10,7 @@ export async function getPartyDetail(companyId: string, kind: "vendor" | "custom
       : await prisma.customer.findFirst({ where: { id, companyId } });
   if (!party) return null;
 
-  const [invoices, quotes, expenses] = await Promise.all([
+  const [invoices, quotes, expenses, purchaseOrders] = await Promise.all([
     prisma.invoice.findMany({
       where: { companyId, ...(kind === "vendor" ? { vendorId: id } : { customerId: id }) },
       include: { payments: { select: { amount: true } }, _count: { select: { lines: true } } },
@@ -25,6 +25,7 @@ export async function getPartyDetail(companyId: string, kind: "vendor" | "custom
           take: 100,
         })
       : Promise.resolve([]),
+    kind === "vendor" ? prisma.purchaseOrder.findMany({ where: { companyId, vendorId: id }, orderBy: [{ issueDate: "desc" }, { orderNumber: "desc" }] }) : Promise.resolve([]),
   ]);
 
   const rows = invoices.map((i) => {
@@ -51,6 +52,7 @@ export async function getPartyDetail(companyId: string, kind: "vendor" | "custom
     },
     invoices: rows,
     quotes,
+    purchaseOrders,
     expenses,
     totals: {
       invoiced: active.reduce((s, r) => s + r.total, 0),

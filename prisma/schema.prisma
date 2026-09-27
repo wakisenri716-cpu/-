@@ -67,6 +67,13 @@ enum QuoteStatus {
   CANCELLED
 }
 
+// 発注書: 発注済み → 検収済み(受け取った請求書として買掛金を計上) / 取消
+enum PurchaseOrderStatus {
+  OPEN
+  RECEIVED
+  CANCELLED
+}
+
 enum BankTransactionStatus {
   PENDING
   POSTED
@@ -171,6 +178,7 @@ model Company {
   aiExtractions    AiExtraction[]
   automationRules  AutomationRule[]
   quotes           Quote[]
+  purchaseOrders   PurchaseOrder[]
   budgets          Budget[]
   recurringInvoices RecurringInvoice[]
   departments      Department[]
@@ -274,6 +282,7 @@ model Vendor {
 
   expenseItems  ExpenseItem[]
   invoices      Invoice[]
+  purchaseOrders PurchaseOrder[]
 }
 
 model Customer {
@@ -371,6 +380,7 @@ model Invoice {
   lines            InvoiceLine[]
   notes            String?
   quote            Quote?
+  purchaseOrder    PurchaseOrder?
   recurringTemplates RecurringInvoice[] @relation("RecurringInvoiceTemplate")
   recurringRun     RecurringInvoiceRun?
 }
@@ -443,6 +453,46 @@ model QuoteLine {
   unitPrice   Int
   taxRate     Int
   amount      Int
+}
+
+// 発注書(仕入先への注文)。仕訳は作らず、検収したときに受け取った請求書(買掛金)を作る。
+model PurchaseOrder {
+  id             String              @id @default(cuid())
+  companyId      String
+  company        Company             @relation(fields: [companyId], references: [id])
+  orderNumber    String
+  vendorId       String
+  vendor         Vendor              @relation(fields: [vendorId], references: [id])
+  issueDate      DateTime
+  deliveryDate   DateTime
+  deliveryPlace  String?
+  paymentTerms   String?
+  subtotalAmount Int
+  taxAmount      Int
+  totalAmount    Int
+  notes          String?
+  status         PurchaseOrderStatus @default(OPEN)
+  receivedDate   DateTime?
+  invoiceId      String?             @unique
+  invoice        Invoice?            @relation(fields: [invoiceId], references: [id])
+  createdAt      DateTime            @default(now())
+
+  lines          PurchaseOrderLine[]
+
+  @@unique([companyId, orderNumber])
+}
+
+model PurchaseOrderLine {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  sortOrder       Int
+  description     String
+  quantity        Float
+  unit            String?
+  unitPrice       Int
+  taxRate         Int
+  amount          Int
 }
 
 // 勘定科目ごとの年間予算(fiscalYear は期首の年。4月始まりなら 2026年4月〜2027年3月 が 2026)

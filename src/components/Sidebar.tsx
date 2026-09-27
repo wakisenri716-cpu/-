@@ -26,6 +26,7 @@ import {
   DownloadIcon,
   PercentIcon,
   QuoteIcon,
+  CartIcon,
   ReceiptIcon,
   RegisterIcon,
   RepeatIcon,
@@ -63,6 +64,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/quotes", label: "見積書", icon: QuoteIcon },
       { href: "/invoices", label: "請求書", icon: DocumentIcon },
+      { href: "/purchase-orders", label: "発注書", icon: CartIcon },
       { href: "/receivables", label: "売掛金・買掛金", icon: CoinsIcon },
       { href: "/vendors", label: "取引先・顧客", icon: UsersIcon },
       { href: "/pos", label: "POSレジ連携", icon: RegisterIcon },

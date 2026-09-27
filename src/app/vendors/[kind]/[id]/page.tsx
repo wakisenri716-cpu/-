@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 export const dynamic = "force-dynamic";
 
 const QUOTE_STATUS = { OPEN: "提出済み", INVOICED: "請求済み", CANCELLED: "取消" } as const;
+const ORDER_STATUS = { OPEN: "発注済み", RECEIVED: "検収済み", CANCELLED: "取消" } as const;
 
 function Tile({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
@@ -130,6 +131,42 @@ export default async function PartyPage({ params }: { params: Promise<{ kind: st
                       <td className="px-4 py-2 whitespace-nowrap">{formatDate(q.issueDate)}</td>
                       <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap">{formatYen(q.totalAmount)}</td>
                       <td className="px-4 py-2 whitespace-nowrap">{QUOTE_STATUS[q.status]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {!customer && data.purchaseOrders.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold">発注書</h2>
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs whitespace-nowrap text-slate-500">
+                  <tr>
+                    <th className="px-4 py-2">発注番号</th>
+                    <th className="px-4 py-2">発注日</th>
+                    <th className="px-4 py-2">納期</th>
+                    <th className="px-4 py-2 text-right">金額</th>
+                    <th className="px-4 py-2">状態</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {data.purchaseOrders.map((o) => (
+                    <tr key={o.id}>
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        <Link href={`/purchase-orders/${o.id}`} className="text-indigo-700 hover:underline">
+                          {o.orderNumber}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap">{formatDate(o.issueDate)}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{formatDate(o.deliveryDate)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap">{formatYen(o.totalAmount)}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{ORDER_STATUS[o.status]}</td>
                     </tr>
                   ))}
                 </tbody>

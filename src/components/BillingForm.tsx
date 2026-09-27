@@ -7,7 +7,7 @@ import { formatYen } from "@/lib/format";
 
 export type FormLine = { description: string; quantity: string; unit: string; unitPrice: string; taxRate: string };
 type Line = FormLine;
-export type BillingFormInitial = { customerName: string; lines: FormLine[]; notes: string; issueDate?: string; dueDate?: string; departmentId?: string | null };
+export type BillingFormInitial = { customerName: string; lines: FormLine[]; notes: string; issueDate?: string; dueDate?: string; departmentId?: string | null; deliveryPlace?: string; paymentTerms?: string };
 // 請求書の訂正(元の請求書の番号・入金済みの額)
 export type BillingCorrection = { id: string; number: string; nextNumber: string; paid: number };
 
@@ -49,11 +49,22 @@ const TEXT = {
     endpoint: "/api/quotes",
     printPath: (id: string) => `/quotes/${id}`,
   },
+  order: {
+    title: "発注書を作成",
+    back: { href: "/purchase-orders", label: "← 発注書一覧" },
+    lead: "発注書は仕訳を作りません。納品を受けたら発注書の画面の「検収する」で、買掛金を計上します(支払・振込データにも出ます)。",
+    customer: "発注先(仕入先・外注先)",
+    issueDate: "発注日",
+    deadline: "納期",
+    total: "発注金額(税込)",
+    endpoint: "/api/purchase-orders",
+    printPath: (id: string) => `/purchase-orders/${id}`,
+  },
 } as const;
 
 const inputClass = "w-full rounded-md border px-2 py-1.5 text-sm";
 
-export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "quote"; initial?: BillingFormInitial | null; correction?: BillingCorrection | null }) {
+export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "quote" | "order"; initial?: BillingFormInitial | null; correction?: BillingCorrection | null }) {
   const text = correction
     ? {
         ...TEXT.invoice,
@@ -73,11 +84,14 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [departmentId, setDepartmentId] = useState(initial?.departmentId ?? "");
+  const [deliveryPlace, setDeliveryPlace] = useState(initial?.deliveryPlace ?? "");
+  const [paymentTerms, setPaymentTerms] = useState(initial?.paymentTerms ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/customers").then(async (res) => setCustomers(res.ok ? await res.json() : []));
+    // 発注書の相手は取引先(仕入先)、見積書・請求書の相手は顧客
+    fetch(kind === "order" ? "/api/vendors" : "/api/customers").then(async (res) => setCustomers(res.ok ? await res.json() : []));
     // 請求書は売上の仕訳を作るので、部門を付けられる
     if (kind === "invoice") {
       fetch("/api/departments").then(async (res) => {
@@ -112,7 +126,17 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
       const res = await fetch(text.endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customerName, issueDate, dueDate, validUntil: dueDate, notes, lines, departmentId: departmentId || null, ...(correction ? { reason } : {}) }),
+        body: JSON.stringify({
+          customerName,
+          issueDate,
+          dueDate,
+          validUntil: dueDate,
+          notes,
+          lines,
+          departmentId: departmentId || null,
+          ...(kind === "order" ? { deliveryPlace, paymentTerms } : {}),
+          ...(correction ? { reason } : {}),
+        }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "作成に失敗しました");
@@ -154,6 +178,18 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
             <label className="mb-1 block text-xs text-slate-500">{text.deadline}</label>
             <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} required className={inputClass} />
           </div>
+          {kind === "order" && (
+            <>
+              <div>
+                <label className="mb-1 block text-xs text-slate-500">納品場所(任意)</label>
+                <input value={deliveryPlace} onChange={(e) => setDeliveryPlace(e.target.value)} maxLength={100} className={inputClass} placeholder="例: 本社(東京都千代田区…)" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs text-slate-500">お支払条件(任意)</label>
+                <input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} maxLength={100} className={inputClass} placeholder="例: 月末締め翌月末払い(銀行振込)" />
+              </div>
+            </>
+          )}
           {departments.length > 0 && (
             <div>
               <label className="mb-1 block text-xs text-slate-500">部門(任意)</label>
