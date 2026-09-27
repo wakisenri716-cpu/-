@@ -12,6 +12,7 @@ export function jpDate(d: Date | null) {
 const TEXT = {
   invoice: { title: "請求書", number: "請求番号", date: "請求日", lead: "下記のとおりご請求申し上げます。", total: "ご請求金額(税込)", deadline: "お支払期限" },
   quote: { title: "御見積書", number: "見積番号", date: "見積日", lead: "下記のとおりお見積り申し上げます。", total: "お見積金額(税込)", deadline: "有効期限" },
+  order: { title: "発注書", number: "発注番号", date: "発注日", lead: "下記のとおり発注いたします。", total: "発注金額(税込)", deadline: "納期" },
   delivery: { title: "納品書", number: "納品書番号", date: "納品日", lead: "下記のとおり納品いたしました。", total: "合計金額(税込)", deadline: null },
 } as const;
 
@@ -28,6 +29,8 @@ export function BillingDocument(props: {
   notes: string | null;
   // 訂正版の請求書なら、訂正した元の請求書
   correction?: { originalNumber: string; originalDate: Date | null; reason: string | null } | null;
+  // 発注書の納品場所・支払条件など、期限の下に並べる項目
+  terms?: { label: string; value: string | null }[];
 }) {
   const { kind, company, lines, calc } = props;
   const invoice = kind === "invoice";
@@ -73,6 +76,13 @@ export function BillingDocument(props: {
               {text.deadline}: {jpDate(props.deadline)}
             </p>
           )}
+          {props.terms
+            ?.filter((t) => t.value)
+            .map((t) => (
+              <p key={t.label} className="text-xs">
+                {t.label}: {t.value}
+              </p>
+            ))}
         </div>
         <div className="text-xs sm:text-right print:text-right">
           <p className="text-sm font-semibold">{company.name}</p>

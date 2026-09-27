@@ -381,3 +381,13 @@ export function StampIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function CartIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 4h2l2.2 10.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6" />
+      <circle cx="9.5" cy="19.5" r="1.2" />
+      <circle cx="17" cy="19.5" r="1.2" />
+    </svg>
+  );
+}
