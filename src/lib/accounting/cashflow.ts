@@ -3,8 +3,8 @@ import { jstDateKey } from "@/lib/jst";
 import { getAging } from "./receivables";
 import { getReimbursements } from "./reimbursement";
 import { listRecurring, postingDate } from "./recurring";
+import { cashAccountCodes } from "@/lib/bank/accounts";
 
-const CASH_CODES = ["1010", "1020"]; // 現金・普通預金
 const POSTED = ["AUTO_POSTED", "POSTED_MANUALLY"] as const;
 
 export type CashItem = { label: string; amount: number; note?: string };
@@ -25,6 +25,8 @@ export async function getCashflow(companyId: string, today = jstDateKey(new Date
     return m < current ? current : m;
   };
 
+  // 現金・普通預金と、登録した銀行口座
+  const CASH_CODES = await cashAccountCodes(companyId);
   const [cash, receivables, payables, recurring, reimbursements] = await Promise.all([
     prisma.journalLine.aggregate({
       where: {

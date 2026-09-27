@@ -40,7 +40,7 @@ export async function buildBackup(companyId: string) {
       prisma.staff.findMany({ where: { companyId }, orderBy: { createdAt: "asc" } }),
       prisma.shift.findMany({ where: { companyId }, include: { staff: true }, orderBy: [{ date: "asc" }, { startMinutes: "asc" }] }),
       prisma.timeRecord.findMany({ where: { companyId }, include: { staff: true }, orderBy: { clockIn: "asc" } }),
-      prisma.bankTransaction.findMany({ where: { companyId }, orderBy: { date: "asc" } }),
+      prisma.bankTransaction.findMany({ where: { companyId }, orderBy: { date: "asc" }, include: { bankAccount: { select: { name: true } } } }),
       prisma.recurringEntry.findMany({ where: { companyId }, include: { lines: { include: { account: true }, orderBy: { sortOrder: "asc" } } } }),
       prisma.budget.findMany({ where: { companyId }, include: { account: true }, orderBy: [{ fiscalYear: "asc" }] }),
       prisma.auditLog.findMany({ where: { companyId }, orderBy: { createdAt: "asc" } }),
@@ -132,7 +132,7 @@ export async function buildBackup(companyId: string) {
     { name: "スタッフ.csv", rows: [["名前", "時給", "在籍", "暗証番号"], ...staff.map((s) => [s.name, s.hourlyWage, s.active ? "在籍" : "退職", s.pinHash ? "設定済み" : ""])] },
     { name: "シフト.csv", rows: [["日付", "スタッフ", "開始", "終了", "休憩(分)", "メモ"], ...shifts.map((s) => [d(s.date), s.staff.name, minutes(s.startMinutes), minutes(s.endMinutes), s.breakMinutes, s.note ?? ""])] },
     { name: "勤怠(打刻).csv", rows: [["勤務日", "スタッフ", "出勤", "退勤", "休憩(分)", "修正済み"], ...records.map((r) => [d(r.date), r.staff.name, t(r.clockIn), t(r.clockOut), r.breakMinutes, r.edited ? "はい" : ""])] },
-    { name: "銀行明細.csv", rows: [["日付", "摘要", "出金", "入金", "残高", "状態"], ...bank.map((b) => [d(b.date), b.description, b.withdrawal || "", b.deposit || "", b.balance ?? "", b.status])] },
+    { name: "銀行明細.csv", rows: [["口座・カード", "日付", "摘要", "出金(カードは利用)", "入金(カードは返品)", "残高", "状態"], ...bank.map((b) => [b.bankAccount?.name ?? "普通預金", d(b.date), b.description, b.withdrawal || "", b.deposit || "", b.balance ?? "", b.status])] },
     {
       name: "定期取引.csv",
       rows: [

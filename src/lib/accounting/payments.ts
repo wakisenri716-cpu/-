@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 
-// MVP simplification: all settlements are assumed to move through the bank
-// account (1020 普通預金). Cash/other payment methods are a future extension.
+// 入金・支払は普通預金(1020)を通る。銀行明細から消込むときは、その明細の口座の科目を使う。
 const BANK_ACCOUNT_CODE = "1020";
 
 async function getAccountByCode(tx: Prisma.TransactionClient, companyId: string, code: string) {
@@ -11,7 +10,7 @@ async function getAccountByCode(tx: Prisma.TransactionClient, companyId: string,
   return account;
 }
 
-export async function recordInvoicePayment(invoiceId: string, amount: number, paymentDate: Date) {
+export async function recordInvoicePayment(invoiceId: string, amount: number, paymentDate: Date, cashAccountCode = BANK_ACCOUNT_CODE) {
   if (amount <= 0) throw new Error("Payment amount must be positive");
 
   return prisma.$transaction(async (tx) => {
@@ -31,7 +30,7 @@ export async function recordInvoicePayment(invoiceId: string, amount: number, pa
       throw new Error(`Payment amount exceeds remaining balance (残高 ¥${remaining.toLocaleString()})`);
     }
 
-    const bankAccount = await getAccountByCode(tx, invoice.companyId, BANK_ACCOUNT_CODE);
+    const bankAccount = await getAccountByCode(tx, invoice.companyId, cashAccountCode);
     const counterAccountCode = invoice.direction === "RECEIVED" ? "2010" : "1110"; // 買掛金 or 売掛金
     const counterAccount = await getAccountByCode(tx, invoice.companyId, counterAccountCode);
 

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { cashAccountCodes } from "@/lib/bank/accounts";
 import { jstDateKey } from "@/lib/jst";
 import { fiscalYearOf, getFiscalStartMonth } from "@/lib/accounting/period";
 import { requireCompanyId } from "@/lib/auth/session";
@@ -69,9 +70,11 @@ export async function getMonthlyTrend(companyId: string, today = jstDateKey(new 
   return [...byMonth.values()].map((r) => ({ ...r, profit: r.revenue - r.expense }));
 }
 
+// 現金・普通預金と、登録した銀行口座の残高の合計(カードの未払金は含めない)
 export async function getCashBalance(companyId: string) {
+  const codes = await cashAccountCodes(companyId);
   const sums = await prisma.journalLine.aggregate({
-    where: { account: { companyId, code: { in: ["1010", "1020"] } }, journalEntry: { companyId, status: { in: [...POSTED] } } },
+    where: { account: { companyId, code: { in: codes } }, journalEntry: { companyId, status: { in: [...POSTED] } } },
     _sum: { debit: true, credit: true },
   });
   return (sums._sum.debit ?? 0) - (sums._sum.credit ?? 0);
@@ -107,7 +110,7 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
     { key: "review", label: "AI仕訳のレビュー待ち", detail: "経費・請求書のAI判定を確認してください", count: reviews, href: "/review", tone: "amber" },
-    { key: "bank", label: "銀行明細の確認待ち", detail: "勘定科目を選んで確定してください", count: bank, href: "/bank", tone: "amber" },
+    { key: "bank", label: "銀行・カード明細の確認待ち", detail: "勘定科目を選んで確定してください", count: bank, href: "/bank", tone: "amber" },
     { key: "overdue", label: "支払期限を過ぎた請求書", detail: "入金・支払の状況を確認してください", count: overdue, href: "/invoices", tone: "rose" },
     { key: "recurringInvoices", label: "定期請求の作成", detail: "請求日が来た毎月の請求書を作成してください", count: recurringInvoicesDue, href: "/recurring-invoices", tone: "amber" },
     { key: "recurring", label: "定期取引の記帳", detail: "記帳日が来た家賃などを記帳してください", count: recurringDue, href: "/recurring", tone: "amber" },
