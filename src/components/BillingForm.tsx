@@ -84,6 +84,8 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [departmentId, setDepartmentId] = useState(initial?.departmentId ?? "");
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+  const [projectId, setProjectId] = useState("");
   const [deliveryPlace, setDeliveryPlace] = useState(initial?.deliveryPlace ?? "");
   const [paymentTerms, setPaymentTerms] = useState(initial?.paymentTerms ?? "");
   const [saving, setSaving] = useState(false);
@@ -94,6 +96,7 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
     fetch(kind === "order" ? "/api/vendors" : "/api/customers").then(async (res) => setCustomers(res.ok ? await res.json() : []));
     // 請求書は売上の仕訳を作るので、部門を付けられる
     if (kind === "invoice") {
+      fetch("/api/projects?list=1").then(async (res) => setProjects(res.ok ? await res.json() : []));
       fetch("/api/departments").then(async (res) => {
         const list: { id: string; name: string; active: boolean }[] = res.ok ? await res.json() : [];
         setDepartments(list.filter((d) => d.active));
@@ -134,6 +137,7 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
           notes,
           lines,
           departmentId: departmentId || null,
+          projectId: projectId || null,
           ...(kind === "order" ? { deliveryPlace, paymentTerms } : {}),
           ...(correction ? { reason } : {}),
         }),
@@ -189,6 +193,19 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
                 <input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} maxLength={100} className={inputClass} placeholder="例: 月末締め翌月末払い(銀行振込)" />
               </div>
             </>
+          )}
+          {projects.length > 0 && !correction && (
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">案件(任意)</label>
+              <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={inputClass}>
+                <option value="">なし</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
           {departments.length > 0 && (
             <div>

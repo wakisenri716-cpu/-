@@ -14,6 +14,7 @@ type Entry = {
   sourceType: string;
   status: string;
   department: { id: string; name: string } | null;
+  project: { id: string; name: string } | null;
   lines: { id: string; accountId: string; debit: number; credit: number; memo: string | null; account: { code: string; name: string } }[];
 };
 
@@ -68,6 +69,8 @@ export default function JournalPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [departmentId, setDepartmentId] = useState("");
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+  const [projectId, setProjectId] = useState("");
   const [month, setMonth] = useState("");
   // 検索条件(入力中の値と、実際に検索に使う値を分ける)
   const [search, setSearch] = useState({ q: "", accountId: "", min: "", max: "", source: "" });
@@ -91,6 +94,7 @@ export default function JournalPage() {
     setEntries(body.entries);
     setAccounts(body.accounts);
     setDepartments(body.departments ?? []);
+    setProjects(body.projects ?? []);
   }, [query]);
 
   const loadTemplates = useCallback(async () => {
@@ -150,6 +154,7 @@ export default function JournalPage() {
 
   function duplicate(entry: Entry) {
     setDepartmentId(entry.department && departments.some((d) => d.id === entry.department!.id) ? entry.department.id : "");
+    setProjectId(entry.project && projects.some((p) => p.id === entry.project!.id) ? entry.project.id : "");
     fillForm(entry.description, entry.lines, `「${entry.description}」の内容をコピーしました。日付を確認して登録してください。`);
   }
 
@@ -186,7 +191,7 @@ export default function JournalPage() {
       const res = await fetch("/api/journal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, description, lines, departmentId: departmentId || null }),
+        body: JSON.stringify({ date, description, lines, departmentId: departmentId || null, projectId: projectId || null }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "登録に失敗しました");
@@ -199,6 +204,19 @@ export default function JournalPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function changeProject(entry: Entry, id: string) {
+    setError(null);
+    setMessage(null);
+    const res = await fetch(`/api/journal/${entry.id}/project`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId: id || null }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) setError(body.error || "案件を変更できませんでした");
+    await load();
   }
 
   async function changeDepartment(entry: Entry, id: string) {
@@ -283,7 +301,7 @@ export default function JournalPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className={`grid gap-3 ${departments.length > 0 ? "sm:grid-cols-[10rem_1fr_12rem]" : "sm:grid-cols-[10rem_1fr]"}`}>
+          <div className={`grid gap-3 ${["sm:grid-cols-[10rem_1fr]", "sm:grid-cols-[10rem_1fr_12rem]", "sm:grid-cols-[10rem_1fr_12rem_12rem]"][(departments.length > 0 ? 1 : 0) + (projects.length > 0 ? 1 : 0)]}`}>
             <div>
               <label className="mb-1 block text-xs text-slate-500">日付</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className={inputClass} />
@@ -307,6 +325,19 @@ export default function JournalPage() {
                   {departments.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {projects.length > 0 && (
+              <div>
+                <label className="mb-1 block text-xs text-slate-500">案件(任意)</label>
+                <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={inputClass}>
+                  <option value="">なし</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
                     </option>
                   ))}
                 </select>
@@ -563,6 +594,22 @@ export default function JournalPage() {
                           {departments.map((d) => (
                             <option key={d.id} value={d.id}>
                               {d.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {(projects.length > 0 || entry.project) && !isVoid && (
+                        <select
+                          value={entry.project?.id ?? ""}
+                          onChange={(e) => changeProject(entry, e.target.value)}
+                          className="mt-1 block max-w-[10rem] rounded border px-1 py-0.5 text-xs text-slate-600"
+                          aria-label="案件"
+                        >
+                          <option value="">案件なし</option>
+                          {entry.project && !projects.some((p) => p.id === entry.project!.id) && <option value={entry.project.id}>{entry.project.name}(完了)</option>}
+                          {projects.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
                             </option>
                           ))}
                         </select>

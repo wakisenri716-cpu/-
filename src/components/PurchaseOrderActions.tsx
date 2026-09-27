@@ -15,12 +15,14 @@ export function PurchaseOrderActions({
   accounts,
   defaultAccountCode,
   canUndo,
+  projects,
 }: {
   orderId: string;
   status: "OPEN" | "RECEIVED" | "CANCELLED";
   accounts: { code: string; name: string }[];
   defaultAccountCode: string;
   canUndo: boolean;
+  projects: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -32,6 +34,7 @@ export function PurchaseOrderActions({
   });
   const [accountCode, setAccountCode] = useState(defaultAccountCode);
   const [vendorInvoiceNumber, setVendorInvoiceNumber] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +53,7 @@ export function PurchaseOrderActions({
   }
 
   async function receive() {
-    if (await post({ action: "receive", receivedDate, dueDate, accountCode, vendorInvoiceNumber })) setOpen(false);
+    if (await post({ action: "receive", receivedDate, dueDate, accountCode, vendorInvoiceNumber, projectId })) setOpen(false);
   }
 
   async function undo() {
@@ -112,6 +115,19 @@ export function PurchaseOrderActions({
               ))}
             </select>
           </label>
+          {projects.length > 0 && (
+            <label className="text-xs text-slate-600">
+              案件(任意)
+              <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={inputClass}>
+                <option value="">なし</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="text-xs text-slate-600">
             相手の請求書番号(任意)
             <input value={vendorInvoiceNumber} onChange={(e) => setVendorInvoiceNumber(e.target.value)} maxLength={50} className={inputClass} />

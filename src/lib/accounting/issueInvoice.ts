@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureAccount } from "./accounts";
 import { findOrCreateCustomer } from "./parties";
 import { resolveDepartmentId } from "./departments";
+import { resolveProjectId } from "./projects";
 import { UserError } from "@/lib/errors";
 
 export class InvoiceError extends UserError {}
@@ -31,6 +32,7 @@ export type IssueInvoiceInput = {
   lines: InvoiceLineInput[];
   notes?: string | null;
   departmentId?: string | null;
+  projectId?: string | null;
 };
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -78,6 +80,7 @@ export async function issueInvoice(companyId: string, input: IssueInvoiceInput) 
   const calc = calcInvoice(lines);
   if (calc.total <= 0) throw new InvoiceError("合計金額が0円の請求書は作成できません");
   const departmentId = await resolveDepartmentId(companyId, input.departmentId);
+  const projectId = await resolveProjectId(companyId, input.projectId);
   const customer = await findOrCreateCustomer(companyId, input.customerName.trim());
 
   // 同時に作成されて番号が重複した場合に備え、数回まで採番し直す
@@ -86,7 +89,7 @@ export async function issueInvoice(companyId: string, input: IssueInvoiceInput) 
     const duplicate = await prisma.invoice.findFirst({ where: { companyId, direction: "ISSUED", invoiceNumber } });
     if (duplicate) continue;
     return prisma.$transaction((tx) =>
-      createIssuedInvoice(tx, companyId, { invoiceNumber, customer, departmentId, calc, issueDate: input.issueDate, dueDate: input.dueDate, notes: input.notes, status: "CONFIRMED" }),
+      createIssuedInvoice(tx, companyId, { invoiceNumber, customer, departmentId, projectId, calc, issueDate: input.issueDate, dueDate: input.dueDate, notes: input.notes, status: "CONFIRMED" }),
     );
   }
   throw new InvoiceError("請求書番号の採番に失敗しました。もう一度お試しください");
@@ -102,6 +105,7 @@ async function createIssuedInvoice(
     invoiceNumber: string;
     customer: { id: string; name: string };
     departmentId: string | null;
+    projectId?: string | null;
     calc: Calc;
     issueDate: string;
     dueDate: string;
@@ -118,6 +122,7 @@ async function createIssuedInvoice(
       date: new Date(`${v.issueDate}T00:00:00Z`),
       description: `${v.correction ? "売上請求書(訂正版)発行" : "売上請求書発行"}: ${v.invoiceNumber} ${v.customer.name}`,
       departmentId: v.departmentId,
+      projectId: v.projectId ?? null,
       sourceType: "INVOICE",
       status: "AUTO_POSTED",
       createdByAi: false,
@@ -196,11 +201,14 @@ export async function correctIssuedInvoice(companyId: string, originalId: string
     if ((await tx.payment.aggregate({ where: { invoiceId: original.id }, _sum: { amount: true } }))._sum.amount !== (paid || null)) {
       throw new InvoiceError("入金の記録が変わりました。画面を更新してもう一度お試しください");
     }
+    // 訂正版の仕訳も、元の請求書と同じ案件にする
+    const originalEntry = original.journalEntryId ? await tx.journalEntry.findUnique({ where: { id: original.journalEntryId }, select: { projectId: true } }) : null;
     if (original.journalEntryId) await tx.journalEntry.updateMany({ where: { id: original.journalEntryId, companyId }, data: { status: "VOID" } });
     const corrected = await createIssuedInvoice(tx, companyId, {
       invoiceNumber,
       customer,
       departmentId,
+      projectId: originalEntry?.projectId ?? null,
       calc,
       issueDate: input.issueDate,
       dueDate: input.dueDate,

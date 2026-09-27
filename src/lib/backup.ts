@@ -45,6 +45,7 @@ export async function buildBackup(companyId: string) {
       prisma.budget.findMany({ where: { companyId }, include: { account: true }, orderBy: [{ fiscalYear: "asc" }] }),
       prisma.auditLog.findMany({ where: { companyId }, orderBy: { createdAt: "asc" } }),
     ]);
+  const projects = await prisma.project.findMany({ where: { companyId }, include: { journalEntries: { select: { date: true, description: true } } }, orderBy: { createdAt: "asc" } });
   const orders = await prisma.purchaseOrder.findMany({ where: { companyId }, include: { vendor: true, lines: { orderBy: { sortOrder: "asc" } } }, orderBy: { issueDate: "asc" } });
 
   const minutes = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
@@ -112,6 +113,13 @@ export async function buildBackup(companyId: string) {
         ...invoices.flatMap((i) => i.lines.map((l) => ["請求書", i.invoiceNumber ?? "", l.description, l.quantity, l.unit ?? "", l.unitPrice, l.taxRate, l.amount])),
         ...quotes.flatMap((q) => q.lines.map((l) => ["見積書", q.quoteNumber, l.description, l.quantity, l.unit ?? "", l.unitPrice, l.taxRate, l.amount])),
         ...orders.flatMap((o) => o.lines.map((l) => ["発注書", o.orderNumber, l.description, l.quantity, l.unit ?? "", l.unitPrice, l.taxRate, l.amount])),
+      ],
+    },
+    {
+      name: "案件.csv",
+      rows: [
+        ["案件名", "顧客", "開始日", "終了日", "受注額の予算", "原価の予算", "状態", "付いている仕訳の数", "メモ"],
+        ...projects.map((p) => [p.name, p.customerName ?? "", d(p.startDate), d(p.endDate), p.budgetRevenue ?? "", p.budgetCost ?? "", p.active ? "進行中" : "完了", p.journalEntries.length, p.notes ?? ""]),
       ],
     },
     {

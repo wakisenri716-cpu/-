@@ -4,6 +4,7 @@ import { jstDateKey } from "@/lib/jst";
 import { ensureAccount } from "./accounts";
 import { CHART_OF_ACCOUNTS, EXPENSE_ACCOUNT_CODES } from "./chartOfAccounts";
 import { findOrCreateVendor } from "./parties";
+import { resolveProjectId } from "./projects";
 import { calcInvoice, InvoiceError, validDate, validateLines, type InvoiceLineInput } from "./issueInvoice";
 
 // 発注書: 仕入先・外注先への注文。発注しただけでは仕訳を作らず、
@@ -122,13 +123,14 @@ export function countLateOrders(companyId: string, now = new Date()) {
 export async function receivePurchaseOrder(
   companyId: string,
   id: string,
-  input: { receivedDate: string; dueDate: string; accountCode: string; vendorInvoiceNumber?: string | null },
+  input: { receivedDate: string; dueDate: string; accountCode: string; vendorInvoiceNumber?: string | null; projectId?: string | null },
 ) {
   if (!validDate(input.receivedDate)) throw new InvoiceError("検収日を正しく入力してください");
   if (!validDate(input.dueDate)) throw new InvoiceError("支払期日を正しく入力してください");
   if (input.dueDate < input.receivedDate) throw new InvoiceError("支払期日は検収日以降にしてください");
   if (!RECEIVE_ACCOUNT_CODES.includes(input.accountCode)) throw new InvoiceError("勘定科目を選んでください");
   const vendorInvoiceNumber = text(input.vendorInvoiceNumber, 50, "請求書番号");
+  const projectId = await resolveProjectId(companyId, input.projectId);
   const data = await getPurchaseOrder(companyId, id);
   if (!data) throw new InvoiceError("発注書が見つかりません");
   const { order } = data;
@@ -151,6 +153,7 @@ export async function receivePurchaseOrder(
           companyId,
           date,
           description: `発注書の検収: ${order.orderNumber} ${order.vendor.name}`,
+          projectId,
           sourceType: "INVOICE",
           status: "AUTO_POSTED",
           createdByAi: false,
