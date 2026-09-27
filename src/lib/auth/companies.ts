@@ -2,20 +2,28 @@ import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { UserError } from "@/lib/errors";
 import { ensureChartOfAccounts } from "@/lib/accounting/accounts";
+import { ipAllowed } from "@/lib/security";
 
 // 複数の会社: 1人のユーザーが複数の会社のメンバーになれる。権限・利用停止は会社ごと(CompanyMember)。
 // ログイン中にどの会社を開いているかはセッションに持つ(端末ごとに別の会社を開ける)。
 
 // 開く会社を決める: 指定の会社 → 最初の会社(User.companyId) → ほかの会社 の順に、利用停止されていないもの
-// メンバーの記録がまだないユーザー(最初の管理者・デモのユーザーなど)は、User の会社・権限から作る
-export async function pickMembership(user: { id: string; companyId: string; role: UserRole; active: boolean }, preferred: string | null) {
-  let members = await prisma.companyMember.findMany({ where: { userId: user.id }, orderBy: { createdAt: "asc" } });
+// メンバーの記録がまだないユーザー(最初の管理者・デモのユーザーなど)は、User の会社・権限から作る。
+// ip を渡すと、IPアドレス制限でその場所から開けない会社は選ばない。
+export async function pickMembership(user: { id: string; companyId: string; role: UserRole; active: boolean }, preferred: string | null, ip?: string | null) {
+  const find = () =>
+    prisma.companyMember.findMany({
+      where: { userId: user.id },
+      include: { company: { select: { name: true, require2fa: true, sessionIdleMinutes: true, allowedIps: true, loginAlert: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+  let members = await find();
   if (members.length === 0) {
     await prisma.companyMember.createMany({ data: [{ userId: user.id, companyId: user.companyId, role: user.role, active: user.active }], skipDuplicates: true });
-    members = await prisma.companyMember.findMany({ where: { userId: user.id }, orderBy: { createdAt: "asc" } });
+    members = await find();
   }
-  const active = members.filter((m) => m.active);
-  return active.find((m) => m.companyId === preferred) ?? active.find((m) => m.companyId === user.companyId) ?? active[0] ?? null;
+  const usable = members.filter((m) => m.active && (ip === undefined || ipAllowed(ip, m.company.allowedIps)));
+  return usable.find((m) => m.companyId === preferred) ?? usable.find((m) => m.companyId === user.companyId) ?? usable[0] ?? null;
 }
 
 export async function listMyCompanies(userId: string) {

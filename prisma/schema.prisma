@@ -133,6 +133,15 @@ model Company {
   overtimeStartMonth     Int     @default(4)
   overtimeMonthlyLimit   Int     @default(45)
   overtimeYearlyLimit    Int     @default(360)
+  // 安全の設定(会社ごと)
+  // 全員に2段階認証を必須にする(設定していない人は、設定するまでアカウント画面しか使えない)
+  require2fa             Boolean @default(false)
+  // 操作しないまま、この分数が過ぎたら自動でログアウトする(空なら30日)
+  sessionIdleMinutes     Int?
+  // この会社を開ける IP アドレス(1行に1つ、CIDR可。空なら制限なし)
+  allowedIps             String?
+  // 新しい端末からログインしたら、本人にメールで知らせる
+  loginAlert             Boolean @default(false)
   createdAt        DateTime @default(now())
 
   users            User[]

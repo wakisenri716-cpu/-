@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 type Status = { enabled: boolean; recoveryCodesRemaining: number };
@@ -7,6 +8,7 @@ type Status = { enabled: boolean; recoveryCodesRemaining: number };
 const inputClass = "mt-1 w-full rounded-md border px-3 py-2 text-sm";
 
 export function TwoFactorSection() {
+  const router = useRouter();
   const [status, setStatus] = useState<Status | null>(null);
   const [setup, setSetup] = useState<{ secret: string; qrSvg: string } | null>(null);
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
@@ -45,6 +47,8 @@ export function TwoFactorSection() {
       setSetup(null);
       setRecoveryCodes(data.recoveryCodes);
       await load();
+      // 2段階認証が必須の会社では、これでほかの画面が使えるようになる
+      router.refresh();
     }
   }
 
