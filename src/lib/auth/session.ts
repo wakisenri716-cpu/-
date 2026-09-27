@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { pickMembership } from "./companies";
+import { clientIp } from "@/lib/security";
 
 export const SESSION_COOKIE = "session";
 const SESSION_DAYS = 30;
@@ -42,14 +43,30 @@ export const getCurrentUser = cache(async () => {
   if (!token) return null;
   const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: true } });
   if (!session || session.expiresAt < new Date() || !session.user.active) return null;
-  // 開いている会社と、その会社での権限。どの会社でも利用停止されていればログインしていない扱い
-  const member = await pickMembership(session.user, session.companyId);
+  // 開いている会社と、その会社での権限。どの会社でも利用停止されている、または
+  // IPアドレス制限でこの場所から開ける会社がなければ、ログインしていない扱い
+  const ip = clientIp(await headers());
+  const member = await pickMembership(session.user, session.companyId, ip);
   if (!member) return null;
-  // 「ログイン中の端末」に最終利用日時を出すため、10分に1回だけ更新する(毎回書き込まない)
-  if (!session.lastSeenAt || Date.now() - session.lastSeenAt.getTime() > 10 * 60_000 || session.companyId !== member.companyId) {
+  // 自動ログアウト: 開いている会社の設定の時間、操作がなければログアウトさせる
+  const idle = member.company.sessionIdleMinutes;
+  const last = session.lastSeenAt ?? session.createdAt;
+  if (idle && Date.now() - last.getTime() > idle * 60_000) {
+    await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
+    return null;
+  }
+  // 「ログイン中の端末」に最終利用日時を出すため、ときどきだけ更新する(毎回書き込まない)
+  const every = Math.min(10, idle ? idle / 5 : 10) * 60_000;
+  if (Date.now() - last.getTime() > every || session.companyId !== member.companyId) {
     await prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date(), companyId: member.companyId } }).catch(() => {});
   }
-  return { ...session.user, companyId: member.companyId, role: member.role };
+  return {
+    ...session.user,
+    companyId: member.companyId,
+    role: member.role,
+    // 会社で2段階認証を必須にしていて、まだ設定していない
+    mustSetup2fa: member.company.require2fa && !session.user.totpEnabled,
+  };
 });
 
 // 今使っているセッション(この端末)の ID
@@ -70,19 +87,22 @@ export async function requireUser() {
 // 従業員が使える画面。これ以外(帳票・銀行・給料など)は管理者と経理担当だけ。
 export const EMPLOYEE_PATHS = ["/expenses", "/timeclock", "/requests", "/account", "/share"];
 
-// 従業員も使える機能(自分の経費精算・タイムカード)用
+// 従業員も使える機能(自分の経費精算・タイムカード)用。
+// 2段階認証が必須なのに設定していない人は、設定するまでアカウント画面へ戻す
 export async function requireMember() {
-  return requireUser();
+  const user = await requireUser();
+  if (user.mustSetup2fa) redirect("/account?require2fa=1");
+  return user;
 }
 
 // 既定はこちら: 管理者・経理担当だけがデータに届く。従業員は経費精算へ戻す。
 export async function requireCompanyId(): Promise<string> {
-  const user = await requireUser();
+  const user = await requireMember();
   if (user.role === "EMPLOYEE") redirect("/expenses");
   return user.companyId;
 }
 
 export async function requireAdmin() {
-  const user = await requireUser();
+  const user = await requireMember();
   return user.role === "ADMIN" ? user : null;
 }

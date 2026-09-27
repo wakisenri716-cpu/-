@@ -20,8 +20,28 @@ const PUBLIC_PATHS = [
   "/api/cron",
 ];
 
+const SAFE_METHODS = ["GET", "HEAD", "OPTIONS"];
+
+// ほかのサイトから送られてきた書き込み(CSRF)を断る。ブラウザは送信元を Origin / Sec-Fetch-Site で知らせる
+function crossSite(request: NextRequest) {
+  if (SAFE_METHODS.includes(request.method)) return false;
+  const origin = request.headers.get("origin");
+  if (origin) {
+    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+    try {
+      return new URL(origin).host !== host;
+    } catch {
+      return true;
+    }
+  }
+  return request.headers.get("sec-fetch-site") === "cross-site";
+}
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname.startsWith("/api") && !pathname.startsWith("/api/cron") && crossSite(request)) {
+    return NextResponse.json({ error: "ほかのサイトからの送信は受け付けていません" }, { status: 403 });
+  }
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return NextResponse.next();
 
   const token = request.cookies.get(SESSION_COOKIE)?.value ?? "";
