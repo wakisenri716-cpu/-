@@ -16,6 +16,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         dueDate: String(body.dueDate ?? ""),
         accountCode: String(body.accountCode ?? ""),
         vendorInvoiceNumber: body.vendorInvoiceNumber ? String(body.vendorInvoiceNumber) : null,
+        projectId: body.projectId ? String(body.projectId) : null,
       });
       await audit("発注書を検収", `${order.orderNumber} ${order.vendor.name} ${yen(invoice.totalAmount)}`);
       return NextResponse.json({ ok: true, invoiceId: invoice.id });

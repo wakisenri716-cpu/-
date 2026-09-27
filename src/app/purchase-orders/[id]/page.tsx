@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireCompanyId } from "@/lib/auth/session";
 import { getPurchaseOrder, RECEIVE_ACCOUNTS } from "@/lib/accounting/purchaseOrders";
+import { listActiveProjects } from "@/lib/accounting/projects";
 import { BillingDocument } from "@/components/BillingDocument";
 import { PurchaseOrderActions } from "@/components/PurchaseOrderActions";
 import { formatDate } from "@/lib/format";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function PurchaseOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const companyId = await requireCompanyId();
-  const data = await getPurchaseOrder(companyId, id);
+  const [data, projects] = await Promise.all([getPurchaseOrder(companyId, id), listActiveProjects(companyId)]);
   if (!data) notFound();
   const { order, calc } = data;
   const paid = order.invoice?.payments.reduce((s, p) => s + p.amount, 0) ?? 0;
@@ -23,7 +24,7 @@ export default async function PurchaseOrderPage({ params }: { params: Promise<{ 
           ← 発注書一覧
         </Link>
         <div className="flex-1">
-          <PurchaseOrderActions orderId={order.id} status={order.status} accounts={RECEIVE_ACCOUNTS} defaultAccountCode={data.defaultAccountCode} canUndo={paid === 0} />
+          <PurchaseOrderActions orderId={order.id} status={order.status} accounts={RECEIVE_ACCOUNTS} defaultAccountCode={data.defaultAccountCode} canUndo={paid === 0} projects={projects} />
         </div>
       </div>
 

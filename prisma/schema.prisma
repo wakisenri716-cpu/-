@@ -182,6 +182,7 @@ model Company {
   budgets          Budget[]
   recurringInvoices RecurringInvoice[]
   departments      Department[]
+  projects         Project[]
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
   bankAccounts     BankAccount[]
@@ -786,6 +787,9 @@ model JournalEntry {
   // 部門・店舗(任意)。部門別の損益を出すために仕訳ごとに付ける。
   departmentId String?
   department   Department?        @relation(fields: [departmentId], references: [id])
+  // 案件(プロジェクト)。案件ごとの売上・原価・利益を出すために付ける
+  projectId    String?
+  project      Project?           @relation(fields: [projectId], references: [id])
   createdAt    DateTime           @default(now())
 
   lines             JournalLine[]
@@ -885,6 +889,27 @@ model AutomationRule {
 }
 
 // 部門・店舗。仕訳に付けておくと、部門別の損益計算書を出せる。
+// 案件(プロジェクト・工事・受託など)。仕訳に付けて、案件ごとの損益を出す
+model Project {
+  id            String    @id @default(cuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id])
+  name          String
+  customerName  String?
+  startDate     DateTime?
+  endDate       DateTime?
+  // 予算(受注額・原価の見込み。任意)
+  budgetRevenue Int?
+  budgetCost    Int?
+  active        Boolean   @default(true)
+  notes         String?
+  createdAt     DateTime  @default(now())
+
+  journalEntries JournalEntry[]
+
+  @@unique([companyId, name])
+}
+
 model Department {
   id        String   @id @default(cuid())
   companyId String

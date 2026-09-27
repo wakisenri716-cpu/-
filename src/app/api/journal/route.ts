@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCompanyId } from "@/lib/auth/session";
 import { ensureChartOfAccounts } from "@/lib/accounting/accounts";
 import { createManualJournal, getJournalBook, journalFilterFromParams } from "@/lib/accounting/journal";
+import { listActiveProjects } from "@/lib/accounting/projects";
 import { audit } from "@/lib/audit";
 import { UserError } from "@/lib/errors";
 
@@ -18,12 +19,13 @@ export async function GET(request: Request) {
 
   // 資本金・借入金など後から追加した科目を、既存デプロイでも選べるようにする
   await ensureChartOfAccounts(companyId);
-  const [entries, accounts, departments] = await Promise.all([
+  const [entries, accounts, departments, projects] = await Promise.all([
     getJournalBook(companyId, { month, filter: journalFilterFromParams(params) }),
     prisma.account.findMany({ where: { companyId, hidden: false }, orderBy: { code: "asc" }, select: { id: true, code: true, name: true, category: true } }),
     prisma.department.findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } }),
+    listActiveProjects(companyId),
   ]);
-  return NextResponse.json({ entries, accounts, departments });
+  return NextResponse.json({ entries, accounts, departments, projects });
 }
 
 export async function POST(request: Request) {
@@ -36,6 +38,7 @@ export async function POST(request: Request) {
       date: new Date(String(body.date ?? "")),
       description: String(body.description ?? ""),
       departmentId: body.departmentId ? String(body.departmentId) : null,
+      projectId: body.projectId ? String(body.projectId) : null,
       lines: lines.map((l: Record<string, unknown>) => ({
         accountId: String(l.accountId ?? ""),
         debit: Number(l.debit || 0),

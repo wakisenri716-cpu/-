@@ -29,6 +29,7 @@ const FIELD_LABELS: Record<string, string> = {
   accountId: "勘定科目",
   memo: "メモ",
   departmentId: "部門",
+  projectId: "案件",
   expenseDate: "日付",
   vendorId: "取引先",
   customerId: "顧客",
