@@ -53,9 +53,10 @@ export async function buildBackup(companyId: string) {
   ]);
   const folderLabels = new Map(folderList.map((f) => [f.id, f.label]));
   const history = await listRecordHistory(companyId, { take: 500, changesOnly: true });
-  const [leaveGrants, leaveTaken] = await Promise.all([
+  const [leaveGrants, leaveTaken, approvalRequests] = await Promise.all([
     prisma.leaveGrant.findMany({ where: { companyId }, include: { staff: { select: { name: true } } }, orderBy: { grantDate: "asc" } }),
     prisma.leaveTaken.findMany({ where: { companyId }, include: { staff: { select: { name: true } } }, orderBy: { date: "asc" } }),
+    prisma.approvalRequest.findMany({ where: { companyId }, include: { actions: { orderBy: { createdAt: "asc" } } }, orderBy: { createdAt: "asc" } }),
   ]);
 
   const files: { name: string; rows: (string | number)[][] }[] = [
@@ -138,6 +139,25 @@ export async function buildBackup(companyId: string) {
       rows: [
         ["名前", "時給", "在籍", "暗証番号", "入社日", "週の所定労働日数", "1日の所定労働時間(分)"],
         ...staff.map((s) => [s.name, s.hourlyWage, s.active ? "在籍" : "退職", s.pinHash ? "設定済み" : "", s.hireDate ? d(s.hireDate) : "", s.weeklyDays, s.scheduledMinutes]),
+      ],
+    },
+    {
+      name: "申請・稟議.csv",
+      rows: [
+        ["番号", "申請日", "種類", "件名", "申請者", "金額", "購入先・支払先", "休む日", "状態", "回覧の記録", "内容"],
+        ...approvalRequests.map((r) => [
+          r.number,
+          t(r.createdAt),
+          ({ LEAVE: "有給休暇", PURCHASE: "購入・支払", GENERAL: "その他" } as Record<string, string>)[r.kind] ?? r.kind,
+          r.title,
+          r.requesterName,
+          r.amount ?? "",
+          r.payee ?? "",
+          r.leaveDate ? `${d(r.leaveDate)}${r.leaveHalfDays === 1 ? "(半日)" : ""}` : "",
+          ({ PENDING: "承認待ち", APPROVED: "承認", REJECTED: "差戻し", WITHDRAWN: "取下げ" } as Record<string, string>)[r.status] ?? r.status,
+          r.actions.map((a) => `${t(a.createdAt)} ${a.userName} ${a.action}${a.comment ? `「${a.comment}」` : ""}`).join(" / "),
+          r.body,
+        ]),
       ],
     },
     {

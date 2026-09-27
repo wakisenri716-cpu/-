@@ -26,6 +26,7 @@ type LeaveStaff = {
   id: string;
   name: string;
   hireDate: string | null;
+  userId: string | null;
   weeklyDays: number;
   scheduledMinutes: number;
   hourlyWage: number;
@@ -36,7 +37,7 @@ type LeaveStaff = {
   grants: { id: string; grantDate: string; halfDays: number; remaining: number; expires: string; expired: boolean; auto: boolean; note: string | null }[];
   taken: { id: string; date: string; halfDays: number; bulk: boolean; note: string | null; short: number }[];
 };
-type Leave = { today: string; staff: LeaveStaff[] };
+type Leave = { today: string; users: { id: string; name: string; email: string }[]; staff: LeaveStaff[] };
 
 const hours = (minutes: number) => `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`;
 const d = (halfDays: number) => `${halfDays % 2 === 0 ? halfDays / 2 : (halfDays / 2).toFixed(1)}日`;
@@ -258,7 +259,7 @@ function LeaveView({ data, busy, send }: { data: Leave; busy: boolean; send: Sen
         <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-400">「シフト管理」でスタッフを登録してください。</div>
       )}
       {data.staff.map((s) => (
-        <StaffLeave key={s.id} s={s} today={data.today} busy={busy} send={send} />
+        <StaffLeave key={s.id} s={s} users={data.users} today={data.today} busy={busy} send={send} />
       ))}
       <p className="text-xs text-slate-500">
         付与日数は労働基準法のとおり(入社6か月で10日、その後1年ごとに11日・12日・14日…最大20日。週4日以下の人は比例付与)で、出勤率8割以上を満たしている前提です。
@@ -268,7 +269,7 @@ function LeaveView({ data, busy, send }: { data: Leave; busy: boolean; send: Sen
   );
 }
 
-function StaffLeave({ s, today, busy, send }: { s: LeaveStaff; today: string; busy: boolean; send: Send }) {
+function StaffLeave({ s, users, today, busy, send }: { s: LeaveStaff; users: Leave["users"]; today: string; busy: boolean; send: Send }) {
   const [kind, setKind] = useState<"FULL" | "HALF" | "BULK">("FULL");
   const open = s.obligations.filter((o) => !o.ended);
   const missed = s.obligations.filter((o) => o.ended && !o.met);
@@ -279,7 +280,12 @@ function StaffLeave({ s, today, busy, send }: { s: LeaveStaff; today: string; bu
     send(
       `/api/leave/staff/${s.id}`,
       "PATCH",
-      { hireDate: f.get("hireDate") || null, weeklyDays: Number(f.get("weeklyDays")), scheduledMinutes: Math.round(Number(f.get("scheduledHours")) * 60) },
+      {
+        hireDate: f.get("hireDate") || null,
+        weeklyDays: Number(f.get("weeklyDays")),
+        scheduledMinutes: Math.round(Number(f.get("scheduledHours")) * 60),
+        userId: f.get("userId") || null,
+      },
       `${s.name}さんの設定を保存しました`,
     );
   }
@@ -421,7 +427,7 @@ function StaffLeave({ s, today, busy, send }: { s: LeaveStaff; today: string; bu
           </div>
         </div>
 
-        <form key={`${s.hireDate}-${s.weeklyDays}-${s.scheduledMinutes}`} onSubmit={saveSettings} className="mt-4 flex flex-wrap items-end gap-2">
+        <form key={`${s.hireDate}-${s.weeklyDays}-${s.scheduledMinutes}-${s.userId}`} onSubmit={saveSettings} className="mt-4 flex flex-wrap items-end gap-2">
           <label>
             <span className="mb-1 block text-xs text-slate-500">入社日</span>
             <input name="hireDate" type="date" defaultValue={s.hireDate ?? ""} className={inputClass} />
@@ -439,6 +445,17 @@ function StaffLeave({ s, today, busy, send }: { s: LeaveStaff; today: string; bu
           <label>
             <span className="mb-1 block text-xs text-slate-500">1日の所定労働時間</span>
             <input name="scheduledHours" type="number" min={0.5} max={12} step={0.25} defaultValue={s.scheduledMinutes / 60} className={`${inputClass} w-24`} />
+          </label>
+          <label>
+            <span className="mb-1 block text-xs text-slate-500">ログインユーザー(本人が有給を申請できる)</span>
+            <select name="userId" defaultValue={s.userId ?? ""} className={inputClass}>
+              <option value="">ひも付けない</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}({u.email})
+                </option>
+              ))}
+            </select>
           </label>
           <button disabled={busy} className="rounded-md border border-slate-300 px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50">
             設定を保存
