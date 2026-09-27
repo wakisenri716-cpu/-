@@ -96,8 +96,9 @@ export async function reimburse(companyId: string, reportId: string, input: { da
 
 // 精算の取消(振込を間違えた場合など)。支払の仕訳を無効にして未精算に戻す。
 export async function undoReimbursement(companyId: string, reportId: string) {
-  const report = await prisma.expenseReport.findFirst({ where: { id: reportId, companyId } });
+  const report = await prisma.expenseReport.findFirst({ where: { id: reportId, companyId }, include: { cashAdvance: { select: { id: true } } } });
   if (!report?.reimbursedAt) throw new ReimbursementError("精算済みの経費精算ではありません");
+  if (report.cashAdvance) throw new ReimbursementError("仮払金と相殺して精算した経費精算です。「仮払金」の画面で精算を取り消してください");
   return prisma.$transaction(async (tx) => {
     const released = await tx.expenseReport.updateMany({
       where: { id: reportId, companyId, reimbursementEntryId: report.reimbursementEntryId },

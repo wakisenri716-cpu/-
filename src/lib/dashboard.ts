@@ -4,6 +4,7 @@ import { countOvertimeAlerts } from "@/lib/leave/overtime";
 import { countLeaveObligationAlerts } from "@/lib/leave/service";
 import { countTodo } from "@/lib/approvals/service";
 import { countLateOrders } from "@/lib/accounting/purchaseOrders";
+import { countStaleAdvances } from "@/lib/accounting/cashAdvances";
 import { countRemittanceAlerts } from "@/lib/withholding/service";
 import type { User } from "@prisma/client";
 import { jstDateKey } from "@/lib/jst";
@@ -94,7 +95,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -118,6 +119,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     user ? countTodo(user) : prisma.approvalRequest.count({ where: { companyId, status: "PENDING" } }),
     countRemittanceAlerts(companyId, now),
     countLateOrders(companyId, now),
+    countStaleAdvances(companyId, now),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
@@ -150,6 +152,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
       href: "/reimbursements",
       tone: "amber",
     },
+    { key: "advances", label: "精算していない仮払金", detail: "渡してから30日以上たっています。経費精算と相殺して精算してください", count: staleAdvances, href: "/advances", tone: "amber" },
     { key: "forgot", label: "退勤の打刻忘れ", detail: "勤怠一覧で退勤時刻を入れてください", count: forgot, href: "/attendance", tone: "rose" },
     {
       key: "payroll",
