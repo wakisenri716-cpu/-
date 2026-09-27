@@ -3,6 +3,7 @@ import { toBooksClosedError, UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { ensureAccount } from "@/lib/accounting/accounts";
 import type { PayrollSheetRow } from "@/lib/payroll/service";
+import { bonusPayments } from "@/lib/payroll/bonus";
 import {
   addMonth,
   FEE_CATEGORIES,
@@ -126,16 +127,26 @@ export async function deleteWithholding(companyId: string, paymentId: string) {
 
 // ---- 支払調書・法定調書合計表 ----
 
+// 支払った給料と賞与を、支払った月ごとに(給料は「働いた月の翌月に払う」の設定で支払月を決める)
+type PaidRow = { staffId: string; name: string; gross: number; commute: number; incomeTax: number; residentTax: number };
 async function payrollByPayMonth(companyId: string) {
-  const [company, runs] = await Promise.all([
+  const [company, runs, bonuses] = await Promise.all([
     prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { salaryPaidNextMonth: true } }),
     prisma.payrollRun.findMany({ where: { companyId }, orderBy: { month: "asc" } }),
+    bonusPayments(companyId),
   ]);
-  return runs.map((r) => ({
-    workMonth: r.month,
-    payMonth: company.salaryPaidNextMonth ? addMonth(r.month, 1) : r.month,
-    rows: Array.isArray(r.details) ? (r.details as unknown as PayrollSheetRow[]) : [],
-  }));
+  return [
+    ...runs.map((r) => ({
+      kind: "給与",
+      payMonth: company.salaryPaidNextMonth ? addMonth(r.month, 1) : r.month,
+      rows: (Array.isArray(r.details) ? (r.details as unknown as PayrollSheetRow[]) : []) as PaidRow[],
+    })),
+    ...bonuses.map((b) => ({
+      kind: "賞与",
+      payMonth: b.payMonth,
+      rows: b.rows.map((x) => ({ staffId: x.staffId, name: x.name, gross: x.amount, commute: 0, incomeTax: x.incomeTax, residentTax: 0 })),
+    })),
+  ];
 }
 
 export async function getStatements(companyId: string, yearValue: unknown) {
@@ -213,7 +224,7 @@ export async function getRemittances(companyId: string, yearValue: unknown, toda
   for (const run of payroll) {
     const incomeTax = run.rows.reduce((s, r) => s + r.incomeTax, 0);
     const resident = run.rows.reduce((s, r) => s + r.residentTax, 0);
-    add("INCOME_TAX", company.withholdingSpecial ? incomeTaxSpecialPeriod(run.payMonth) : monthlyPeriod(run.payMonth), "給与", incomeTax);
+    add("INCOME_TAX", company.withholdingSpecial ? incomeTaxSpecialPeriod(run.payMonth) : monthlyPeriod(run.payMonth), run.kind, incomeTax);
     add("RESIDENT_TAX", company.residentTaxSpecial ? residentTaxSpecialPeriod(run.payMonth) : monthlyPeriod(run.payMonth), "住民税", resident);
   }
   for (const f of fees) {

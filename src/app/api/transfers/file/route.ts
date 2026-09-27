@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   try {
     const { file, kind, count, total } = await buildTransfer(companyId, body);
     await audit("振込データを作成", `${LABEL[kind]} ${String(body.date)} ${count}件 ${total.toLocaleString("ja-JP")}円`);
-    const name = `${kind === "GENERAL" ? "sogo" : "kyuyo"}_${String(body.date).replaceAll("-", "")}.txt`;
+    const name = `${kind === "GENERAL" ? "sogo" : kind === "BONUS" ? "shoyo" : "kyuyo"}_${String(body.date).replaceAll("-", "")}.txt`;
     return new Response(new Uint8Array(file), {
       headers: {
         "Content-Type": "text/plain; charset=Shift_JIS",
