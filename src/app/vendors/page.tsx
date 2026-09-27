@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { CsvImportForm } from "@/components/CsvImportForm";
 import { PrintButton } from "@/components/PrintButton";
 
@@ -11,10 +12,26 @@ type Vendor = {
   name: string;
   defaultExpenseAccountId: string | null;
   defaultExpenseAccount: Account | null;
+  invoiceStatus: "REGISTERED" | "NOT_REGISTERED" | null;
+  registrationNumber: string | null;
 };
+
+const kohyoUrl = (number: string) => `https://www.invoice-kohyo.nta.go.jp/regno-search/detail?selRegNo=${number.replace(/^T/, "")}`;
 type Customer = { id: string; name: string };
 
 export default function VendorsPage() {
+  return (
+    <Suspense>
+      <VendorsContent />
+    </Suspense>
+  );
+}
+
+function VendorsContent() {
+  const searchParams = useSearchParams();
+  // 消費税集計の「未確認の取引先」から来たときは、未確認の取引先だけを出す
+  const [onlyUnknown, setOnlyUnknown] = useState(searchParams.get("invoice") === "unknown");
+  const [notice, setNotice] = useState<string | null>(null);
   const [tab, setTab] = useState<"vendors" | "customers">("vendors");
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -81,6 +98,26 @@ export default function VendorsPage() {
     }
   }
 
+  async function saveInvoice(id: string, body: { invoiceStatus?: string; registrationNumber?: string }) {
+    setSavingId(id);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/vendors/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "更新に失敗しました");
+      if (json.warning) setNotice(`${json.name}: ${json.warning}`);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "エラーが発生しました");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  const unknownCount = vendors.filter((v) => !v.invoiceStatus).length;
+  const shownVendors = onlyUnknown ? vendors.filter((v) => !v.invoiceStatus) : vendors;
+
   async function saveCustomerName(id: string) {
     const name = drafts[id];
     if (!name || !name.trim()) return;
@@ -141,6 +178,19 @@ export default function VendorsPage() {
       </div>
 
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
+      {notice && <div className="rounded-md bg-amber-50 px-4 py-2 text-sm text-amber-900">{notice}</div>}
+      {tab === "vendors" && !loading && (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <p className="text-slate-600">
+            インボイス登録を確かめていない取引先: <span className="font-semibold">{unknownCount}件</span>
+            <span className="ml-1 text-xs text-slate-500">(登録のない取引先への支払は、消費税の差し引きが一部だけになります)</span>
+          </p>
+          <label className="flex items-center gap-2 text-xs text-slate-600">
+            <input type="checkbox" checked={onlyUnknown} onChange={(e) => setOnlyUnknown(e.target.checked)} />
+            未確認の取引先だけ表示
+          </label>
+        </div>
+      )}
 
       {loading ? (
         <p className="text-sm text-slate-500">読み込み中...</p>
@@ -152,11 +202,12 @@ export default function VendorsPage() {
                 <tr>
                   <th className="px-4 py-2">取引先名</th>
                   <th className="px-4 py-2">既定の勘定科目</th>
+                  <th className="px-4 py-2">インボイス登録</th>
                   <th className="px-4 py-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {vendors.map((vendor) => (
+                {shownVendors.map((vendor) => (
                   <tr key={vendor.id}>
                     <td className="px-4 py-2">
                       <input
@@ -181,6 +232,36 @@ export default function VendorsPage() {
                         ))}
                       </select>
                     </td>
+                    <td className="px-4 py-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          value={vendor.invoiceStatus ?? ""}
+                          onChange={(e) => saveInvoice(vendor.id, { invoiceStatus: e.target.value })}
+                          disabled={savingId === vendor.id}
+                          aria-label="インボイス登録"
+                          className={`rounded border px-2 py-1 text-sm ${vendor.invoiceStatus ? "" : "border-amber-300 bg-amber-50"}`}
+                        >
+                          <option value="">未確認</option>
+                          <option value="REGISTERED">登録あり</option>
+                          <option value="NOT_REGISTERED">登録なし</option>
+                        </select>
+                        {vendor.invoiceStatus !== "NOT_REGISTERED" && (
+                          <input
+                            key={vendor.registrationNumber ?? ""}
+                            defaultValue={vendor.registrationNumber ?? ""}
+                            onBlur={(e) => e.target.value.trim() !== (vendor.registrationNumber ?? "") && saveInvoice(vendor.id, { registrationNumber: e.target.value })}
+                            placeholder="T1234567890123"
+                            aria-label="登録番号"
+                            className="w-40 rounded border px-2 py-1 font-mono text-xs"
+                          />
+                        )}
+                        {vendor.registrationNumber && (
+                          <a href={kohyoUrl(vendor.registrationNumber)} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-700 hover:underline">
+                            公表サイト
+                          </a>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-2 text-xs whitespace-nowrap text-slate-400">
                       {savingId === vendor.id ? (
                         "保存中..."
@@ -192,9 +273,16 @@ export default function VendorsPage() {
                     </td>
                   </tr>
                 ))}
+                {vendors.length > 0 && shownVendors.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                      インボイス登録が未確認の取引先はありません。
+                    </td>
+                  </tr>
+                )}
                 {vendors.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="px-4 py-6 text-center text-slate-400">
+                    <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
                       まだ取引先がありません。経費精算や受領請求書をAI処理すると自動的に登録されます。
                     </td>
                   </tr>

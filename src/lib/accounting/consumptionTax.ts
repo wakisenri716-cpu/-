@@ -76,11 +76,12 @@ export function isTaxMethod(value: unknown): value is TaxMethod {
 
 // 3つの方式それぞれの納付見込み額(目安)。
 // 簡易課税・2割特例は、預かった消費税から「みなし仕入率」分を差し引く(実際に払った消費税は使わない)。
-export function estimateByMethod(outputTotal: number, inputTotal: number, businessType: number) {
+// notDeductible: 登録のない取引先からの仕入で、経過措置により控除できない仮払消費税(原則課税だけに効く)
+export function estimateByMethod(outputTotal: number, inputTotal: number, businessType: number, notDeductible = 0) {
   const rate = BUSINESS_TYPES[businessType]?.rate ?? BUSINESS_TYPES[5].rate;
   const base = Math.max(outputTotal, 0);
   return {
-    GENERAL: outputTotal - inputTotal,
+    GENERAL: outputTotal - inputTotal + notDeductible,
     SIMPLIFIED: base - Math.floor(base * rate),
     TWENTY_PERCENT: base - Math.floor(base * 0.8),
   } satisfies Record<TaxMethod, number>;
