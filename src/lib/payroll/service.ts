@@ -13,7 +13,23 @@ const ACCOUNTS = { salary: "5110", commute: "5010", welfare: "5120", withheld: "
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 // leaveHalfDays は有給休暇の日数(半日単位)。これを入れる前に計上した月の記録にはない
-export type PayrollSheetRow = Deductions & { staffId: string; name: string; hourlyWage: number; days: number; leaveHalfDays?: number; taxColumn: string; dependents: number };
+// 勤務時間と支給の内訳(workMinutes など)は賃金台帳のために残す。これを入れる前に計上した月の記録にはない
+export type PayrollSheetRow = Deductions & {
+  staffId: string;
+  name: string;
+  hourlyWage: number;
+  days: number;
+  leaveHalfDays?: number;
+  taxColumn: string;
+  dependents: number;
+  workMinutes?: number;
+  overtimeMinutes?: number;
+  nightMinutes?: number;
+  basePay?: number;
+  nightPay?: number;
+  overtimePay?: number;
+  leavePay?: number;
+};
 
 function checkMonth(month: string) {
   if (!MONTH.test(month)) throw new PayrollError("月を正しく指定してください");
@@ -124,6 +140,13 @@ export async function getPayrollSheet(companyId: string, month: string) {
       hourlyWage: r.hourlyWage,
       days: r.actualDays + r.plannedDays,
       leaveHalfDays: r.leaveHalfDays,
+      workMinutes: r.workMinutes,
+      overtimeMinutes: r.overtimeMinutes,
+      nightMinutes: r.nightMinutes,
+      basePay: r.base,
+      nightPay: r.night,
+      overtimePay: r.overtime,
+      leavePay: r.leavePay,
       taxColumn: s.taxColumn,
       dependents: s.dependents,
       ...calcDeductions(r.total, s, settings.rates, overrideBy.get(r.staffId) ?? null),

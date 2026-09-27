@@ -148,6 +148,8 @@ model Company {
   salaryPaidNextMonth    Boolean @default(true)
   withholdingSpecial     Boolean @default(false)
   residentTaxSpecial     Boolean @default(false)
+  // 労働条件通知書に入れる会社の決まり(就業の場所・休日・賃金の締切日と支払日・相談窓口など)
+  laborDefaults          Json?
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -642,6 +644,8 @@ model Staff {
   timeRecords TimeRecord[]
   leaveGrants LeaveGrant[]
   leaveTaken  LeaveTaken[]
+  // 労働者名簿・労働条件通知書のための情報(ふりがな・生年月日・住所・雇用形態・業務・勤務時間・退職日など)
+  profile     Json?
   // 給与の振込先: { bankCode, bankName, branchCode, branchName, accountType, accountNumber, holder }(名前はすべて半角カナ)
   payeeAccount Json?
   // ログインユーザーとのひも付け(本人が有給の申請などをするため)
