@@ -35,6 +35,7 @@ import {
   MailIcon,
   SearchIcon,
   ShieldIcon,
+  StampIcon,
   StoreIcon,
   SunIcon,
   TrendIcon,
@@ -52,6 +53,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/", label: "ダッシュボード", icon: DashboardIcon },
       { href: "/review", label: "レビューキュー", icon: InboxIcon },
+      { href: "/requests", label: "申請・稟議", icon: StampIcon },
       { href: "/files", label: "書類フォルダ", icon: FolderIcon },
     ],
   },
@@ -115,6 +117,7 @@ const EMPLOYEE_SECTIONS: NavSection[] = [
     items: [
       { href: "/expenses", label: "経費精算", icon: ReceiptIcon },
       { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
+      { href: "/requests", label: "申請・稟議", icon: StampIcon },
     ],
   },
 ];

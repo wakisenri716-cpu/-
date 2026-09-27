@@ -371,3 +371,13 @@ export function SunIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function StampIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M9.5 13.5V11a2.5 2.5 0 1 1 5 0v2.5" />
+      <path d="M5 13.5h14a1 1 0 0 1 1 1V17H4v-2.5a1 1 0 0 1 1-1ZM6 20.5h12" />
+      <circle cx="12" cy="6" r="2.5" />
+    </svg>
+  );
+}

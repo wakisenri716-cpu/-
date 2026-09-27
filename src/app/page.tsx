@@ -23,7 +23,7 @@ export default async function DashboardPage() {
     getDashboardSummary(),
     getMonthlyTrend(companyId),
     getCashBalance(companyId),
-    getTodos(companyId),
+    getTodos(companyId, new Date(), user),
     getRankings(companyId),
     user.role === "ADMIN" ? getSetupSteps(companyId, user) : Promise.resolve(null),
   ]);

@@ -40,14 +40,16 @@ async function staffLeave(companyId: string, staffId: string) {
 export async function getLeaveOverview(companyId: string, now = new Date()) {
   await ensureAutoGrants(companyId, now);
   const today = todayDate(now);
-  const [staff, grants, taken] = await Promise.all([
+  const [staff, grants, taken, users] = await Promise.all([
     prisma.staff.findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" } }),
     prisma.leaveGrant.findMany({ where: { companyId }, orderBy: { grantDate: "asc" } }),
     prisma.leaveTaken.findMany({ where: { companyId }, orderBy: { date: "desc" } }),
+    prisma.user.findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, email: true } }),
   ]);
   const soon = addMonths(today, 3);
   return {
     today: dateKey(today),
+    users,
     staff: staff.map((s) => {
       const g = grants.filter((x) => x.staffId === s.id);
       const t = taken.filter((x) => x.staffId === s.id);
@@ -57,6 +59,7 @@ export async function getLeaveOverview(companyId: string, now = new Date()) {
         id: s.id,
         name: s.name,
         hireDate: s.hireDate ? dateKey(s.hireDate) : null,
+        userId: s.userId,
         weeklyDays: s.weeklyDays,
         scheduledMinutes: s.scheduledMinutes,
         hourlyWage: s.hourlyWage,
@@ -100,10 +103,21 @@ export async function countLeaveObligationAlerts(companyId: string, now = new Da
   return overview.staff.filter((s) => s.obligations.some((o) => !o.met && o.deadline <= limit)).length;
 }
 
-export async function updateLeaveSettings(companyId: string, staffId: string, input: { hireDate?: unknown; weeklyDays?: unknown; scheduledMinutes?: unknown }) {
+export async function updateLeaveSettings(
+  companyId: string,
+  staffId: string,
+  input: { hireDate?: unknown; weeklyDays?: unknown; scheduledMinutes?: unknown; userId?: unknown },
+) {
   const staff = await prisma.staff.findFirst({ where: { id: staffId, companyId } });
   if (!staff) throw new LeaveError("スタッフが見つかりません");
-  const data: { hireDate?: Date | null; weeklyDays?: number; scheduledMinutes?: number } = {};
+  const data: { hireDate?: Date | null; weeklyDays?: number; scheduledMinutes?: number; userId?: string | null } = {};
+  // ログインユーザーとのひも付け(本人が「申請・稟議」から有給を申請できるようにする)
+  if (input.userId !== undefined) {
+    const userId = input.userId === null || input.userId === "" ? null : String(input.userId);
+    if (userId && !(await prisma.user.findFirst({ where: { id: userId, companyId } }))) throw new LeaveError("ログインユーザーを選び直してください");
+    if (userId && (await prisma.staff.findFirst({ where: { userId, id: { not: staffId } } }))) throw new LeaveError("このユーザーはすでに別のスタッフにひも付いています");
+    data.userId = userId;
+  }
   if (input.hireDate !== undefined) data.hireDate = input.hireDate === null || input.hireDate === "" ? null : toDate(input.hireDate, "入社日");
   if (data.hireDate && data.hireDate > todayDate()) throw new LeaveError("入社日は今日より前の日付にしてください");
   if (input.weeklyDays !== undefined) {
@@ -120,7 +134,7 @@ export async function updateLeaveSettings(companyId: string, staffId: string, in
     // 入社日を変えたら、自動で付与した分を作り直す(週の日数だけの変更は、これからの付与にだけ反映する)
     const hireChanged = data.hireDate !== undefined && (data.hireDate?.getTime() ?? null) !== (staff.hireDate?.getTime() ?? null);
     if (hireChanged) await tx.leaveGrant.deleteMany({ where: { staffId, auto: true } });
-    return tx.staff.update({ where: { id: staffId }, data, select: { id: true, hireDate: true, weeklyDays: true, scheduledMinutes: true } });
+    return tx.staff.update({ where: { id: staffId }, data, select: { id: true, hireDate: true, weeklyDays: true, scheduledMinutes: true, userId: true } });
   });
 }
 
@@ -161,8 +175,9 @@ async function assertMonthOpen(companyId: string, date: Date) {
   }
 }
 
-// 取得を登録する。kind: FULL(1日) / HALF(半日) / BULK(導入前に取った分をまとめて。給与には入れない)
-export async function addTaken(companyId: string, input: { staffId?: unknown; date?: unknown; kind?: unknown; days?: unknown; note?: unknown }) {
+// 取得の内容を確かめる(登録はしない)。有給の申請(稟議)でも、申請するときと承認するときに使う。
+// kind: FULL(1日) / HALF(半日) / BULK(導入前に取った分をまとめて。給与には入れない)
+export async function checkTaken(companyId: string, input: { staffId?: unknown; date?: unknown; kind?: unknown; days?: unknown }) {
   const staff = await prisma.staff.findFirst({ where: { id: String(input.staffId ?? ""), companyId } });
   if (!staff) throw new LeaveError("スタッフを選んでください");
   const date = toDate(input.date, "取得日");
@@ -178,6 +193,7 @@ export async function addTaken(companyId: string, input: { staffId?: unknown; da
       if (worked) throw new LeaveError("この日は出勤の打刻があります。半日の有給にするか、打刻を直してください");
     }
   }
+  if (await prisma.leaveTaken.findUnique({ where: { staffId_date: { staffId: staff.id, date } } })) throw new LeaveError("この日はすでに有給の記録があります");
   const { grants, taken } = await staffLeave(companyId, staff.id);
   const { shortage } = allocate(grants, [...taken, { id: "new", date, halfDays }]);
   if (shortage.has("new")) {
@@ -185,14 +201,26 @@ export async function addTaken(companyId: string, input: { staffId?: unknown; da
     const left = balanceOn(pool, date);
     throw new LeaveError(`有給の残りが足りません(${dateKey(date)} 時点の残り ${left / 2}日)。付与を確かめてください`);
   }
+  return { staff, date, halfDays, bulk: kind === "BULK" };
+}
+
+export async function addTaken(companyId: string, input: { staffId?: unknown; date?: unknown; kind?: unknown; days?: unknown; note?: unknown }) {
+  const { staff, date, halfDays, bulk } = await checkTaken(companyId, input);
   try {
     return await prisma.leaveTaken.create({
-      data: { companyId, staffId: staff.id, date, halfDays, bulk: kind === "BULK", note: String(input.note ?? "").trim().slice(0, 100) || null },
+      data: { companyId, staffId: staff.id, date, halfDays, bulk, note: String(input.note ?? "").trim().slice(0, 100) || null },
     });
   } catch (error) {
     if ((error as { code?: string }).code === "P2002") throw new LeaveError("この日はすでに有給の記録があります");
     throw error;
   }
+}
+
+// 今日時点の有給の残り(半日単位)
+export async function leaveBalance(companyId: string, staffId: string, now = new Date()) {
+  await ensureAutoGrants(companyId, now);
+  const { grants, taken } = await staffLeave(companyId, staffId);
+  return balanceOn(allocate(grants, taken).pool, todayDate(now));
 }
 
 export async function deleteTaken(companyId: string, id: string) {

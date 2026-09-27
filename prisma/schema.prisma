@@ -162,6 +162,8 @@ model Company {
   bankAccounts     BankAccount[]
   leaveGrants      LeaveGrant[]
   leaveTaken       LeaveTaken[]
+  approvalRequests ApprovalRequest[]
+  approvalRoutes   ApprovalRoute[]
   folders          Folder[]
   storedFiles      StoredFile[]
   recurringEntries RecurringEntry[]
@@ -192,6 +194,8 @@ model User {
   expenseReports ExpenseReport[]
   sessions       Session[]
   passwordResets PasswordReset[]
+  staff          Staff?
+  requests       ApprovalRequest[]
 }
 
 // ログインセッション。ブラウザのクッキーには推測できないランダムなトークンだけを入れ、
@@ -608,6 +612,10 @@ model Staff {
   timeRecords TimeRecord[]
   leaveGrants LeaveGrant[]
   leaveTaken  LeaveTaken[]
+  // ログインユーザーとのひも付け(本人が有給の申請などをするため)
+  userId      String?  @unique
+  user        User?    @relation(fields: [userId], references: [id])
+  requests    ApprovalRequest[]
 
   @@unique([companyId, name])
 }
@@ -856,7 +864,7 @@ model EmailLog {
   id         String   @id @default(cuid())
   companyId  String
   company    Company  @relation(fields: [companyId], references: [id])
-  // INVOICE / QUOTE / REMINDER / PASSWORD_RESET / DIGEST / TEST
+  // INVOICE / QUOTE / REMINDER / PASSWORD_RESET / DIGEST / APPROVAL / TEST
   kind       String
   to         String
   subject    String
@@ -966,4 +974,70 @@ model LeaveTaken {
 
   @@unique([staffId, date])
   @@index([companyId, date])
+}
+
+// 稟議・申請(有給休暇・購入・その他)。承認ルート(steps)は申請したときのものを残す。
+model ApprovalRequest {
+  id            String           @id @default(cuid())
+  companyId     String
+  company       Company          @relation(fields: [companyId], references: [id])
+  // R-2026-0001 のような番号(会社ごと・年ごとの連番)
+  number        String
+  // LEAVE(有給休暇) / PURCHASE(購入・支払) / GENERAL(その他)
+  kind          String
+  title         String
+  body          String           @default("")
+  amount        Int?
+  payee         String?
+  leaveDate     DateTime?
+  leaveHalfDays Int?
+  staffId       String?
+  staff         Staff?           @relation(fields: [staffId], references: [id])
+  requesterId   String
+  requester     User             @relation(fields: [requesterId], references: [id])
+  requesterName String
+  // PENDING(承認待ち) / APPROVED(承認) / REJECTED(差戻し) / WITHDRAWN(取下げ)
+  status        String           @default("PENDING")
+  // [{ userId: string | null(管理者のだれか), name: string }]
+  steps         Json
+  currentStep   Int              @default(0)
+  leaveTakenId  String?
+  decidedAt     DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  actions       ApprovalAction[]
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([requesterId])
+}
+
+// 稟議の回覧記録(申請・承認・差戻し・取下げ・コメント)
+model ApprovalAction {
+  id        String          @id @default(cuid())
+  requestId String
+  request   ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  step      Int
+  userId    String?
+  userName  String
+  // SUBMIT / APPROVE / REJECT / WITHDRAW / COMMENT / SKIP
+  action    String
+  comment   String?
+  createdAt DateTime        @default(now())
+
+  @@index([requestId])
+}
+
+// 承認ルート。申請の種類(ALL は全部)と金額で選ぶ。approverIds の順に回す。
+model ApprovalRoute {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  name        String
+  kind        String
+  minAmount   Int      @default(0)
+  approverIds String[]
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
 }
