@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   for (const company of companies) {
     const todos = await getTodos(company.id);
     if (!todos.length) continue;
-    const admins = await prisma.user.findMany({ where: { companyId: company.id, role: "ADMIN", active: true }, select: { email: true, name: true } });
+    const admins = await prisma.user.findMany({ where: { active: true, memberships: { some: { companyId: company.id, role: "ADMIN", active: true } } }, select: { email: true, name: true } });
     const text = [
       `${company.name} の今日のやること(${todos.length}件)です。`,
       "",

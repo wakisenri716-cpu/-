@@ -216,7 +216,7 @@ export type SetupStep = { key: string; label: string; detail: string; href: stri
 export async function getSetupSteps(companyId: string, user: { id: string; totpEnabled: boolean }): Promise<SetupStep[]> {
   const [company, users, invoices, bank, expenses, backups] = await Promise.all([
     prisma.company.findUnique({ where: { id: companyId }, select: { address: true, registrationNumber: true, bankAccount: true } }),
-    prisma.user.count({ where: { companyId, passwordHash: { not: null } } }),
+    prisma.user.count({ where: { passwordHash: { not: null }, memberships: { some: { companyId } } } }),
     prisma.invoice.count({ where: { companyId } }),
     prisma.bankTransaction.count({ where: { companyId } }),
     prisma.expenseItem.count({ where: { expenseReport: { companyId } } }),

@@ -4,7 +4,19 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { formatDate } from "@/lib/format";
 
 type Role = "ADMIN" | "ACCOUNTANT" | "EMPLOYEE";
-type User = { id: string; name: string; email: string; role: Role; active: boolean; hasPassword: boolean; totpEnabled: boolean; createdAt: string };
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  active: boolean;
+  hasPassword: boolean;
+  totpEnabled: boolean;
+  createdAt: string;
+  // ほかの会社にも入っている数(パスワード・2段階認証は本人が変える)
+  otherCompanies?: number;
+  homeCompany?: boolean;
+};
 
 const ROLE_LABELS: Record<Role, string> = { ADMIN: "管理者", ACCOUNTANT: "経理担当", EMPLOYEE: "従業員" };
 const inputClass = "w-full rounded-md border px-2.5 py-1.5 text-sm";
@@ -51,7 +63,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = Object.fromEntries(new FormData(form));
-    if (await send("/api/users", "POST", data, `${data.name}さんを追加しました。メールアドレスと初期パスワードを本人に伝えてください`)) form.reset();
+    if (await send("/api/users", "POST", data, `${data.email} の人を追加しました。新しく作った人には、メールアドレスと初期パスワードを伝えてください(ほかの会社のアカウントを持っている人は、今のパスワードのまま使えます)`)) form.reset();
   }
 
   async function resetPassword(event: FormEvent<HTMLFormElement>) {
@@ -67,7 +79,8 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
         <h1 className="text-2xl font-semibold">ユーザー管理</h1>
         <p className="mt-1 text-sm text-slate-600">
           アプリにログインできるメンバーを管理します。追加したメンバーには、メールアドレスと初期パスワードを伝えてください
-          (本人は「アカウント」からパスワードを変更できます)。
+          (本人は「アカウント」からパスワードを変更できます)。ほかの会社のアカウントを持っている人は、メールアドレスと権限だけで追加できます。
+          権限と利用停止は、この会社の中だけに効きます。
         </p>
       </div>
 
@@ -79,7 +92,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
         <form onSubmit={addUser} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.4fr_1fr_8rem_auto] lg:items-end">
           <div>
             <label className="mb-1 block text-xs text-slate-500">名前</label>
-            <input name="name" required className={inputClass} />
+            <input name="name" className={inputClass} />
           </div>
           <div>
             <label className="mb-1 block text-xs text-slate-500">メールアドレス</label>
@@ -87,7 +100,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
           </div>
           <div>
             <label className="mb-1 block text-xs text-slate-500">初期パスワード(8文字以上)</label>
-            <input name="password" type="text" required minLength={8} autoComplete="off" className={inputClass} />
+            <input name="password" type="text" minLength={8} autoComplete="off" className={inputClass} />
           </div>
           <div>
             <label className="mb-1 block text-xs text-slate-500">権限</label>
@@ -130,6 +143,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
                     <td className="px-4 py-2 whitespace-nowrap">
                       {u.name}
                       {self && <span className="ml-1 text-xs text-slate-400">(あなた)</span>}
+                      {!!u.otherCompanies && <span className="ml-1 rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-800">ほかの会社にも所属</span>}
                     </td>
                     <td className="px-4 py-2">{u.email}</td>
                     <td className="px-4 py-2">
@@ -160,10 +174,12 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">{formatDate(u.createdAt)}</td>
                     <td className="px-4 py-2 text-right whitespace-nowrap">
-                      <button onClick={() => setResetFor(u)} disabled={busy} className="text-xs text-indigo-700 hover:underline">
-                        {u.hasPassword ? "パスワード再設定" : "パスワード設定"}
-                      </button>
-                      {u.totpEnabled && !self && (
+                      {!u.otherCompanies && u.homeCompany !== false && (
+                        <button onClick={() => setResetFor(u)} disabled={busy} className="text-xs text-indigo-700 hover:underline">
+                          {u.hasPassword ? "パスワード再設定" : "パスワード設定"}
+                        </button>
+                      )}
+                      {u.totpEnabled && !self && !u.otherCompanies && u.homeCompany !== false && (
                         <button
                           onClick={() =>
                             window.confirm(`${u.name}さんの2段階認証を解除しますか?(スマホをなくした場合など)`) &&

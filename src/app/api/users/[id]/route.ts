@@ -10,8 +10,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const admin = await adminOr403();
   if (admin instanceof NextResponse) return admin;
   const { id } = await params;
-  const target = await prisma.user.findFirst({ where: { id, companyId: admin.companyId } });
-  if (!target) return NextResponse.json({ error: "ユーザーが見つかりません" }, { status: 404 });
+  const member = await prisma.companyMember.findUnique({
+    where: { userId_companyId: { userId: id, companyId: admin.companyId } },
+    include: { user: { include: { _count: { select: { memberships: true } } } } },
+  });
+  if (!member) return NextResponse.json({ error: "ユーザーが見つかりません" }, { status: 404 });
+  const target = member.user;
 
   const body = await request.json().catch(() => ({}));
   const role = body.role === undefined ? undefined : ROLES.find((r) => r === body.role);
@@ -25,25 +29,36 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (target.id === admin.id && ((role && role !== "ADMIN") || active === false)) {
     return NextResponse.json({ error: "自分自身の管理者権限を外したり、停止したりはできません" }, { status: 400 });
   }
+  // パスワードと2段階認証はアカウント全体の設定なので、ほかの会社にも入っている人のものは変えない
+  if ((password !== undefined || resetTotp) && (target.companyId !== admin.companyId || target._count.memberships > 1)) {
+    return NextResponse.json({ error: "ほかの会社にも入っている人のパスワード・2段階認証は、ここでは変えられません。本人に「パスワードを忘れた方」から再設定してもらってください" }, { status: 400 });
+  }
   if (password !== undefined) {
     const problem = passwordProblem(password);
     if (problem) return NextResponse.json({ error: problem }, { status: 400 });
   }
 
   const user = await prisma.$transaction(async (tx) => {
+    // 権限・利用停止はこの会社の中だけ(ほかの会社での権限は変わらない)
+    const updatedMember = await tx.companyMember.update({
+      where: { id: member.id },
+      data: { ...(role ? { role } : {}), ...(active !== undefined ? { active } : {}) },
+    });
+    // 最初の会社の権限は、User にも同じ値を残しておく
     const updated = await tx.user.update({
       where: { id },
       data: {
-        ...(role ? { role } : {}),
-        ...(active !== undefined ? { active } : {}),
+        ...(role && target.companyId === admin.companyId ? { role } : {}),
         ...(password !== undefined ? { passwordHash: await hashPassword(password), failedLogins: 0, lockedUntil: null } : {}),
         ...(resetTotp ? { totpEnabled: false, totpSecret: null, totpPendingSecret: null, totpLastStep: null, recoveryCodes: null } : {}),
       },
       select: PUBLIC_USER_FIELDS,
     });
-    // 停止・パスワード再設定をしたら、その人のログイン中の端末はすべてログアウトさせる
-    if (active === false || password !== undefined || resetTotp) await tx.session.deleteMany({ where: { userId: id } });
-    return updated;
+    // パスワード再設定などをしたら、すべての端末をログアウトさせる。
+    // この会社で停止したときは、この会社を開いている端末をほかの会社に切り替える(ほかの会社がなければログアウトと同じ)
+    if (password !== undefined || resetTotp) await tx.session.deleteMany({ where: { userId: id } });
+    else if (active === false) await tx.session.updateMany({ where: { userId: id, companyId: admin.companyId }, data: { companyId: null } });
+    return { ...updated, role: updatedMember.role, active: updatedMember.active };
   });
   const changes = [
     role ? `権限を${ROLE_LABELS[role]}に変更` : null,

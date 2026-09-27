@@ -1,5 +1,7 @@
 import { requireUser } from "@/lib/auth/session";
 import { CompanyForm } from "./CompanyForm";
+import { AddCompany } from "./AddCompany";
+import { listMyCompanies } from "@/lib/auth/companies";
 
 export const dynamic = "force-dynamic";
 
@@ -13,5 +15,11 @@ export default async function CompanyPage() {
       </div>
     );
   }
-  return <CompanyForm />;
+  const companies = await listMyCompanies(user.id);
+  return (
+    <div className="space-y-6">
+      <CompanyForm key={user.companyId} />
+      <AddCompany companies={companies} />
+    </div>
+  );
 }

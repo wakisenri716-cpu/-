@@ -27,7 +27,9 @@ const text = (value: unknown, max: number) => String(value ?? "").normalize("NFK
 export async function listRoutes(companyId: string) {
   const [routes, users] = await Promise.all([
     prisma.approvalRoute.findMany({ where: { companyId }, orderBy: [{ kind: "asc" }, { minAmount: "asc" }, { createdAt: "asc" }] }),
-    prisma.user.findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, role: true } }),
+    prisma.companyMember
+      .findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" }, select: { role: true, user: { select: { id: true, name: true } } } })
+      .then((ms) => ms.map((m) => ({ id: m.user.id, name: m.user.name, role: m.role }))),
   ]);
   const name = new Map(users.map((u) => [u.id, u.name]));
   return {
@@ -47,7 +49,7 @@ export async function createRoute(companyId: string, input: { name?: unknown; ki
   if (ids.length === 0) throw new ApprovalError("承認する人を1人以上選んでください");
   if (ids.length > 5) throw new ApprovalError("承認する人は5人までです");
   if (new Set(ids).size !== ids.length) throw new ApprovalError("同じ人が2回入っています");
-  const found = await prisma.user.count({ where: { companyId, active: true, id: { in: ids } } });
+  const found = await prisma.companyMember.count({ where: { companyId, active: true, userId: { in: ids } } });
   if (found !== ids.length) throw new ApprovalError("承認する人を選び直してください");
   return prisma.approvalRoute.create({ data: { companyId, name, kind, minAmount: kind === "PURCHASE" || kind === "ALL" ? minAmount : 0, approverIds: ids } });
 }
@@ -67,7 +69,7 @@ async function pickSteps(companyId: string, kind: RequestKind, amount: number | 
     .sort((a, b) => Number(b.kind === kind) - Number(a.kind === kind) || b.minAmount - a.minAmount);
   const route = fits[0];
   if (!route) return [{ userId: null, name: "管理者" }];
-  const users = await prisma.user.findMany({ where: { companyId, active: true, id: { in: route.approverIds } }, select: { id: true, name: true } });
+  const users = await prisma.user.findMany({ where: { id: { in: route.approverIds }, memberships: { some: { companyId, active: true } } }, select: { id: true, name: true } });
   const steps = route.approverIds.flatMap((id) => {
     const u = users.find((x) => x.id === id);
     return u ? [{ userId: u.id, name: u.name }] : [];
@@ -78,8 +80,8 @@ async function pickSteps(companyId: string, kind: RequestKind, amount: number | 
 // ---- だれが何をできるか ----
 
 async function isSoleAdmin(companyId: string, userId: string) {
-  const admins = await prisma.user.findMany({ where: { companyId, role: "ADMIN", active: true }, select: { id: true } });
-  return admins.length === 1 && admins[0].id === userId;
+  const admins = await prisma.companyMember.findMany({ where: { companyId, role: "ADMIN", active: true }, select: { userId: true } });
+  return admins.length === 1 && admins[0].userId === userId;
 }
 
 // いまの段を承認できるか。本人の申請は、管理者が本人しかいない会社を除いて承認できない。
@@ -91,7 +93,7 @@ async function canDecide(req: { companyId: string; requesterId: string; status: 
     if (step.userId === user.id) return true;
     // 承認者が退職などで使えなくなっていたら、管理者が代わりに承認・差戻しできる
     if (user.role !== "ADMIN" || user.id === req.requesterId) return false;
-    return !(await prisma.user.findFirst({ where: { id: step.userId, active: true }, select: { id: true } }));
+    return !(await prisma.companyMember.findFirst({ where: { userId: step.userId, companyId: req.companyId, active: true, user: { active: true } }, select: { id: true } }));
   }
   if (user.role !== "ADMIN") return false;
   return user.id !== req.requesterId || (await isSoleAdmin(req.companyId, user.id));
@@ -340,8 +342,11 @@ async function notifyApprovers(id: string, baseUrl: string) {
   const step = (req.steps as Step[])[req.currentStep];
   if (!step) return;
   const to = step.userId
-    ? await prisma.user.findMany({ where: { id: step.userId, active: true }, select: { email: true } })
-    : await prisma.user.findMany({ where: { companyId: req.companyId, role: "ADMIN", active: true, id: { not: req.requesterId } }, select: { email: true } });
+    ? await prisma.user.findMany({ where: { id: step.userId, active: true, memberships: { some: { companyId: req.companyId, active: true } } }, select: { email: true } })
+    : await prisma.user.findMany({
+        where: { active: true, id: { not: req.requesterId }, memberships: { some: { companyId: req.companyId, role: "ADMIN", active: true } } },
+        select: { email: true },
+      });
   const body = [
     `${req.requesterName}さんから申請が届いています。内容を確認して、承認か差戻しをしてください。`,
     "",

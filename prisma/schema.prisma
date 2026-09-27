@@ -164,6 +164,7 @@ model Company {
   leaveTaken       LeaveTaken[]
   approvalRequests ApprovalRequest[]
   approvalRoutes   ApprovalRoute[]
+  members          CompanyMember[]
   folders          Folder[]
   storedFiles      StoredFile[]
   recurringEntries RecurringEntry[]
@@ -194,8 +195,9 @@ model User {
   expenseReports ExpenseReport[]
   sessions       Session[]
   passwordResets PasswordReset[]
-  staff          Staff?
+  staffs         Staff[]
   requests       ApprovalRequest[]
+  memberships    CompanyMember[]
 }
 
 // ログインセッション。ブラウザのクッキーには推測できないランダムなトークンだけを入れ、
@@ -205,6 +207,8 @@ model Session {
   tokenHash String   @unique
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // このログインで開いている会社(空ならユーザーの最初の会社)
+  companyId String?
   expiresAt DateTime
   // ログイン中の端末の一覧に出すための情報
   userAgent  String?
@@ -613,11 +617,12 @@ model Staff {
   leaveGrants LeaveGrant[]
   leaveTaken  LeaveTaken[]
   // ログインユーザーとのひも付け(本人が有給の申請などをするため)
-  userId      String?  @unique
+  userId      String?
   user        User?    @relation(fields: [userId], references: [id])
   requests    ApprovalRequest[]
 
   @@unique([companyId, name])
+  @@unique([companyId, userId])
 }
 
 // 時刻は勤務日の0時からの分数。日付をまたぐ勤務は endMinutes が1440(24:00)を超える。
@@ -1039,5 +1044,21 @@ model ApprovalRoute {
   approverIds String[]
   createdAt   DateTime @default(now())
 
+  @@index([companyId])
+}
+
+// 会社のメンバー。1人のユーザーが複数の会社に入れる(会社ごとに権限と利用停止を持つ)。
+// User.companyId はログインしたときに最初に開く会社。
+model CompanyMember {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  role      UserRole @default(EMPLOYEE)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, companyId])
   @@index([companyId])
 }

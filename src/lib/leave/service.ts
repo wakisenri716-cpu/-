@@ -44,7 +44,7 @@ export async function getLeaveOverview(companyId: string, now = new Date()) {
     prisma.staff.findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" } }),
     prisma.leaveGrant.findMany({ where: { companyId }, orderBy: { grantDate: "asc" } }),
     prisma.leaveTaken.findMany({ where: { companyId }, orderBy: { date: "desc" } }),
-    prisma.user.findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, email: true } }),
+    prisma.user.findMany({ where: { active: true, memberships: { some: { companyId, active: true } } }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, email: true } }),
   ]);
   const soon = addMonths(today, 3);
   return {
@@ -114,8 +114,8 @@ export async function updateLeaveSettings(
   // ログインユーザーとのひも付け(本人が「申請・稟議」から有給を申請できるようにする)
   if (input.userId !== undefined) {
     const userId = input.userId === null || input.userId === "" ? null : String(input.userId);
-    if (userId && !(await prisma.user.findFirst({ where: { id: userId, companyId } }))) throw new LeaveError("ログインユーザーを選び直してください");
-    if (userId && (await prisma.staff.findFirst({ where: { userId, id: { not: staffId } } }))) throw new LeaveError("このユーザーはすでに別のスタッフにひも付いています");
+    if (userId && !(await prisma.companyMember.findFirst({ where: { userId, companyId } }))) throw new LeaveError("ログインユーザーを選び直してください");
+    if (userId && (await prisma.staff.findFirst({ where: { companyId, userId, id: { not: staffId } } }))) throw new LeaveError("このユーザーはすでに別のスタッフにひも付いています");
     data.userId = userId;
   }
   if (input.hireDate !== undefined) data.hireDate = input.hireDate === null || input.hireDate === "" ? null : toDate(input.hireDate, "入社日");
