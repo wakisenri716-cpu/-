@@ -142,6 +142,8 @@ model Company {
   allowedIps             String?
   // 新しい端末からログインしたら、本人にメールで知らせる
   loginAlert             Boolean @default(false)
+  // 振込データ(全銀フォーマット)の振込元: { requesterCode, requesterName, bankCode, bankName, branchCode, branchName, accountType, accountNumber }
+  transferSource         Json?
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -256,6 +258,8 @@ model Vendor {
   name                  String
   defaultExpenseAccountId String?
   defaultExpenseAccount  Account? @relation("VendorDefaultAccount", fields: [defaultExpenseAccountId], references: [id])
+  // 支払の振込先(形は Staff.payeeAccount と同じ)
+  payeeAccount          Json?
   createdAt             DateTime @default(now())
 
   expenseItems  ExpenseItem[]
@@ -625,6 +629,8 @@ model Staff {
   timeRecords TimeRecord[]
   leaveGrants LeaveGrant[]
   leaveTaken  LeaveTaken[]
+  // 給与の振込先: { bankCode, bankName, branchCode, branchName, accountType, accountNumber, holder }(名前はすべて半角カナ)
+  payeeAccount Json?
   // ログインユーザーとのひも付け(本人が有給の申請などをするため)
   userId      String?
   user        User?    @relation(fields: [userId], references: [id])
