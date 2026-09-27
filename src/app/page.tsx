@@ -3,6 +3,8 @@ import { getCashBalance, getDashboardSummary, getMonthlyTrend, getRankings, getS
 import { SetupGuide } from "@/components/SetupGuide";
 import { RankList } from "@/components/RankList";
 import { requireCompanyId, requireUser } from "@/lib/auth/session";
+import { unreadAnnouncements } from "@/lib/announcements";
+import { UnreadNotices } from "@/components/UnreadNotices";
 import { TrendChart } from "@/components/TrendChart";
 import { formatDate, formatPercent, formatYen } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -19,13 +21,14 @@ const TODO_TONES = {
 export default async function DashboardPage() {
   const companyId = await requireCompanyId();
   const user = await requireUser();
-  const [summary, trend, cash, todos, rankings, setupSteps] = await Promise.all([
+  const [summary, trend, cash, todos, rankings, setupSteps, notices] = await Promise.all([
     getDashboardSummary(),
     getMonthlyTrend(companyId),
     getCashBalance(companyId),
     getTodos(companyId, new Date(), user),
     getRankings(companyId),
     user.role === "ADMIN" ? getSetupSteps(companyId, user) : Promise.resolve(null),
+    unreadAnnouncements(user),
   ]);
   const thisMonth = trend[trend.length - 1];
   const lastMonth = trend[trend.length - 2];
@@ -56,6 +59,8 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-semibold">ダッシュボード</h1>
         <p className="mt-1 text-sm text-slate-600">今月の数字、直近12か月の推移、対応が必要なことをまとめて確認できます。</p>
       </div>
+
+      <UnreadNotices {...notices} />
 
       {setupSteps && <SetupGuide steps={setupSteps} />}
 
