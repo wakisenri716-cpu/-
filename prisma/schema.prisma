@@ -157,6 +157,8 @@ model Company {
   residentTaxSpecial     Boolean @default(false)
   // 労働条件通知書に入れる会社の決まり(就業の場所・休日・賃金の締切日と支払日・相談窓口など)
   laborDefaults          Json?
+  // 月次決算チェックリストに会社で足した確認項目(文字列の配列)
+  closeChecklist         Json?
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -183,6 +185,7 @@ model Company {
   recurringInvoices RecurringInvoice[]
   departments      Department[]
   projects         Project[]
+  monthlyCloseChecks MonthlyCloseCheck[]
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
   bankAccounts     BankAccount[]
@@ -889,6 +892,19 @@ model AutomationRule {
 }
 
 // 部門・店舗。仕訳に付けておくと、部門別の損益計算書を出せる。
+// 月次決算チェックリストで、人が確かめて付けたチェック(自動で判定する項目は保存しない)
+model MonthlyCloseCheck {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  month     String
+  key       String
+  checkedBy String
+  checkedAt DateTime @default(now())
+
+  @@unique([companyId, month, key])
+}
+
 // 案件(プロジェクト・工事・受託など)。仕訳に付けて、案件ごとの損益を出す
 model Project {
   id            String    @id @default(cuid())
