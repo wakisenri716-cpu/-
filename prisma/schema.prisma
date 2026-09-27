@@ -144,6 +144,10 @@ model Company {
   loginAlert             Boolean @default(false)
   // 振込データ(全銀フォーマット)の振込元: { requesterCode, requesterName, bankCode, bankName, branchCode, branchName, accountType, accountNumber }
   transferSource         Json?
+  // 源泉所得税・住民税の納付: 給料を働いた月の翌月に払う / 納期の特例(源泉所得税は年2回、住民税は年2回)
+  salaryPaidNextMonth    Boolean @default(true)
+  withholdingSpecial     Boolean @default(false)
+  residentTaxSpecial     Boolean @default(false)
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -176,6 +180,7 @@ model Company {
   approvalRequests ApprovalRequest[]
   approvalRoutes   ApprovalRoute[]
   members          CompanyMember[]
+  taxRemittances   TaxRemittance[]
   folders          Folder[]
   storedFiles      StoredFile[]
   recurringEntries RecurringEntry[]
@@ -260,6 +265,8 @@ model Vendor {
   defaultExpenseAccount  Account? @relation("VendorDefaultAccount", fields: [defaultExpenseAccountId], references: [id])
   // 支払の振込先(形は Staff.payeeAccount と同じ)
   payeeAccount          Json?
+  // 支払調書に載せる住所
+  address               String?
   createdAt             DateTime @default(now())
 
   expenseItems  ExpenseItem[]
@@ -472,6 +479,11 @@ model Payment {
   paymentDate    DateTime
   journalEntryId String?      @unique
   journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  // 報酬の源泉徴収(買掛金 / 預り金)。支払うお金ではないが、請求書の残りから差し引く
+  withholding     Boolean     @default(false)
+  // 源泉徴収の対象にした報酬の額(消費税が分かれていれば税抜)と、報酬の種類
+  withholdingBase Int?
+  feeCategory     String?
   createdAt      DateTime     @default(now())
 }
 
@@ -1076,4 +1088,18 @@ model CompanyMember {
 
   @@unique([userId, companyId])
   @@index([companyId])
+}
+
+// 源泉所得税・住民税を納付した記録。period は「2026-09」(毎月)か「2026-H1」「2026-H2」(納期の特例)
+model TaxRemittance {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  kind      String
+  period    String
+  amount    Int
+  paidAt    DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, kind, period])
 }
