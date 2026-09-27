@@ -140,9 +140,10 @@ export async function getAttendanceWeek(companyId: string, week: string, now = n
   const monday = mondayOf(week);
   const days = Array.from({ length: 7 }, (_, i) => dateKey(new Date(monday.getTime() + i * 86_400_000)));
   const range = { gte: monday, lt: new Date(monday.getTime() + 7 * 86_400_000) };
-  const [shifts, records] = await Promise.all([
+  const [shifts, records, leaves] = await Promise.all([
     prisma.shift.findMany({ where: { companyId, date: range }, orderBy: { startMinutes: "asc" } }),
     prisma.timeRecord.findMany({ where: { companyId, date: range }, orderBy: { clockIn: "asc" } }),
+    prisma.leaveTaken.findMany({ where: { companyId, date: range, bulk: false } }),
   ]);
   const staffIds = [...new Set([...shifts.map((s) => s.staffId), ...records.map((r) => r.staffId)])];
   const staff = await prisma.staff.findMany({
@@ -162,6 +163,7 @@ export async function getAttendanceWeek(companyId: string, week: string, now = n
       endMinutes: s.endMinutes,
       breakMinutes: s.breakMinutes,
     })),
+    leaves: leaves.map((l) => ({ staffId: l.staffId, date: dateKey(l.date), halfDays: l.halfDays })),
     records: records.map((r) => ({
       id: r.id,
       staffId: r.staffId,

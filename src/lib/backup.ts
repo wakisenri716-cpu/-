@@ -53,6 +53,10 @@ export async function buildBackup(companyId: string) {
   ]);
   const folderLabels = new Map(folderList.map((f) => [f.id, f.label]));
   const history = await listRecordHistory(companyId, { take: 500, changesOnly: true });
+  const [leaveGrants, leaveTaken] = await Promise.all([
+    prisma.leaveGrant.findMany({ where: { companyId }, include: { staff: { select: { name: true } } }, orderBy: { grantDate: "asc" } }),
+    prisma.leaveTaken.findMany({ where: { companyId }, include: { staff: { select: { name: true } } }, orderBy: { date: "asc" } }),
+  ]);
 
   const files: { name: string; rows: (string | number)[][] }[] = [
     {
@@ -129,7 +133,23 @@ export async function buildBackup(companyId: string) {
       name: "在庫の動き.csv",
       rows: [["日付", "商品名", "種類", "数量", "金額", "メモ"], ...products.flatMap((p) => p.movements.map((m) => [d(m.date), p.name, m.type, m.quantity, m.amount, m.memo ?? ""]))],
     },
-    { name: "スタッフ.csv", rows: [["名前", "時給", "在籍", "暗証番号"], ...staff.map((s) => [s.name, s.hourlyWage, s.active ? "在籍" : "退職", s.pinHash ? "設定済み" : ""])] },
+    {
+      name: "スタッフ.csv",
+      rows: [
+        ["名前", "時給", "在籍", "暗証番号", "入社日", "週の所定労働日数", "1日の所定労働時間(分)"],
+        ...staff.map((s) => [s.name, s.hourlyWage, s.active ? "在籍" : "退職", s.pinHash ? "設定済み" : "", s.hireDate ? d(s.hireDate) : "", s.weeklyDays, s.scheduledMinutes]),
+      ],
+    },
+    {
+      name: "有給休暇.csv",
+      rows: [
+        ["日付", "スタッフ", "種類", "日数", "メモ"],
+        ...[
+          ...leaveGrants.map((g) => [d(g.grantDate), g.staff.name, g.auto ? "付与(自動)" : "付与(手動)", g.halfDays / 2, g.note ?? ""]),
+          ...leaveTaken.map((l) => [d(l.date), l.staff.name, l.bulk ? "取得(導入前の分)" : "取得", l.halfDays / 2, l.note ?? ""]),
+        ].sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+      ],
+    },
     { name: "シフト.csv", rows: [["日付", "スタッフ", "開始", "終了", "休憩(分)", "メモ"], ...shifts.map((s) => [d(s.date), s.staff.name, minutes(s.startMinutes), minutes(s.endMinutes), s.breakMinutes, s.note ?? ""])] },
     { name: "勤怠(打刻).csv", rows: [["勤務日", "スタッフ", "出勤", "退勤", "休憩(分)", "修正済み"], ...records.map((r) => [d(r.date), r.staff.name, t(r.clockIn), t(r.clockOut), r.breakMinutes, r.edited ? "はい" : ""])] },
     { name: "銀行明細.csv", rows: [["口座・カード", "日付", "摘要", "出金(カードは利用)", "入金(カードは返品)", "残高", "状態"], ...bank.map((b) => [b.bankAccount?.name ?? "普通預金", d(b.date), b.description, b.withdrawal || "", b.deposit || "", b.balance ?? "", b.status])] },

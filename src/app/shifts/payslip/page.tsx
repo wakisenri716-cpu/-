@@ -66,9 +66,10 @@ export default async function PayslipPage({ searchParams }: { searchParams: Prom
             <tbody className="divide-y border-y">
               {[
                 ["出勤日数", `${slip.rows.length}日`],
+                ...(t.leaveHalfDays > 0 ? [["有給休暇", `${t.leaveHalfDays / 2}日`]] : []),
                 ["労働時間", formatMinutes(t.workMinutes)],
                 ["うち深夜(22時〜5時)", formatMinutes(t.nightMinutes)],
-                ["うち時間外(1日8時間超)", formatMinutes(t.overtimeMinutes)],
+                ["うち時間外(1日8時間・週40時間超)", formatMinutes(t.overtimeMinutes)],
                 ["時給", formatYen(slip.staff.hourlyWage)],
               ].map(([label, value]) => (
                 <tr key={label}>
@@ -85,6 +86,7 @@ export default async function PayslipPage({ searchParams }: { searchParams: Prom
                 ["基本給(時給×労働時間)", t.base],
                 ["深夜割増(25%)", t.night],
                 ["時間外割増(25%)", t.overtime],
+                ...(t.leavePay > 0 ? [["有給休暇の賃金", t.leavePay]] : []),
               ].map(([label, value]) => (
                 <tr key={label}>
                   <th className="bg-slate-50 px-2 py-1.5 text-left font-medium print:bg-slate-100">{label}</th>
@@ -157,19 +159,32 @@ export default async function PayslipPage({ searchParams }: { searchParams: Prom
             </tr>
           </thead>
           <tbody>
-            {slip.rows.map((r) => (
-              <tr key={r.date} className="border-b border-slate-200">
-                <td className="px-2 py-1 whitespace-nowrap">{dayLabel(r.date)}</td>
-                <td className="px-2 py-1 whitespace-nowrap tabular-nums">
-                  {formatClock(r.startMinutes)}〜{formatClock(r.endMinutes)}
-                </td>
-                <td className="px-2 py-1 text-right tabular-nums">{r.breakMinutes ? `${r.breakMinutes}分` : "-"}</td>
-                <td className="px-2 py-1 text-right tabular-nums">{formatMinutes(r.workMinutes)}</td>
-                <td className="px-2 py-1 text-right tabular-nums">{formatYen(Math.round(r.base + r.night + r.overtime))}</td>
-                <td className="px-2 py-1 text-slate-500 print:hidden">{r.actual ? "打刻" : "シフト予定"}</td>
-              </tr>
-            ))}
-            {slip.rows.length === 0 && (
+            {[...slip.rows.map((r) => ({ date: r.date, r, l: null })), ...slip.leaveRows.map((l) => ({ date: l.date, r: null, l }))]
+              .sort((x, y) => x.date.localeCompare(y.date) || (x.r ? -1 : 1))
+              .map(({ r, l }) =>
+                l ? (
+                  <tr key={`leave-${l.date}`} className="border-b border-slate-200 bg-sky-50/50">
+                    <td className="px-2 py-1 whitespace-nowrap">{dayLabel(l.date)}</td>
+                    <td className="px-2 py-1 whitespace-nowrap">{l.halfDays >= 2 ? "有給休暇" : "有給休暇(半日)"}</td>
+                    <td className="px-2 py-1 text-right">-</td>
+                    <td className="px-2 py-1 text-right tabular-nums">{formatMinutes(Math.round((slip.staff.scheduledMinutes * l.halfDays) / 2))}</td>
+                    <td className="px-2 py-1 text-right tabular-nums">{formatYen(Math.round(l.pay))}</td>
+                    <td className="px-2 py-1 text-slate-500 print:hidden">有給</td>
+                  </tr>
+                ) : (
+                  <tr key={r.date} className="border-b border-slate-200">
+                    <td className="px-2 py-1 whitespace-nowrap">{dayLabel(r.date)}</td>
+                    <td className="px-2 py-1 whitespace-nowrap tabular-nums">
+                      {formatClock(r.startMinutes)}〜{formatClock(r.endMinutes)}
+                    </td>
+                    <td className="px-2 py-1 text-right tabular-nums">{r.breakMinutes ? `${r.breakMinutes}分` : "-"}</td>
+                    <td className="px-2 py-1 text-right tabular-nums">{formatMinutes(r.workMinutes)}</td>
+                    <td className="px-2 py-1 text-right tabular-nums">{formatYen(Math.round(r.base + r.night + r.overtime))}</td>
+                    <td className="px-2 py-1 text-slate-500 print:hidden">{r.actual ? "打刻" : "シフト予定"}</td>
+                  </tr>
+                ),
+              )}
+            {slip.rows.length === 0 && slip.leaveRows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-2 py-4 text-center text-slate-400">
                   この月の勤務はありません。

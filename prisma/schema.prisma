@@ -129,6 +129,10 @@ model Company {
   payrollCareRate        Int     @default(1590)
   payrollPensionRate     Int     @default(18300)
   payrollEmploymentRate  Int     @default(550)
+  // 36協定: 起算月と、時間外労働の上限(時間)。原則は月45時間・年360時間
+  overtimeStartMonth     Int     @default(4)
+  overtimeMonthlyLimit   Int     @default(45)
+  overtimeYearlyLimit    Int     @default(360)
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -156,6 +160,8 @@ model Company {
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
   bankAccounts     BankAccount[]
+  leaveGrants      LeaveGrant[]
+  leaveTaken       LeaveTaken[]
   folders          Folder[]
   storedFiles      StoredFile[]
   recurringEntries RecurringEntry[]
@@ -592,10 +598,16 @@ model Staff {
   standardMonthly     Int?                      // 標準報酬月額(空なら毎月の支給額から目安で決める)
   commuteAllowance    Int      @default(0)      // 通勤手当(月額・非課税)
   residentTax         Int      @default(0)      // 住民税(特別徴収の月額)
+  // 有給休暇の設定。入社日から法律どおりの日数を自動で付与する
+  hireDate            DateTime?                 // 入社日(空なら自動付与しない)
+  weeklyDays          Int      @default(5)      // 週の所定労働日数(4日以下なら比例付与)
+  scheduledMinutes    Int      @default(480)    // 1日の所定労働時間(分)。有給1日分の賃金に使う
   createdAt   DateTime @default(now())
 
   shifts      Shift[]
   timeRecords TimeRecord[]
+  leaveGrants LeaveGrant[]
+  leaveTaken  LeaveTaken[]
 
   @@unique([companyId, name])
 }
@@ -920,4 +932,38 @@ model BankAccount {
   transactions BankTransaction[]
 
   @@unique([companyId, name])
+}
+
+// 有給休暇の付与。auto は入社日から自動で付与したもの。日数は半日単位(halfDays = 日数×2)。付与から2年で時効。
+model LeaveGrant {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id])
+  grantDate DateTime
+  halfDays  Int
+  auto      Boolean  @default(false)
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@unique([staffId, grantDate, auto])
+  @@index([companyId])
+}
+
+// 有給休暇の取得。halfDays は 2(1日) か 1(半日)。bulk はこのシステムを使う前に取った分をまとめて登録したもの(給与には入れない)
+model LeaveTaken {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id])
+  date      DateTime
+  halfDays  Int
+  bulk      Boolean  @default(false)
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@unique([staffId, date])
+  @@index([companyId, date])
 }

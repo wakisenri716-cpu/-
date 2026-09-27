@@ -16,7 +16,15 @@ type Rec = {
   forgotClockOut: boolean;
   edited: boolean;
 };
-type Week = { weekStart: string; days: string[]; today: string; staff: { id: string; name: string; active: boolean }[]; plans: Plan[]; records: Rec[] };
+type Week = {
+  weekStart: string;
+  days: string[];
+  today: string;
+  staff: { id: string; name: string; active: boolean }[];
+  plans: Plan[];
+  records: Rec[];
+  leaves: { staffId: string; date: string; halfDays: number }[];
+};
 type Draft = { id?: string; staffId: string; date: string; start: string; end: string; breakMinutes: string };
 
 const WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"];
@@ -110,7 +118,7 @@ export default function AttendancePage() {
         </div>
         <p className="mt-1 text-sm text-slate-600">
           シフトの予定(灰色)とタイムカードの打刻(太字)を並べて確認できます。打刻を押して修正したり、打刻忘れの日に追加したりできます。
-          人件費は、打刻がある日は実績で、ない日は予定で計算されます。
+          人件費は、打刻がある日は実績で、ない日は予定で計算されます。有給休暇は「有給・残業」で登録すると、ここにも表示されます。
         </p>
       </div>
 
@@ -165,7 +173,8 @@ export default function AttendancePage() {
                       const late = plan && first ? first.startMinutes - plan.startMinutes : 0;
                       const lastPlan = plans[plans.length - 1];
                       const early = lastPlan && lastEnd !== null && lastEnd !== undefined ? lastPlan.endMinutes - lastEnd : 0;
-                      const absent = plan && recs.length === 0 && d < week.today;
+                      const leave = week.leaves.find((l) => l.staffId === person.id && l.date === d);
+                      const absent = plan && recs.length === 0 && d < week.today && !leave;
                       return (
                         <td key={d} className={`px-1 py-1.5 text-xs ${d === week.today ? "bg-indigo-50/40" : ""}`}>
                           {plans.map((p, i) => (
@@ -198,6 +207,7 @@ export default function AttendancePage() {
                             </button>
                           ))}
                           <div className="mt-0.5 space-y-0.5 px-1">
+                            {leave && <div className="rounded bg-sky-100 px-1 font-medium text-sky-800">{leave.halfDays >= 2 ? "有給" : "有給(半日)"}</div>}
                             {late > 0 && <div className="text-amber-700">遅刻 {late}分</div>}
                             {early > 0 && <div className="text-amber-700">早退 {early}分</div>}
                             {absent && <div className="text-rose-600">打刻なし</div>}

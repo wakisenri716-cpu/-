@@ -1,11 +1,12 @@
 // 人件費の見込み計算(労働基準法の割増を反映した概算)。
 // - 深夜割増: 22:00〜翌5:00 の勤務は25%増
-// - 残業割増: 1日の実働が8時間を超えた分は25%増(深夜と重なれば合計50%増)
+// - 残業割増: 1日の実働が8時間を超えた分と、週(月〜日)の実働が40時間を超えた分は25%増(深夜と重なれば合計50%増)
 // 休憩は日中の勤務から先に差し引く。源泉所得税・社会保険料などの控除前の総支給額。
 
 export const NIGHT_PREMIUM = 0.25;
 export const OVERTIME_PREMIUM = 0.25;
 export const DAILY_REGULAR_MINUTES = 8 * 60;
+export const WEEKLY_REGULAR_MINUTES = 40 * 60;
 
 // 勤務日の0時からの分数で表した深夜帯(前日深夜の続き 0:00〜5:00 と、当日22:00〜翌5:00)
 const NIGHT_WINDOWS: [number, number][] = [

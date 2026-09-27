@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { Shift, Staff } from "@prisma/client";
 import { hashPassword } from "@/lib/auth/password";
 import { recordTimes } from "@/lib/attendance/times";
-import { addPay, dailyPay, EMPTY_PAY, parseTime, roundPay, type PayBreakdown, type ShiftTimes } from "./pay";
+import { addPay, dailyPay, EMPTY_PAY, OVERTIME_PREMIUM, parseTime, roundPay, WEEKLY_REGULAR_MINUTES, type PayBreakdown, type ShiftTimes } from "./pay";
 import { UserError } from "@/lib/errors";
 
 export class ShiftError extends UserError {}
@@ -32,7 +32,7 @@ export function mondayOf(key: string): Date {
   return addDays(d, -((d.getUTCDay() + 6) % 7));
 }
 
-function monthRange(month: string) {
+export function monthRange(month: string) {
   if (!MONTH.test(month)) throw new ShiftError("月の指定が正しくありません");
   const [y, m] = month.split("-").map(Number);
   return { gte: new Date(Date.UTC(y, m - 1, 1)), lt: new Date(Date.UTC(y, m, 1)) };
@@ -149,7 +149,7 @@ export async function copyPreviousWeek(companyId: string, weekStart: string) {
 
 // ---- 集計 ----
 
-type StaffDay = { staff: Staff; date: string; times: ShiftTimes[] };
+export type StaffDay = { staff: Staff; date: string; times: ShiftTimes[] };
 
 function groupShifts(shifts: (Shift & { staff: Staff })[]): Map<string, StaffDay> {
   const days = new Map<string, StaffDay>();
@@ -162,18 +162,46 @@ function groupShifts(shifts: (Shift & { staff: Staff })[]): Map<string, StaffDay
   return days;
 }
 
-// スタッフ×日ごとに割増を計算し、合計してから円単位に丸める
-function summarize(days: Iterable<StaffDay>) {
+// スタッフ×日ごとの支給額。1日8時間超に加えて、週(月〜日)の実働が40時間を超えた分も時間外として割増する。
+// 週40時間は1日8時間以内の分だけを数え、超えた日の分を時間外にする(1日8時間超で数えた分と二重にしない)。
+export function payDays(days: Map<string, StaffDay>) {
+  const result = new Map<string, PayBreakdown>();
+  const weeks = new Map<string, string[]>();
+  for (const [key, day] of days) {
+    result.set(key, dailyPay(day.times, day.staff.hourlyWage));
+    const week = `${day.staff.id}|${dateKey(mondayOf(day.date))}`;
+    weeks.set(week, [...(weeks.get(week) ?? []), key]);
+  }
+  for (const keys of weeks.values()) {
+    let regular = 0;
+    for (const key of keys.sort()) {
+      const pay = result.get(key)!;
+      const today = pay.workMinutes - pay.overtimeMinutes;
+      const extra = Math.max(0, regular + today - Math.max(regular, WEEKLY_REGULAR_MINUTES));
+      regular += today;
+      if (extra > 0) {
+        const wage = days.get(key)!.staff.hourlyWage;
+        result.set(key, { ...pay, overtimeMinutes: pay.overtimeMinutes + extra, overtime: pay.overtime + (wage / 60) * OVERTIME_PREMIUM * extra });
+      }
+    }
+  }
+  return result;
+}
+
+// スタッフ×日ごとに割増を計算し、合計してから円単位に丸める。include で集計する日を絞る(週40時間の判定には前後の日も使う)
+function summarize(days: Map<string, StaffDay>, include: (date: string) => boolean = () => true) {
   const perStaff = new Map<string, PayBreakdown>();
   const perDay = new Map<string, PayBreakdown & { people: Set<string> }>();
-  for (const { staff, date, times } of days) {
-    const pay = dailyPay(times, staff.hourlyWage);
+  const pays = payDays(days);
+  for (const [key, { staff, date }] of days) {
+    if (!include(date)) continue;
+    const pay = pays.get(key)!;
     perStaff.set(staff.id, addPay(perStaff.get(staff.id) ?? EMPTY_PAY, pay));
     const day = perDay.get(date) ?? { ...EMPTY_PAY, people: new Set<string>() };
     day.people.add(staff.id);
     perDay.set(date, { ...addPay(day, pay), people: day.people });
   }
-  return { perStaff, perDay };
+  return { perStaff, perDay, pays };
 }
 
 export async function getWeek(companyId: string, weekStart: string) {
@@ -188,7 +216,7 @@ export async function getWeek(companyId: string, weekStart: string) {
     where: { companyId, OR: [{ active: true }, { id: { in: shifts.map((s) => s.staffId) } }] },
     orderBy: [{ active: "desc" }, { createdAt: "asc" }],
   });
-  const { perStaff, perDay } = summarize(groupShifts(shifts).values());
+  const { perStaff, perDay } = summarize(groupShifts(shifts));
   return {
     weekStart: days[0],
     days,
@@ -210,13 +238,16 @@ export async function getWeek(companyId: string, weekStart: string) {
   };
 }
 
-// 退勤まで打刻された日は打刻の実績で、打刻のない日はシフトの予定で人件費を計算する
-// その月のスタッフ×日の勤務。退勤まで打刻された日は打刻の実績、打刻のない日はシフトの予定を使う。
-async function collectMonthDays(companyId: string, month: string, staffId?: string) {
-  const range = monthRange(month);
-  const [shifts, records] = await Promise.all([
-    prisma.shift.findMany({ where: { companyId, date: range, ...(staffId ? { staffId } : {}) }, include: { staff: true } }),
-    prisma.timeRecord.findMany({ where: { companyId, date: range, clockOut: { not: null }, ...(staffId ? { staffId } : {}) }, include: { staff: true } }),
+// 期間内のスタッフ×日の勤務。退勤まで打刻された日は打刻の実績、打刻のない日はシフトの予定を使う。
+// 週40時間の判定のため、期間の最初の週の月曜日から集める(期間の前の日は支給額には入れない)。
+// 有給休暇を1日取った日は、打刻がなければシフトの予定を勤務に数えない(有給の賃金を払う)。
+export async function collectDays(companyId: string, range: { gte: Date; lt: Date }, staffId?: string) {
+  const from = mondayOf(dateKey(range.gte));
+  const where = { companyId, date: { gte: from, lt: range.lt }, ...(staffId ? { staffId } : {}) };
+  const [shifts, records, leaves] = await Promise.all([
+    prisma.shift.findMany({ where, include: { staff: true } }),
+    prisma.timeRecord.findMany({ where: { ...where, clockOut: { not: null } }, include: { staff: true } }),
+    prisma.leaveTaken.findMany({ where: { ...where, bulk: false }, include: { staff: true }, orderBy: { date: "asc" } }),
   ]);
   const days = groupShifts(shifts);
   const actualKeys = new Set<string>();
@@ -228,43 +259,80 @@ async function collectMonthDays(companyId: string, month: string, staffId?: stri
     }
     days.get(key)!.times.push(recordTimes(r));
   }
-  return { days, actualKeys };
+  for (const l of leaves) {
+    const key = `${l.staffId}|${dateKey(l.date)}`;
+    if (l.halfDays >= 2 && !actualKeys.has(key)) days.delete(key);
+  }
+  const start = dateKey(range.gte);
+  return { days, actualKeys, leaves: leaves.filter((l) => l.date >= range.gte), inRange: (date: string) => date >= start };
+}
+
+// 有給休暇の賃金(通常の賃金: 時給 × 1日の所定労働時間。半日はその半分)
+export function leavePayOf(staff: { hourlyWage: number; scheduledMinutes: number }, halfDays: number) {
+  return (staff.hourlyWage / 60) * staff.scheduledMinutes * (halfDays / 2);
 }
 
 // 給与明細: 1人・1か月の日ごとの勤務時間と支給額(源泉所得税・社会保険料などの控除は含まない)
 export async function getPayslip(companyId: string, staffId: string, month: string) {
   const staff = await prisma.staff.findFirst({ where: { id: staffId, companyId } });
   if (!staff) throw new ShiftError("スタッフが見つかりません");
-  const { days, actualKeys } = await collectMonthDays(companyId, month, staffId);
+  const { days, actualKeys, leaves, inRange } = await collectDays(companyId, monthRange(month), staffId);
+  const pays = payDays(days);
   const rows = [...days.entries()]
+    .filter(([, day]) => inRange(day.date))
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, day]) => {
-      const pay = dailyPay(day.times, staff.hourlyWage);
+      const pay = pays.get(key)!;
       const first = Math.min(...day.times.map((t) => t.startMinutes));
       const last = Math.max(...day.times.map((t) => t.endMinutes));
       const breakMinutes = day.times.reduce((s, t) => s + t.breakMinutes, 0);
       return { date: day.date, actual: actualKeys.has(key), startMinutes: first, endMinutes: last, breakMinutes, ...pay };
     });
-  const total = roundPay(rows.reduce<PayBreakdown>((sum, r) => addPay(sum, r), EMPTY_PAY));
+  const leaveRows = leaves.map((l) => ({ date: dateKey(l.date), halfDays: l.halfDays, pay: leavePayOf(staff, l.halfDays) }));
+  const leaveHalfDays = leaveRows.reduce((s, l) => s + l.halfDays, 0);
+  const leavePay = Math.round(leaveRows.reduce((s, l) => s + l.pay, 0));
+  const worked = roundPay(rows.reduce<PayBreakdown>((sum, r) => addPay(sum, r), EMPTY_PAY));
+  const total = { ...worked, leavePay, leaveHalfDays, total: worked.total + leavePay };
   const run = await prisma.payrollRun.findUnique({ where: { companyId_month: { companyId, month } } });
-  return { staff: { id: staff.id, name: staff.name, hourlyWage: staff.hourlyWage }, month, rows, total, posted: !!run };
+  return {
+    staff: { id: staff.id, name: staff.name, hourlyWage: staff.hourlyWage, scheduledMinutes: staff.scheduledMinutes },
+    month,
+    rows,
+    leaveRows,
+    total,
+    posted: !!run,
+  };
 }
 
 export async function getMonthlyPayroll(companyId: string, month: string) {
-  const { days, actualKeys } = await collectMonthDays(companyId, month);
-  const { perStaff } = summarize(days.values());
+  const { days, actualKeys, leaves, inRange } = await collectDays(companyId, monthRange(month));
+  const { perStaff } = summarize(days, inRange);
   const countDays = (staffId: string, actual: boolean) =>
-    [...days.keys()].filter((k) => k.startsWith(`${staffId}|`) && actualKeys.has(k) === actual).length;
+    [...days.entries()].filter(([k, d]) => k.startsWith(`${staffId}|`) && inRange(d.date) && actualKeys.has(k) === actual).length;
+  const leaveBy = new Map<string, { halfDays: number; pay: number }>();
+  for (const l of leaves) {
+    const cur = leaveBy.get(l.staffId) ?? { halfDays: 0, pay: 0 };
+    leaveBy.set(l.staffId, { halfDays: cur.halfDays + l.halfDays, pay: cur.pay + leavePayOf(l.staff, l.halfDays) });
+  }
 
-  const staff = await prisma.staff.findMany({ where: { id: { in: [...perStaff.keys()] } }, orderBy: { createdAt: "asc" } });
-  const rows = staff.map((s) => ({
-    staffId: s.id,
-    name: s.name,
-    hourlyWage: s.hourlyWage,
-    actualDays: countDays(s.id, true),
-    plannedDays: countDays(s.id, false),
-    ...roundPay(perStaff.get(s.id)!),
-  }));
+  const ids = [...new Set([...perStaff.keys(), ...leaveBy.keys()])];
+  const staff = await prisma.staff.findMany({ where: { id: { in: ids } }, orderBy: { createdAt: "asc" } });
+  const rows = staff.map((s) => {
+    const pay = roundPay(perStaff.get(s.id) ?? EMPTY_PAY);
+    const leave = leaveBy.get(s.id);
+    const leavePay = Math.round(leave?.pay ?? 0);
+    return {
+      staffId: s.id,
+      name: s.name,
+      hourlyWage: s.hourlyWage,
+      actualDays: countDays(s.id, true),
+      plannedDays: countDays(s.id, false),
+      ...pay,
+      leaveHalfDays: leave?.halfDays ?? 0,
+      leavePay,
+      total: pay.total + leavePay,
+    };
+  });
   const run = await prisma.payrollRun.findUnique({ where: { companyId_month: { companyId, month } } });
   return { month, rows, total: rows.reduce((sum, r) => sum + r.total, 0), run };
 }
