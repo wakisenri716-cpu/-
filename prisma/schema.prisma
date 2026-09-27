@@ -191,6 +191,7 @@ model Company {
   recurringInvoices RecurringInvoice[]
   departments      Department[]
   projects         Project[]
+  cashAdvances     CashAdvance[]
   monthlyCloseChecks MonthlyCloseCheck[]
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
@@ -230,6 +231,7 @@ model User {
   createdAt     DateTime @default(now())
 
   expenseReports ExpenseReport[]
+  cashAdvances   CashAdvance[]
   sessions       Session[]
   passwordResets PasswordReset[]
   staffs         Staff[]
@@ -324,6 +326,8 @@ model ExpenseReport {
   reimbursedAt         DateTime?
   reimbursementEntryId String?       @unique
   reimbursementEntry   JournalEntry? @relation("ExpenseReimbursement", fields: [reimbursementEntryId], references: [id])
+  // 仮払金と相殺して精算したときの仮払金
+  cashAdvance          CashAdvance?
   // 承認フロー: DRAFT(作成中) / SUBMITTED(申請中) / APPROVED(承認済み) / RETURNED(差戻し)
   approvalStatus String    @default("DRAFT")
   approvedAt     DateTime?
@@ -816,6 +820,8 @@ model JournalEntry {
   payrollRun        PayrollRun?
   bonusRun          BonusRun?
   reimbursedReport  ExpenseReport?     @relation("ExpenseReimbursement")
+  cashAdvanceIssue  CashAdvance?       @relation("CashAdvanceIssue")
+  cashAdvanceSettle CashAdvance?       @relation("CashAdvanceSettle")
   disposedAsset     FixedAsset?        @relation("FixedAssetDisposal")
   recurringPosting  RecurringPosting?
 }
@@ -912,6 +918,35 @@ model MonthlyCloseCheck {
   checkedAt DateTime @default(now())
 
   @@unique([companyId, month, key])
+}
+
+// 仮払金: 出張などの前に従業員へ先に渡すお金。あとで経費精算と相殺し、差額を返してもらうか払う
+enum CashAdvanceStatus {
+  OPEN
+  SETTLED
+  CANCELLED
+}
+
+model CashAdvance {
+  id              String            @id @default(cuid())
+  companyId       String
+  company         Company           @relation(fields: [companyId], references: [id])
+  employeeId      String
+  employee        User              @relation(fields: [employeeId], references: [id])
+  purpose         String
+  amount          Int
+  paidDate        DateTime
+  payFrom         String
+  status          CashAdvanceStatus @default(OPEN)
+  issueEntryId    String            @unique
+  issueEntry      JournalEntry      @relation("CashAdvanceIssue", fields: [issueEntryId], references: [id])
+  // 精算: 相殺した経費精算(なければ全額返金)と、その仕訳
+  expenseReportId String?           @unique
+  expenseReport   ExpenseReport?    @relation(fields: [expenseReportId], references: [id])
+  settleEntryId   String?           @unique
+  settleEntry     JournalEntry?     @relation("CashAdvanceSettle", fields: [settleEntryId], references: [id])
+  settledDate     DateTime?
+  createdAt       DateTime          @default(now())
 }
 
 // 案件(プロジェクト・工事・受託など)。仕訳に付けて、案件ごとの損益を出す

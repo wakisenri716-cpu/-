@@ -44,10 +44,12 @@ export default function ExpensesPage() {
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [limit, setLimit] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const [advances, setAdvances] = useState<{ id: string; purpose: string; amount: number; paidDate: string }[]>([]);
 
   async function loadReports() {
-    const [res, setting] = await Promise.all([fetch("/api/expense-reports"), fetch("/api/expense-reports/approval-setting")]);
+    const [res, setting, mine] = await Promise.all([fetch("/api/expense-reports"), fetch("/api/expense-reports/approval-setting"), fetch("/api/cash-advances/mine")]);
     setReports(await res.json());
+    if (mine.ok) setAdvances(await mine.json());
     if (setting.ok) {
       const body = await setting.json();
       setApprovalRequired(body.required === true);
@@ -128,6 +130,14 @@ export default function ExpensesPage() {
       </div>
 
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
+
+      {advances.length > 0 && (
+        <div className="rounded-md bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          受け取っている仮払金があります:{" "}
+          {advances.map((a) => `${a.purpose} ${formatYen(a.amount)}(${a.paidDate.replaceAll("-", "/")})`).join("、")}。
+          使ったお金のレシートを経費精算に登録して申請してください。残ったお金は会社に返します。
+        </div>
+      )}
 
       {loading && <p className="text-sm text-slate-500">読み込み中...</p>}
 
