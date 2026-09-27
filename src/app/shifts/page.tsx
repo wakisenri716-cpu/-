@@ -9,7 +9,7 @@ type Pay = { workMinutes: number; nightMinutes: number; overtimeMinutes: number;
 type Staff = { id: string; name: string; hourlyWage: number; active: boolean; hasPin: boolean; week: Pay };
 type Shift = { id: string; staffId: string; date: string; startMinutes: number; endMinutes: number; breakMinutes: number; note: string | null };
 type Week = { weekStart: string; days: string[]; staff: Staff[]; shifts: Shift[]; daily: (Pay & { date: string; people: number })[] };
-type PayrollRow = Pay & { staffId: string; name: string; hourlyWage: number; actualDays: number; plannedDays: number };
+type PayrollRow = Pay & { staffId: string; name: string; hourlyWage: number; actualDays: number; plannedDays: number; leaveHalfDays: number; leavePay: number };
 type Payroll = { month: string; rows: PayrollRow[]; total: number; run: { totalAmount: number; createdAt: string } | null };
 
 type Draft = { id?: string; staffId: string; date: string; start: string; end: string; breakMinutes: number; note: string };
@@ -401,6 +401,7 @@ export default function ShiftsPage() {
                     </td>
                     <td className="py-1.5 pr-2 text-right whitespace-nowrap text-slate-500">
                       {r.actualDays}日/{r.plannedDays}日
+                      {r.leaveHalfDays > 0 && <span className="block text-xs text-sky-700">有給{r.leaveHalfDays / 2}日 {formatYen(r.leavePay)}</span>}
                     </td>
                     <td className="py-1.5 pr-2 text-right whitespace-nowrap">{hours(r.workMinutes)}</td>
                     <td className="py-1.5 pr-2 text-right whitespace-nowrap">{formatYen(r.base)}</td>

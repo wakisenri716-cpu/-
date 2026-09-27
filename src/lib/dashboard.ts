@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { cashAccountCodes } from "@/lib/bank/accounts";
+import { countOvertimeAlerts } from "@/lib/leave/overtime";
+import { countLeaveObligationAlerts } from "@/lib/leave/service";
 import { jstDateKey } from "@/lib/jst";
 import { fiscalYearOf, getFiscalStartMonth } from "@/lib/accounting/period";
 import { requireCompanyId } from "@/lib/auth/session";
@@ -87,7 +89,7 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -106,6 +108,8 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
     countDueRecurring(companyId),
     countDueRecurringInvoices(companyId),
     prisma.storedFile.count({ where: expiringWhere(companyId, today) }),
+    countOvertimeAlerts(companyId, now),
+    countLeaveObligationAlerts(companyId, now),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
@@ -139,6 +143,8 @@ export async function getTodos(companyId: string, now = new Date()): Promise<Tod
       href: "/payroll",
       tone: "amber",
     },
+    { key: "overtime", label: "残業が上限に近い人", detail: "36協定の上限(原則 月45時間・年360時間)に近いか超えています", count: overtimeAlerts, href: "/leave", tone: "rose" },
+    { key: "leave", label: "有給の年5日の取得が足りない人", detail: "期限まで90日以内です。有給を取れるよう日程を調整してください", count: leaveAlerts, href: "/leave", tone: "amber" },
     { key: "files", label: "期限が近い書類", detail: "契約の更新・満了などの期限が30日以内か、過ぎた書類があります", count: expiringFiles, href: "/files", tone: "amber" },
     { key: "stock", label: "発注が必要な商品", detail: "在庫切れ・発注点以下の商品があります", count: stockouts, href: "/inventory", tone: "slate" },
   ];
