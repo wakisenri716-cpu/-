@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { addressLine, attentionLine } from "@/lib/addressBook";
 import { notFound } from "next/navigation";
 import { getSharedQuote } from "@/lib/documentMail";
 import { BillingDocument } from "@/components/BillingDocument";
@@ -30,6 +31,8 @@ export default async function SharedQuotePage({ params }: { params: Promise<{ to
             issueDate={quote.issueDate}
             deadline={quote.validUntil}
             customerName={quote.customer.name}
+            customerAddress={addressLine(quote.customer)}
+            customerAttention={attentionLine(quote.customer)}
             company={quote.company}
             lines={quote.lines}
             calc={calc}

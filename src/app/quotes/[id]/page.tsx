@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { addressLine, attentionLine } from "@/lib/addressBook";
 import { notFound } from "next/navigation";
 import { requireCompanyId } from "@/lib/auth/session";
 import { getQuote } from "@/lib/accounting/quotes";
@@ -49,6 +50,8 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
         issueDate={quote.issueDate}
         deadline={quote.validUntil}
         customerName={quote.customer.name}
+        customerAddress={addressLine(quote.customer)}
+        customerAttention={attentionLine(quote.customer)}
         company={quote.company}
         lines={quote.lines}
         calc={calc}

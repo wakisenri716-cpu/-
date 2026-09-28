@@ -4,6 +4,8 @@ import { requireCompanyId } from "@/lib/auth/session";
 import { getPartyDetail } from "@/lib/parties";
 import { formatDate, formatYen } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PartyContactCard } from "@/components/PartyContactCard";
+import { getParty } from "@/lib/addressBook";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +25,8 @@ export default async function PartyPage({ params }: { params: Promise<{ kind: st
   const { kind, id } = await params;
   if (kind !== "vendor" && kind !== "customer") notFound();
   const companyId = await requireCompanyId();
-  const data = await getPartyDetail(companyId, kind, id);
-  if (!data) notFound();
+  const [data, contact] = await Promise.all([getPartyDetail(companyId, kind, id), getParty(companyId, kind, id)]);
+  if (!data || !contact) notFound();
   const customer = kind === "customer";
 
   return (
@@ -41,6 +43,8 @@ export default async function PartyPage({ params }: { params: Promise<{ kind: st
             ` ・ インボイス登録: ${data.party.invoiceStatus === "REGISTERED" ? `あり${data.party.registrationNumber ? `(${data.party.registrationNumber})` : ""}` : data.party.invoiceStatus === "NOT_REGISTERED" ? "なし(消費税の差し引きは経過措置の割合だけ)" : "未確認"}`}
         </p>
       </div>
+
+      <PartyContactCard kind={kind} id={id} values={contact} />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Tile label={customer ? "請求額の合計" : "受け取った請求額の合計"} value={formatYen(data.totals.invoiced)} />

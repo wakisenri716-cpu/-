@@ -297,8 +297,15 @@ model Vendor {
   defaultExpenseAccount  Account? @relation("VendorDefaultAccount", fields: [defaultExpenseAccountId], references: [id])
   // 支払の振込先(形は Staff.payeeAccount と同じ)
   payeeAccount          Json?
-  // 支払調書に載せる住所
+  // 支払調書・宛名に使う住所
   address               String?
+  // 住所録(送付状・封筒・宛名ラベル、請求書などの宛先に使う)
+  postalCode            String?
+  department            String?
+  contactName           String?
+  // 敬称: 御中 か 様(担当者名があるときは担当者に「様」)
+  honorific             String?
+  phone                 String?
   // インボイス(適格請求書発行事業者)の登録。null は未確認
   invoiceStatus         VendorInvoiceStatus?
   registrationNumber    String?
@@ -316,6 +323,14 @@ model Customer {
   name       String
   // 請求書・見積書をメールで送るときの宛先(前回入力したものを覚えておく)
   email      String?
+  address    String?
+  // 住所録(送付状・封筒・宛名ラベル、請求書などの宛先に使う)
+  postalCode  String?
+  department  String?
+  contactName String?
+  // 敬称: 御中 か 様(担当者名があるときは担当者に「様」)
+  honorific   String?
+  phone       String?
   createdAt  DateTime @default(now())
 
   invoices   Invoice[]

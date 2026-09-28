@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { addressLine, attentionLine } from "@/lib/addressBook";
 import { notFound } from "next/navigation";
 import { requireCompanyId } from "@/lib/auth/session";
 import { getPurchaseOrder, RECEIVE_ACCOUNTS } from "@/lib/accounting/purchaseOrders";
@@ -50,6 +51,8 @@ export default async function PurchaseOrderPage({ params }: { params: Promise<{ 
         issueDate={order.issueDate}
         deadline={order.deliveryDate}
         customerName={order.vendor.name}
+        customerAddress={addressLine(order.vendor)}
+        customerAttention={attentionLine(order.vendor)}
         company={order.company}
         lines={order.lines}
         calc={calc}

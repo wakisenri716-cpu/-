@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { addressLine, attentionLine } from "@/lib/addressBook";
 import { notFound } from "next/navigation";
 import { requireCompanyId } from "@/lib/auth/session";
 import { getPrintableInvoice } from "@/lib/accounting/issueInvoice";
@@ -42,6 +43,14 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
             </>
           )}
           {!cancelled && <SendMailButton kind="invoice" id={invoice.id} />}
+          {!cancelled && invoice.customer && (
+            <Link
+              href={`/letters/cover?kind=customer&id=${invoice.customer.id}&items=${encodeURIComponent(`請求書(${invoice.invoiceNumber}) 1通`)}`}
+              className="rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              送付状
+            </Link>
+          )}
           {!cancelled && (
             <Link href={`/invoices/${invoice.id}/delivery`} className="rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
               納品書
@@ -91,6 +100,8 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         issueDate={invoice.issueDate ?? invoice.createdAt}
         deadline={invoice.dueDate}
         customerName={invoice.customer?.name ?? ""}
+        customerAddress={addressLine(invoice.customer)}
+        customerAttention={attentionLine(invoice.customer)}
         company={company}
         lines={invoice.lines}
         calc={calc}

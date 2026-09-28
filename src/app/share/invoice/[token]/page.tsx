@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { addressLine, attentionLine } from "@/lib/addressBook";
 import { notFound } from "next/navigation";
 import { getSharedInvoice } from "@/lib/documentMail";
 import { BillingDocument } from "@/components/BillingDocument";
@@ -32,6 +33,8 @@ export default async function SharedInvoicePage({ params }: { params: Promise<{ 
           issueDate={invoice.issueDate ?? invoice.createdAt}
           deadline={invoice.dueDate}
           customerName={invoice.customer?.name ?? ""}
+          customerAddress={addressLine(invoice.customer)}
+          customerAttention={attentionLine(invoice.customer)}
           company={invoice.company}
           lines={invoice.lines}
           calc={calc}

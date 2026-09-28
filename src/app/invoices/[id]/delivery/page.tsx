@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { addressLine, attentionLine } from "@/lib/addressBook";
 import { notFound } from "next/navigation";
 import { requireCompanyId } from "@/lib/auth/session";
 import { getPrintableInvoice } from "@/lib/accounting/issueInvoice";
@@ -29,6 +30,8 @@ export default async function DeliveryNotePage({ params }: { params: Promise<{ i
         issueDate={invoice.issueDate ?? invoice.createdAt}
         deadline={null}
         customerName={invoice.customer?.name ?? ""}
+        customerAddress={addressLine(invoice.customer)}
+        customerAttention={attentionLine(invoice.customer)}
         company={invoice.company}
         lines={invoice.lines}
         calc={calc}
