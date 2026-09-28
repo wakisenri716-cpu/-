@@ -418,3 +418,12 @@ export function LaptopIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function NotebookIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="5" y="3.5" width="14" height="17" rx="1.5" />
+      <path d="M9 3.5v17M12 8h4M12 11.5h4" />
+    </svg>
+  );
+}
