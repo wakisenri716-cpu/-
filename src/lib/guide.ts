@@ -7,6 +7,8 @@ export type GuideSection = {
   who?: "全員" | "管理者" | "従業員";
   steps: string[];
   tips?: string[];
+  // 画面の写真(public/guide の名前)。赤い枠が押すところ。"-phone" で終わるものはスマホの画面
+  images?: string[];
 };
 
 export type GuideChapter = { id: string; title: string; lead: string; sections: GuideSection[] };
@@ -19,6 +21,7 @@ export const GUIDE: GuideChapter[] = [
     sections: [
       {
         title: "新規登録(最初の1人)",
+        images: ["setup"],
         href: "/login",
         who: "管理者",
         steps: [
@@ -30,6 +33,7 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "ログインと、はじめてのログイン",
+        images: ["welcome"],
         href: "/login",
         who: "全員",
         steps: [
@@ -40,6 +44,7 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "画面の見方と権限",
+        images: ["dashboard"],
         who: "全員",
         steps: [
           "パソコンでは左のメニュー、スマホでは上のボタンの並びから画面を選びます。",
@@ -58,12 +63,14 @@ export const GUIDE: GuideChapter[] = [
     sections: [
       {
         title: "会社情報",
+        images: ["company"],
         href: "/company",
         who: "管理者",
         steps: ["会社名・代表者名・住所・電話番号・インボイス登録番号・お振込先・請求書に毎回入れる備考を入れて保存します。", "ここに入れた内容が、請求書・見積書・発注書・給与明細などの書類に載ります。"],
       },
       {
         title: "ユーザー(メンバー)の追加",
+        images: ["users"],
         href: "/users",
         who: "管理者",
         steps: ["「ユーザー管理」で、名前・メールアドレス・仮のパスワード・権限(管理者・経理担当・従業員)を入れて追加します。", "退職した人は「利用停止」にします。ログインできなくなり、記録は残ります。"],
@@ -75,6 +82,7 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "取引先・顧客",
+        images: ["vendors"],
         href: "/vendors",
         steps: [
           "取引先(仕入・経費の相手)と顧客(売上の相手)は、請求書やレシートを登録すると自動で追加されます。CSVでまとめて登録もできます。",
@@ -89,6 +97,7 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "メール・安全の設定",
+        images: ["account"],
         href: "/security",
         who: "管理者",
         steps: [
@@ -111,11 +120,13 @@ export const GUIDE: GuideChapter[] = [
     sections: [
       {
         title: "見積書",
+        images: ["quotes"],
         href: "/quotes",
         steps: ["「見積書を作成」で宛先・明細・有効期限を入れて作ります。印刷・PDF保存・メール送付ができます。", "受注したら見積書の画面で「請求書にする」を押すと、同じ内容の請求書ができます。"],
       },
       {
         title: "請求書の発行",
+        images: ["invoice-new", "invoice-print"],
         href: "/invoices",
         steps: [
           "「請求書を作成」で宛先・明細(税率10%/8%)・支払期限を入れると、インボイス制度の形式の請求書ができ、売上の仕訳も自動で記帳されます。",
@@ -127,6 +138,7 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "入金の確認と売掛金",
+        images: ["receivables"],
         href: "/receivables",
         steps: ["銀行明細を取り込むと、請求書の残りの金額と一致する入金は自動で消し込まれます。", "手で記録するときは、請求書の画面で「入金を記録」します。", "「売掛金・買掛金」で、入金待ちの金額を期日の過ぎ具合ごとに確かめられます。"],
       },
@@ -144,6 +156,7 @@ export const GUIDE: GuideChapter[] = [
     sections: [
       {
         title: "発注書",
+        images: ["purchase-order"],
         href: "/purchase-orders",
         steps: [
           "「発注書を作成」で発注先・納期・納品場所・支払条件・明細を入れて作り、印刷・PDFで送ります。",
@@ -158,6 +171,7 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "支払と振込データ",
+        images: ["transfers"],
         href: "/transfers",
         steps: [
           "「売掛金・買掛金」の買掛金タブで、支払予定を確かめます。",
@@ -179,6 +193,7 @@ export const GUIDE: GuideChapter[] = [
     sections: [
       {
         title: "経費精算の出し方",
+        images: ["expenses-phone"],
         href: "/expenses",
         who: "全員",
         steps: [
@@ -189,11 +204,13 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "承認と精算(支払)",
+        images: ["reimbursements"],
         href: "/reimbursements",
         steps: ["「立替経費の精算」で申請を確かめ、承認か差戻しをします。", "本人に支払ったら「精算する」を押すと、支払の仕訳が記帳されます。", "会社で1件あたりの上限を決めておくと、上限を超える明細に印が付きます。"],
       },
       {
         title: "仮払金",
+        images: ["advances"],
         href: "/advances",
         steps: [
           "出張などで先にお金を渡したときは「仮払金を渡す」で記録します。",
@@ -210,6 +227,7 @@ export const GUIDE: GuideChapter[] = [
     sections: [
       {
         title: "明細の取込と確定",
+        images: ["bank"],
         href: "/bank",
         steps: [
           "銀行・カード会社のサイトから明細のCSVをダウンロードし、「銀行・カード明細」で口座を選んで取り込みます。",
@@ -226,6 +244,7 @@ export const GUIDE: GuideChapter[] = [
     sections: [
       {
         title: "スタッフとシフト",
+        images: ["shifts", "timeclock-phone"],
         href: "/shifts",
         steps: ["「シフト管理」でスタッフ(時給・入社日・所定労働日数)を登録し、シフトを入れます。", "「タイムカード」は、スタッフが自分の暗証番号(4桁)で出勤・退勤を打刻する画面です。"],
       },
@@ -240,6 +259,7 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "給与計算・給与明細",
+        images: ["payroll"],
         href: "/payroll",
         steps: [
           "「給与計算」で月を選ぶと、勤怠から基本給・残業・深夜・通勤手当と、社会保険料・雇用保険料・源泉所得税・住民税の控除を計算します。",
@@ -254,6 +274,7 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "労働者名簿・賃金台帳・労働条件通知書",
+        images: ["staff-records"],
         href: "/staff-records",
         steps: ["スタッフごとに、ふりがな・生年月日・住所・雇用形態・業務内容などを登録します。", "労働者名簿・賃金台帳(年ごと)を印刷できます。雇うときに渡す労働条件通知書も作れます。"],
       },
@@ -266,12 +287,14 @@ export const GUIDE: GuideChapter[] = [
     sections: [
       {
         title: "申請・稟議",
+        images: ["requests"],
         href: "/requests",
         who: "全員",
         steps: ["購入・有給・出張などを申請します。承認ルートの順に承認されると、申請した人に知らされます。", "承認する人は、承認か差戻しを選び、コメントを残せます。"],
       },
       {
         title: "社内のお知らせ",
+        images: ["notices"],
         href: "/notices",
         who: "全員",
         steps: [
@@ -282,6 +305,7 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "書類フォルダ・証憑の検索",
+        images: ["files"],
         href: "/files",
         steps: [
           "契約書などの書類をフォルダに保存し、更新・満了の期限を入れておくと、期限が近づいたときにやることリストに出ます。",
@@ -297,6 +321,7 @@ export const GUIDE: GuideChapter[] = [
     sections: [
       {
         title: "仕訳帳",
+        images: ["journal"],
         href: "/journal",
         steps: [
           "すべての仕訳を日付順に確かめられます。摘要・科目・金額・種類で検索できます。",
@@ -306,6 +331,7 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "元帳・試算表・決算書",
+        images: ["income-statement"],
         href: "/trial-balance",
         steps: [
           "「総勘定元帳」で科目ごとの動きと残高、「試算表」で全科目の残高を確かめます。",
@@ -315,6 +341,7 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "部門別・案件別の損益",
+        images: ["projects"],
         href: "/projects",
         steps: ["仕訳に部門・案件を付けると、部門ごと・案件ごとの売上・費用・利益が出ます。", "案件は、請求書の発行・発注書の検収・仕訳の入力で選べます。原価の予算の消化率も表示します。"],
       },
@@ -325,6 +352,7 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "消費税",
+        images: ["tax"],
         href: "/tax",
         steps: [
           "「消費税集計」で、預かった消費税と支払った消費税、納める見込み額を出します。原則課税・簡易課税・2割特例を比べられます。",
@@ -341,6 +369,7 @@ export const GUIDE: GuideChapter[] = [
     sections: [
       {
         title: "月次決算チェックリスト",
+        images: ["monthly-close"],
         href: "/monthly-close",
         steps: [
           "月末(翌月のはじめ)に「月次決算チェック」を開きます。明細の確定・定期取引・減価償却・給料などの済み具合が自動で表示されます。",
@@ -355,12 +384,14 @@ export const GUIDE: GuideChapter[] = [
       },
       {
         title: "締め処理",
+        images: ["closing"],
         href: "/closing",
         who: "管理者",
         steps: ["確認が済んだ月は「締め処理」で締めます。締めた期間の仕訳は、追加・変更・取消ができなくなります。", "直す必要が出たときは、管理者が締めを解除してから直します。"],
       },
       {
         title: "税理士へのデータ・バックアップ",
+        images: ["accountant-export"],
         href: "/accountant-export",
         steps: ["「税理士向けデータ」で、弥生会計・マネーフォワードに取り込める形式の仕訳と、試算表・元帳などをまとめてダウンロードできます。", "「データのバックアップ」で、すべてのデータをCSVでまとめて保存できます。定期的に保存しておくと安心です。"],
       },
