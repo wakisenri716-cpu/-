@@ -46,6 +46,7 @@ export async function buildBackup(companyId: string) {
       prisma.auditLog.findMany({ where: { companyId }, orderBy: { createdAt: "asc" } }),
     ]);
   const projects = await prisma.project.findMany({ where: { companyId }, include: { journalEntries: { select: { date: true, description: true } } }, orderBy: { createdAt: "asc" } });
+  const equipment = await prisma.equipment.findMany({ where: { companyId }, include: { loans: { orderBy: { lentAt: "asc" } } }, orderBy: [{ code: "asc" }, { name: "asc" }] });
   const orders = await prisma.purchaseOrder.findMany({ where: { companyId }, include: { vendor: true, lines: { orderBy: { sortOrder: "asc" } } }, orderBy: { issueDate: "asc" } });
 
   const minutes = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
@@ -149,6 +150,20 @@ export async function buildBackup(companyId: string) {
       rows: [
         ["資産名", "取得日", "取得価額", "残存価額", "耐用年数", "減価償却累計額", "除却・売却日", "売却額"],
         ...assets.map((a) => [a.name, d(a.acquisitionDate), a.acquisitionCost, a.residualValue, a.usefulLifeYears, a.depreciationEntries.reduce((s, e) => s + e.amount, 0), d(a.disposedAt), a.disposalPrice ?? ""]),
+      ],
+    },
+    {
+      name: "備品.csv",
+      rows: [
+        ["管理番号", "備品名", "種類", "製造番号", "保管場所", "購入日", "購入金額", "状態", "メモ"],
+        ...equipment.map((e) => [e.code ?? "", e.name, e.category ?? "", e.serialNumber ?? "", e.location ?? "", d(e.purchaseDate), e.price ?? "", e.status, e.notes ?? ""]),
+      ],
+    },
+    {
+      name: "備品の貸出.csv",
+      rows: [
+        ["管理番号", "備品名", "借りた人", "貸出日", "返却予定日", "返却日", "メモ"],
+        ...equipment.flatMap((e) => e.loans.map((l) => [e.code ?? "", e.name, l.borrowerName, d(l.lentAt), d(l.dueDate), d(l.returnedAt), l.notes ?? ""])),
       ],
     },
     { name: "在庫.csv", rows: [["コード", "商品名", "単位", "在庫数", "在庫金額", "発注点"], ...products.map((p) => [p.code ?? "", p.name, p.unit, p.quantityOnHand, p.inventoryValue, p.reorderPoint ?? ""])] },

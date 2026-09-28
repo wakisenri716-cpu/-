@@ -409,3 +409,12 @@ export function MegaphoneIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function LaptopIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="4.5" y="5" width="15" height="10.5" rx="1.5" />
+      <path d="M2.5 19h19" />
+    </svg>
+  );
+}

@@ -198,6 +198,7 @@ model Company {
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
   deals            Deal[]
+  equipment        Equipment[]
   monthlyCloseChecks MonthlyCloseCheck[]
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
@@ -242,6 +243,7 @@ model User {
   termsAcceptedAt DateTime?
   termsVersion    String?
   announcementReads AnnouncementRead[]
+  equipmentLoans  EquipmentLoan[]
   sessions       Session[]
   passwordResets PasswordReset[]
   staffs         Staff[]
@@ -943,6 +945,49 @@ model MonthlyCloseCheck {
   checkedAt DateTime @default(now())
 
   @@unique([companyId, month, key])
+}
+
+// 備品(パソコン・スマホ・鍵など)と貸出の記録
+enum EquipmentStatus {
+  ACTIVE
+  BROKEN
+  DISPOSED
+}
+
+model Equipment {
+  id           String          @id @default(cuid())
+  companyId    String
+  company      Company         @relation(fields: [companyId], references: [id])
+  code         String?
+  name         String
+  category     String?
+  serialNumber String?
+  location     String?
+  purchaseDate DateTime?
+  price        Int?
+  status       EquipmentStatus @default(ACTIVE)
+  notes        String?
+  createdAt    DateTime        @default(now())
+
+  loans        EquipmentLoan[]
+
+  @@unique([companyId, code])
+}
+
+model EquipmentLoan {
+  id           String    @id @default(cuid())
+  equipmentId  String
+  equipment    Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  // 借りた人(メンバーならユーザー、ほかは名前だけ)
+  userId       String?
+  user         User?     @relation(fields: [userId], references: [id])
+  borrowerName String
+  lentAt       DateTime
+  dueDate      DateTime?
+  returnedAt   DateTime?
+  notes        String?
+
+  @@index([equipmentId, returnedAt])
 }
 
 // 商談(受注までの見込み)。見込み → 提案中 → 見積提出 → 受注 / 失注
