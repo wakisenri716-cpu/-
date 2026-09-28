@@ -154,7 +154,7 @@ function VendorsContent() {
       <CsvImportForm
         endpoint="/api/vendors/import"
         title="CSVでまとめて登録"
-        hint="「種類(取引先/顧客)・名前・既定の勘定科目」の列があるCSVを読み込みます。同じ名前がすでにあれば、既定の勘定科目だけ更新します。"
+        hint="「種類(取引先/顧客)・名前・既定の勘定科目」と、あれば「郵便番号・住所・部署・担当者・敬称・電話番号」の列があるCSVを読み込みます。同じ名前がすでにあれば、入っている欄だけ更新します。"
         onDone={load}
       />
 

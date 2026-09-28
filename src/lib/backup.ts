@@ -85,7 +85,12 @@ export async function buildBackup(companyId: string) {
     { name: "勘定科目.csv", rows: [["コード", "科目名", "区分", "非表示"], ...accounts.map((a) => [a.code, a.name, a.category, a.hidden ? "はい" : ""])] },
     {
       name: "取引先・顧客.csv",
-      rows: [["種類", "名前", "既定の勘定科目"], ...vendors.map((v) => ["取引先", v.name, accounts.find((a) => a.id === v.defaultExpenseAccountId)?.code ?? ""]), ...customers.map((c) => ["顧客", c.name, ""])],
+      // 「取引先・顧客」のCSV取込と同じ形(住所・宛名も含めて取り込み直せる)
+      rows: [
+        ["種類", "名前", "既定の勘定科目", "郵便番号", "住所", "部署", "担当者", "敬称", "電話番号"],
+        ...vendors.map((v) => ["取引先", v.name, accounts.find((a) => a.id === v.defaultExpenseAccountId)?.code ?? "", v.postalCode ?? "", v.address ?? "", v.department ?? "", v.contactName ?? "", v.honorific ?? "", v.phone ?? ""]),
+        ...customers.map((c) => ["顧客", c.name, "", c.postalCode ?? "", c.address ?? "", c.department ?? "", c.contactName ?? "", c.honorific ?? "", c.phone ?? ""]),
+      ],
     },
     {
       name: "請求書.csv",

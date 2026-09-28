@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parseContact, type Contact } from "@/lib/addressBook";
 import { parseCsv } from "@/lib/csvParse";
 import { UserError } from "@/lib/errors";
 
@@ -25,15 +26,17 @@ function fail(errors: string[]) {
 }
 
 export const PARTY_SAMPLE = [
-  ["種類", "名前", "既定の勘定科目"],
-  ["取引先", "株式会社サンプル文具", "消耗品費"],
-  ["取引先", "〇〇電力", "5070"],
-  ["顧客", "株式会社お客様商事", ""],
+  ["種類", "名前", "既定の勘定科目", "郵便番号", "住所", "部署", "担当者", "敬称", "電話番号"],
+  ["取引先", "株式会社サンプル文具", "消耗品費", "100-0001", "東京都千代田区千代田1-1", "", "", "", "03-1111-2222"],
+  ["取引先", "〇〇電力", "5070", "", "", "", "", "", ""],
+  ["顧客", "株式会社お客様商事", "", "150-0002", "東京都渋谷区渋谷2-2-2 お客様ビル5F", "経理部", "田中 一郎", "様", "03-3333-4444"],
 ];
 
-// 取引先(経費・仕入の相手)と顧客(売上の相手)。同じ名前がすでにあれば、既定の勘定科目だけ更新する。
+const CONTACT_COLUMNS = { postalCode: ["郵便番号", "〒"], address: ["住所"], department: ["部署", "部署名"], contactName: ["担当者", "担当者名"], honorific: ["敬称"], phone: ["電話番号", "電話", "TEL"] };
+
+// 取引先(経費・仕入の相手)と顧客(売上の相手)。同じ名前がすでにあれば、既定の勘定科目と、入っている住所・宛名の欄だけ更新する。
 export async function importParties(companyId: string, text: string) {
-  const rows = readTable(text, { kind: ["種類", "区分"], name: ["名前", "取引先名", "顧客名", "名称"], account: ["既定の勘定科目", "勘定科目"] }, ["name"]);
+  const rows = readTable(text, { kind: ["種類", "区分"], name: ["名前", "取引先名", "顧客名", "名称"], account: ["既定の勘定科目", "勘定科目"], ...CONTACT_COLUMNS }, ["name"]);
   const accounts = await prisma.account.findMany({ where: { companyId, category: "EXPENSE" }, select: { id: true, code: true, name: true } });
   const accountBy = new Map<string, string>();
   for (const a of accounts) {
@@ -41,14 +44,25 @@ export async function importParties(companyId: string, text: string) {
     accountBy.set(norm(a.name), a.id);
   }
   const errors: string[] = [];
-  const vendors: { name: string; accountId: string | null }[] = [];
-  const customers: string[] = [];
+  type ContactPart = Partial<Contact>;
+  const vendors: { name: string; accountId: string | null; contact: ContactPart }[] = [];
+  const customers: { name: string; contact: ContactPart }[] = [];
   for (const r of rows) {
     const name = r.get("name");
     if (!name) continue;
+    // 住所・宛名は、入っている欄だけ使う(空欄は今の値のまま)
+    let contact: ContactPart = {};
+    try {
+      const raw = Object.fromEntries(Object.keys(CONTACT_COLUMNS).map((k) => [k, r.get(k)]));
+      const parsed = parseContact(raw);
+      contact = Object.fromEntries(Object.entries(parsed).filter(([k]) => raw[k])) as ContactPart;
+    } catch (error) {
+      errors.push(`${r.rowNumber}行目: ${error instanceof Error ? error.message : "住所・宛名が正しくありません"}`);
+      continue;
+    }
     const kind = r.get("kind") || "取引先";
     if (kind === "顧客") {
-      customers.push(name);
+      customers.push({ name, contact });
       continue;
     }
     if (kind !== "取引先") {
@@ -58,36 +72,44 @@ export async function importParties(companyId: string, text: string) {
     const accountName = r.get("account");
     const accountId = accountName ? (accountBy.get(norm(accountName)) ?? null) : null;
     if (accountName && !accountId) errors.push(`${r.rowNumber}行目: 勘定科目「${accountName}」が見つかりません(経費の科目のコードか名前)`);
-    vendors.push({ name, accountId });
+    vendors.push({ name, accountId, contact });
   }
   fail(errors);
 
   const [existingVendors, existingCustomers] = await Promise.all([
     prisma.vendor.findMany({ where: { companyId }, select: { id: true, name: true } }),
-    prisma.customer.findMany({ where: { companyId }, select: { name: true } }),
+    prisma.customer.findMany({ where: { companyId }, select: { id: true, name: true } }),
   ]);
   const vendorByName = new Map(existingVendors.map((v) => [norm(v.name), v.id]));
-  const customerNames = new Set(existingCustomers.map((c) => norm(c.name)));
+  const customerByName = new Map(existingCustomers.map((c) => [norm(c.name), c.id]));
   let created = 0;
   let updated = 0;
   await prisma.$transaction(async (tx) => {
     for (const v of vendors) {
       const id = vendorByName.get(norm(v.name));
+      const hasContact = Object.keys(v.contact).length > 0;
       if (id) {
-        if (v.accountId) {
-          await tx.vendor.update({ where: { id }, data: { defaultExpenseAccountId: v.accountId } });
+        if (v.accountId || hasContact) {
+          await tx.vendor.update({ where: { id }, data: { ...(v.accountId ? { defaultExpenseAccountId: v.accountId } : {}), ...v.contact } });
           updated++;
         }
       } else {
-        const createdVendor = await tx.vendor.create({ data: { companyId, name: v.name, defaultExpenseAccountId: v.accountId } });
+        const createdVendor = await tx.vendor.create({ data: { companyId, name: v.name, defaultExpenseAccountId: v.accountId, ...v.contact } });
         vendorByName.set(norm(v.name), createdVendor.id);
         created++;
       }
     }
-    for (const name of customers) {
-      if (customerNames.has(norm(name))) continue;
-      await tx.customer.create({ data: { companyId, name } });
-      customerNames.add(norm(name));
+    for (const c of customers) {
+      const id = customerByName.get(norm(c.name));
+      if (id) {
+        if (Object.keys(c.contact).length) {
+          await tx.customer.update({ where: { id }, data: c.contact });
+          updated++;
+        }
+        continue;
+      }
+      const createdCustomer = await tx.customer.create({ data: { companyId, name: c.name, ...c.contact } });
+      customerByName.set(norm(c.name), createdCustomer.id);
       created++;
     }
   });

@@ -23,6 +23,9 @@ export function BillingDocument(props: {
   issueDate: Date;
   deadline: Date | null;
   customerName: string;
+  // 宛先の住所(郵便番号・住所)と、部署・担当者
+  customerAddress?: string | null;
+  customerAttention?: string | null;
   company: Company;
   lines: Line[];
   calc: ReturnType<typeof calcInvoice>;
@@ -66,6 +69,12 @@ export function BillingDocument(props: {
       <section className="mt-8 flex flex-col gap-6 sm:flex-row sm:justify-between print:flex-row print:justify-between">
         <div>
           <p className="border-b border-slate-400 pb-1 text-lg font-semibold">{props.customerName} 御中</p>
+          {(props.customerAddress || props.customerAttention) && (
+            <div className="mt-1 text-xs text-slate-700">
+              {props.customerAddress && <p>{props.customerAddress}</p>}
+              {props.customerAttention && <p>{props.customerAttention}</p>}
+            </div>
+          )}
           <p className="mt-4">{text.lead}</p>
           <div className="mt-3 inline-flex items-baseline gap-4 border-b-2 border-slate-900 pb-1">
             <span className="text-sm">{text.total}</span>

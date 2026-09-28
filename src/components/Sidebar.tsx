@@ -70,6 +70,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/purchase-orders", label: "発注書", icon: CartIcon },
       { href: "/receivables", label: "売掛金・買掛金", icon: CoinsIcon },
       { href: "/vendors", label: "取引先・顧客", icon: UsersIcon },
+      { href: "/letters", label: "宛名・送付状", icon: MailIcon },
       { href: "/pos", label: "POSレジ連携", icon: RegisterIcon },
       { href: "/inventory", label: "在庫管理", icon: BoxIcon },
     ],
