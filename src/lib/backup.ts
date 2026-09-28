@@ -46,6 +46,7 @@ export async function buildBackup(companyId: string) {
       prisma.auditLog.findMany({ where: { companyId }, orderBy: { createdAt: "asc" } }),
     ]);
   const projects = await prisma.project.findMany({ where: { companyId }, include: { journalEntries: { select: { date: true, description: true } } }, orderBy: { createdAt: "asc" } });
+  const allocations = await prisma.allocation.findMany({ where: { companyId }, include: { postings: true }, orderBy: { createdAt: "asc" } });
   const yearEnds = await prisma.yearEndAdjustment.findMany({ where: { companyId, finalizedAt: { not: null } }, include: { staff: { select: { name: true } } }, orderBy: [{ year: "asc" }] });
   const workLogs = await prisma.workLog.findMany({ where: { companyId }, include: { user: { select: { name: true } }, project: { select: { name: true } } }, orderBy: [{ date: "asc" }, { createdAt: "asc" }] });
   const equipment = await prisma.equipment.findMany({ where: { companyId }, include: { loans: { orderBy: { lentAt: "asc" } } }, orderBy: [{ code: "asc" }, { name: "asc" }] });
@@ -152,6 +153,16 @@ export async function buildBackup(companyId: string) {
       rows: [
         ["資産名", "取得日", "取得価額", "残存価額", "耐用年数", "減価償却累計額", "除却・売却日", "売却額"],
         ...assets.map((a) => [a.name, d(a.acquisitionDate), a.acquisitionCost, a.residualValue, a.usefulLifeYears, a.depreciationEntries.reduce((s, e) => s + e.amount, 0), d(a.disposedAt), a.disposalPrice ?? ""]),
+      ],
+    },
+    {
+      name: "期間按分.csv",
+      rows: [
+        ["種類", "名前", "金額", "最初の月", "月数", "科目", "計上した月数", "計上した額", "残り", "状態"],
+        ...allocations.map((a) => {
+          const posted = a.postings.reduce((s, p) => s + p.amount, 0);
+          return [a.kind === "PREPAID_EXPENSE" ? "前払費用" : "前受金", a.name, a.totalAmount, a.startMonth, a.months, a.accountCode, a.postings.length, posted, a.totalAmount - posted, a.active ? "計上中" : "停止"];
+        }),
       ],
     },
     {

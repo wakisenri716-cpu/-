@@ -59,6 +59,7 @@ enum SourceType {
   REIMBURSEMENT
   RECURRING
   IMPORT
+  ALLOCATION
 }
 
 enum QuoteStatus {
@@ -203,6 +204,7 @@ model Company {
   equipment        Equipment[]
   workLogs         WorkLog[]
   yearEndAdjustments YearEndAdjustment[]
+  allocations      Allocation[]
   monthlyCloseChecks MonthlyCloseCheck[]
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
@@ -857,6 +859,8 @@ model JournalEntry {
   cashAdvanceSettle CashAdvance?       @relation("CashAdvanceSettle")
   disposedAsset     FixedAsset?        @relation("FixedAssetDisposal")
   recurringPosting  RecurringPosting?
+  allocationPosting AllocationPosting?
+  allocationOpening Allocation?       @relation("AllocationOpening")
 }
 
 // 毎月決まった日に同じ仕訳を記帳する定期取引(家賃・リース料・借入金の返済など)
@@ -1107,6 +1111,7 @@ model Project {
   journalEntries JournalEntry[]
   deal           Deal?
   workLogs       WorkLog[]
+  allocations    Allocation[]
 
   @@unique([companyId, name])
 }
@@ -1441,4 +1446,48 @@ model YearEndAdjustment {
 
   @@unique([staffId, year])
   @@index([companyId, year])
+}
+
+enum AllocationKind {
+  PREPAID_EXPENSE
+  DEFERRED_REVENUE
+}
+
+// 期間按分: まとめて払った費用(前払費用)・まとめて受け取った売上(前受金)を、月割りで費用・売上にする
+model Allocation {
+  id             String        @id @default(cuid())
+  companyId      String
+  company        Company       @relation(fields: [companyId], references: [id])
+  kind           AllocationKind
+  name           String
+  totalAmount    Int
+  startMonth     String
+  months         Int
+  // 毎月の按分で使う損益の科目(費用 or 売上)
+  accountCode    String
+  projectId      String?
+  project        Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  notes          String?
+  active         Boolean       @default(true)
+  // 登録と同時に作った支払・入金の仕訳(任意)
+  openingEntryId String?       @unique
+  openingEntry   JournalEntry? @relation("AllocationOpening", fields: [openingEntryId], references: [id])
+  createdAt      DateTime      @default(now())
+
+  postings AllocationPosting[]
+
+  @@index([companyId])
+}
+
+model AllocationPosting {
+  id             String       @id @default(cuid())
+  allocationId   String
+  allocation     Allocation   @relation(fields: [allocationId], references: [id], onDelete: Cascade)
+  month          String
+  amount         Int
+  journalEntryId String       @unique
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@unique([allocationId, month])
 }
