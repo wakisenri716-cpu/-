@@ -1,12 +1,67 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { GUIDE } from "@/lib/guide";
+import { GUIDE, type GuideSection } from "@/lib/guide";
 import { PrintButton } from "@/components/PrintButton";
 import { LegalLinks } from "@/components/LegalLinks";
 
 export const metadata: Metadata = { title: "使い方ガイド | AI経理オートメーション" };
 
 const WHO = { 全員: "bg-emerald-100 text-emerald-800", 管理者: "bg-indigo-100 text-indigo-800", 従業員: "bg-sky-100 text-sky-800" } as const;
+
+// 画面の写真。スマホの画面は縦長なので細く、パソコンの画面は横いっぱいに出す
+function Shot({ name, title }: { name: string; title: string }) {
+  const phone = name.endsWith("-phone");
+  return (
+    <figure className={phone ? "mx-auto w-52 shrink-0" : "w-full"}>
+      <a href={`/guide/${name}.jpg`} target="_blank" rel="noreferrer" title="クリックで大きく表示">
+        <Image
+          src={`/guide/${name}.jpg`}
+          alt={`${title}の画面`}
+          width={phone ? 780 : 1040}
+          height={phone ? 1688 : 800}
+          sizes={phone ? "208px" : "(min-width: 768px) 720px, 100vw"}
+          className={`h-auto w-full border border-slate-200 shadow-sm ${phone ? "rounded-2xl" : "rounded-lg"}`}
+        />
+      </a>
+      <figcaption className="mt-1 text-center text-[11px] text-slate-500">{phone ? "スマホの画面" : "赤い枠が押すところです"}</figcaption>
+    </figure>
+  );
+}
+
+function Steps({ steps }: { steps: string[] }) {
+  return (
+    <ol className="space-y-2 text-sm leading-relaxed">
+      {steps.map((step, j) => (
+        <li key={j} className="flex gap-3">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">{j + 1}</span>
+          <span className="pt-0.5">{step}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+// 手順と写真。スマホの写真は手順の横に、パソコンの写真は手順の下に並べる
+function SectionBody({ s }: { s: GuideSection }) {
+  const phones = (s.images ?? []).filter((n) => n.endsWith("-phone"));
+  const pcs = (s.images ?? []).filter((n) => !n.endsWith("-phone"));
+  return (
+    <div className="mt-3 space-y-4">
+      <div className={phones.length ? "flex flex-col gap-4 sm:flex-row sm:items-start" : ""}>
+        <div className="min-w-0 flex-1">
+          <Steps steps={s.steps} />
+        </div>
+        {phones.map((n) => (
+          <Shot key={n} name={n} title={s.title} />
+        ))}
+      </div>
+      {pcs.map((n) => (
+        <Shot key={n} name={n} title={s.title} />
+      ))}
+    </div>
+  );
+}
 
 // 使い方ガイドブック(ログインしなくても読める。印刷・PDF保存で1冊の冊子になる)
 export default function GuidePage() {
@@ -17,7 +72,7 @@ export default function GuidePage() {
           <p className="text-xs font-semibold tracking-wide text-indigo-700">AI経理オートメーション</p>
           <h1 className="mt-1 text-2xl font-bold sm:text-3xl">使い方ガイドブック</h1>
           <p className="mt-2 text-sm text-slate-600">
-            登録から、毎日の経費・請求、毎月の給与と締め、年に1回の決算まで、仕事の流れにそって使い方をまとめました。「印刷・PDF」で1冊の冊子として保存できます。
+            登録から、毎日の経費・請求、毎月の給与と締め、年に1回の決算まで、仕事の流れにそって使い方をまとめました。画面の写真の<span className="font-semibold text-rose-600">赤い枠</span>が、押すところです(写真はクリックすると大きく見られます)。「印刷・PDF」で1冊の冊子として保存できます。
           </p>
         </div>
         <div className="print:hidden">
@@ -62,14 +117,7 @@ export default function GuidePage() {
                   </Link>
                 )}
               </div>
-              <ol className="mt-3 space-y-2 text-sm leading-relaxed">
-                {s.steps.map((step, j) => (
-                  <li key={j} className="flex gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">{j + 1}</span>
-                    <span className="pt-0.5">{step}</span>
-                  </li>
-                ))}
-              </ol>
+              <SectionBody s={s} />
               {s.tips && (
                 <ul className="mt-3 space-y-1 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
                   {s.tips.map((t) => (
