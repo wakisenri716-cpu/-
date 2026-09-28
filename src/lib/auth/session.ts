@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { pickMembership } from "./companies";
 import { clientIp } from "@/lib/security";
+import { TERMS_VERSION } from "@/lib/legal";
 
 export const SESSION_COOKIE = "session";
 const SESSION_DAYS = 30;
@@ -66,6 +67,10 @@ export const getCurrentUser = cache(async () => {
     role: member.role,
     // 会社で2段階認証を必須にしていて、まだ設定していない
     mustSetup2fa: member.company.require2fa && !session.user.totpEnabled,
+    // 利用規約・プライバシーポリシー(今の版)にまだ同意していない
+    needsTerms: session.user.termsVersion !== TERMS_VERSION,
+    // 管理者で、開いている会社の情報をまだ入力していない
+    needsCompanyInfo: member.role === "ADMIN" && !member.company.onboardedAt,
   };
 });
 
@@ -85,7 +90,10 @@ export async function requireUser() {
 }
 
 // 従業員が使える画面。これ以外(帳票・銀行・給料など)は管理者と経理担当だけ。
-export const EMPLOYEE_PATHS = ["/expenses", "/timeclock", "/requests", "/notices", "/account", "/share"];
+export const EMPLOYEE_PATHS = ["/expenses", "/timeclock", "/requests", "/notices", "/account", "/share", "/welcome", "/terms", "/privacy", "/guide"];
+
+// ログインしていなくても、ようこそ画面の途中でも読める画面
+export const OPEN_PATHS = ["/welcome", "/terms", "/privacy", "/guide"];
 
 // 従業員も使える機能(自分の経費精算・タイムカード)用。
 // 2段階認証が必須なのに設定していない人は、設定するまでアカウント画面へ戻す

@@ -2,13 +2,14 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 
-type Info = { name: string; registrationNumber: string; address: string; phone: string; bankAccount: string; invoiceNote: string };
+type Info = { name: string; representative: string; registrationNumber: string; address: string; phone: string; bankAccount: string; invoiceNote: string };
 type TextKey = keyof Info;
 
-const EMPTY: Info = { name: "", registrationNumber: "", address: "", phone: "", bankAccount: "", invoiceNote: "" };
+const EMPTY: Info = { name: "", representative: "", registrationNumber: "", address: "", phone: "", bankAccount: "", invoiceNote: "" };
 
 const FIELDS: { key: TextKey; label: string; hint?: string; placeholder?: string; multiline?: boolean }[] = [
   { key: "name", label: "会社名・屋号" },
+  { key: "representative", label: "代表者名", placeholder: "代表取締役 山田 太郎" },
   {
     key: "registrationNumber",
     label: "適格請求書発行事業者の登録番号",

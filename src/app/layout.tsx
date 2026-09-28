@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { EMPLOYEE_PATHS, getCurrentUser } from "@/lib/auth/session";
+import { EMPLOYEE_PATHS, OPEN_PATHS, getCurrentUser } from "@/lib/auth/session";
 import { Sidebar, MobileNav } from "@/components/Sidebar";
 import { LogoutButton } from "@/components/LogoutButton";
 import { CompanySwitcher } from "@/components/CompanySwitcher";
@@ -23,8 +23,11 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
   const pathname = (await headers()).get("x-pathname") ?? "/";
+  const open = OPEN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  // 利用規約への同意・会社情報の入力がまだなら、ようこそ画面でまとめて済ませてもらう
+  if (user && (user.needsTerms || user.needsCompanyInfo) && !open) redirect("/welcome");
   // 会社で2段階認証を必須にしていて、まだ設定していない人は、設定するまでアカウント画面だけ
-  if (user?.mustSetup2fa && pathname !== "/account") redirect("/account?require2fa=1");
+  if (user?.mustSetup2fa && pathname !== "/account" && !open) redirect("/account?require2fa=1");
   if (user?.role === "EMPLOYEE") {
     if (!EMPLOYEE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) redirect("/expenses");
   }

@@ -143,6 +143,7 @@ function sectionsFor(role: Role): NavSection[] {
       title: "設定",
       items: [
         { href: "/account", label: "アカウント", icon: KeyIcon },
+        { href: "/guide", label: "使い方ガイド", icon: BookIcon },
         ...(role === "EMPLOYEE"
           ? []
           : [

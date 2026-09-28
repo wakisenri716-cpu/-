@@ -19,6 +19,7 @@ export async function PUT(request: Request) {
   try {
     const company = await updateCompanyInfo(admin.companyId, {
       name: field("name"),
+      ...("representative" in body ? { representative: field("representative") } : {}),
       registrationNumber: field("registrationNumber"),
       address: field("address"),
       phone: field("phone"),

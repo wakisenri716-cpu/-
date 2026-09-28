@@ -18,6 +18,9 @@ const PUBLIC_PATHS = [
   "/api/auth/forgot",
   "/api/auth/reset",
   "/api/cron",
+  "/terms",
+  "/privacy",
+  "/guide",
 ];
 
 const SAFE_METHODS = ["GET", "HEAD", "OPTIONS"];
@@ -42,15 +45,16 @@ export function proxy(request: NextRequest) {
   if (pathname.startsWith("/api") && !pathname.startsWith("/api/cron") && crossSite(request)) {
     return NextResponse.json({ error: "ほかのサイトからの送信は受け付けていません" }, { status: 403 });
   }
-  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return NextResponse.next();
-
-  const token = request.cookies.get(SESSION_COOKIE)?.value ?? "";
-  if (/^[A-Za-z0-9_-]{43}$/.test(token)) {
-    // レイアウトで役割ごとに見られる画面を判定できるよう、表示中のパスを渡す
+  // レイアウトで役割ごとに見られる画面を判定できるよう、表示中のパスを渡す(ログインなしで開ける画面も同じ)
+  const withPath = () => {
     const headers = new Headers(request.headers);
     headers.set("x-pathname", pathname);
     return NextResponse.next({ request: { headers } });
-  }
+  };
+  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return withPath();
+
+  const token = request.cookies.get(SESSION_COOKIE)?.value ?? "";
+  if (/^[A-Za-z0-9_-]{43}$/.test(token)) return withPath();
 
   if (pathname.startsWith("/api")) {
     return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });

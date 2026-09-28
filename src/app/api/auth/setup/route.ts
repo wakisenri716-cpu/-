@@ -4,6 +4,8 @@ import { seedDatabase } from "@/lib/seedDatabase";
 import { hashPassword, passwordProblem } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { needsInitialSetup } from "@/lib/auth/setup";
+import { acceptTerms, agreed, parseCompanyOnboarding, saveCompanyOnboarding } from "@/lib/onboarding";
+import { UserError } from "@/lib/errors";
 
 export async function POST(request: Request) {
   if (!(await needsInitialSetup())) {
@@ -19,6 +21,14 @@ export async function POST(request: Request) {
   }
   const problem = passwordProblem(password);
   if (problem) return NextResponse.json({ error: problem }, { status: 400 });
+  if (!agreed(body.agree)) return NextResponse.json({ error: "利用規約とプライバシーポリシーに同意してください" }, { status: 400 });
+  // 会社の情報も一緒に受け取る(先に確かめてから、会社・管理者を作る)
+  try {
+    parseCompanyOnboarding(body);
+  } catch (error) {
+    if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 400 });
+    throw error;
+  }
 
   // データベースが空でも、ここで会社・勘定科目などを用意するので /api/seed を先に開く必要はない
   const { companyId } = await seedDatabase(prisma);
@@ -34,6 +44,8 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "管理者はすでに作成されています。ログインしてください" }, { status: 409 });
   }
+  await saveCompanyOnboarding(companyId, body);
+  await acceptTerms(user.id);
   await createSession(user.id);
   return NextResponse.json({ ok: true }, { status: 201 });
 }
