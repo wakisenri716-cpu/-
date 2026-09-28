@@ -65,6 +65,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: "売上・取引先",
     items: [
+      { href: "/deals", label: "商談管理", icon: TrendIcon },
       { href: "/quotes", label: "見積書", icon: QuoteIcon },
       { href: "/invoices", label: "請求書", icon: DocumentIcon },
       { href: "/purchase-orders", label: "発注書", icon: CartIcon },
