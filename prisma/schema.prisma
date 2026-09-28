@@ -202,6 +202,7 @@ model Company {
   deals            Deal[]
   equipment        Equipment[]
   workLogs         WorkLog[]
+  yearEndAdjustments YearEndAdjustment[]
   monthlyCloseChecks MonthlyCloseCheck[]
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
@@ -750,6 +751,7 @@ model Staff {
   userId      String?
   user        User?    @relation(fields: [userId], references: [id])
   requests    ApprovalRequest[]
+  yearEndAdjustments YearEndAdjustment[]
 
   @@unique([companyId, name])
   @@unique([companyId, userId])
@@ -1420,4 +1422,23 @@ model WorkLog {
 
   @@index([companyId, date])
   @@index([userId, date])
+}
+
+// 年末調整: スタッフごと・年ごとの申告(扶養・保険料控除など)。確定すると源泉徴収票の税額に使う
+model YearEndAdjustment {
+  id          String    @id @default(cuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id])
+  staffId     String
+  staff       Staff     @relation(fields: [staffId], references: [id])
+  year        Int
+  inputs      Json
+  // 確定したときの計算結果(あとで給与を直しても、確定した源泉徴収票は変わらないように残す)
+  result      Json?
+  finalizedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([staffId, year])
+  @@index([companyId, year])
 }
