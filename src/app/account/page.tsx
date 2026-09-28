@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { TwoFactorSection } from "./TwoFactorSection";
 import { SessionsSection } from "./SessionsSection";
+import { LoansSection } from "./LoansSection";
 
 const inputClass = "mt-1 w-full rounded-md border px-3 py-2 text-sm";
 
@@ -47,6 +48,7 @@ export default function AccountPage() {
       </div>
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
       {message && <div className="rounded-md bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{message}</div>}
+      <LoansSection />
       <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
           <label className="block text-xs text-slate-500">今のパスワード</label>

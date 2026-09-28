@@ -6,6 +6,7 @@ import { countTodo } from "@/lib/approvals/service";
 import { countLateOrders } from "@/lib/accounting/purchaseOrders";
 import { countStaleAdvances } from "@/lib/accounting/cashAdvances";
 import { countDueDeals } from "@/lib/deals";
+import { countOverdueLoans } from "@/lib/equipment";
 import { countRemittanceAlerts } from "@/lib/withholding/service";
 import type { User } from "@prisma/client";
 import { jstDateKey } from "@/lib/jst";
@@ -96,7 +97,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -122,6 +123,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     countLateOrders(companyId, now),
     countStaleAdvances(companyId, now),
     countDueDeals(companyId, now),
+    countOverdueLoans(companyId, now),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
@@ -170,6 +172,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     { key: "files", label: "期限が近い書類", detail: "契約の更新・満了などの期限が30日以内か、過ぎた書類があります", count: expiringFiles, href: "/files", tone: "amber" },
     { key: "deals", label: "商談の次にやること", detail: "次にやる日が今日までの商談があります", count: dueDeals, href: "/deals", tone: "amber" },
     { key: "lateOrders", label: "納期を過ぎた発注", detail: "納品されたか確かめて、届いていれば「検収する」を押してください", count: lateOrders, href: "/purchase-orders", tone: "amber" },
+    { key: "loans", label: "返却予定を過ぎた備品", detail: "貸し出した備品の返却予定日を過ぎています。返してもらうか、予定日を延ばしてください", count: overdueLoans, href: "/equipment", tone: "amber" },
     { key: "stock", label: "発注が必要な商品", detail: "在庫切れ・発注点以下の商品があります", count: stockouts, href: "/inventory", tone: "slate" },
   ];
   return todos.filter((t) => t.count > 0);
