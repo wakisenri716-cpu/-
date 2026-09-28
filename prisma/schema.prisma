@@ -165,6 +165,8 @@ model Company {
   laborDefaults          Json?
   // 月次決算チェックリストに会社で足した確認項目(文字列の配列)
   closeChecklist         Json?
+  // 工数の標準の時間単価(円)。スタッフの時給がひも付いていない人の労務費に使う
+  laborCostRate          Int?
   // 代表者名(書類に載せる)
   representative         String?
   // 最初の会社情報の入力(ようこそ画面)を済ませた日時。null なら管理者のログイン時に入力を案内する
@@ -199,6 +201,7 @@ model Company {
   announcements    Announcement[]
   deals            Deal[]
   equipment        Equipment[]
+  workLogs         WorkLog[]
   monthlyCloseChecks MonthlyCloseCheck[]
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
@@ -244,6 +247,7 @@ model User {
   termsVersion    String?
   announcementReads AnnouncementRead[]
   equipmentLoans  EquipmentLoan[]
+  workLogs        WorkLog[]
   sessions       Session[]
   passwordResets PasswordReset[]
   staffs         Staff[]
@@ -1100,6 +1104,7 @@ model Project {
 
   journalEntries JournalEntry[]
   deal           Deal?
+  workLogs       WorkLog[]
 
   @@unique([companyId, name])
 }
@@ -1393,4 +1398,26 @@ model BonusRun {
   createdAt      DateTime     @default(now())
 
   @@index([companyId, payDate])
+}
+
+// 日報(工数): 誰が・いつ・どの案件に・何分・何をしたか。案件の労務費(時間 × 単価)の目安に使う
+model WorkLog {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  date       DateTime
+  // 空なら社内の作業(会議・事務など)
+  projectId  String?
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  minutes    Int
+  task       String?
+  // 記録したときの時間単価(円)
+  hourlyCost Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([companyId, date])
+  @@index([userId, date])
 }

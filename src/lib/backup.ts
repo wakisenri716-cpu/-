@@ -46,6 +46,7 @@ export async function buildBackup(companyId: string) {
       prisma.auditLog.findMany({ where: { companyId }, orderBy: { createdAt: "asc" } }),
     ]);
   const projects = await prisma.project.findMany({ where: { companyId }, include: { journalEntries: { select: { date: true, description: true } } }, orderBy: { createdAt: "asc" } });
+  const workLogs = await prisma.workLog.findMany({ where: { companyId }, include: { user: { select: { name: true } }, project: { select: { name: true } } }, orderBy: [{ date: "asc" }, { createdAt: "asc" }] });
   const equipment = await prisma.equipment.findMany({ where: { companyId }, include: { loans: { orderBy: { lentAt: "asc" } } }, orderBy: [{ code: "asc" }, { name: "asc" }] });
   const orders = await prisma.purchaseOrder.findMany({ where: { companyId }, include: { vendor: true, lines: { orderBy: { sortOrder: "asc" } } }, orderBy: { issueDate: "asc" } });
 
@@ -150,6 +151,13 @@ export async function buildBackup(companyId: string) {
       rows: [
         ["資産名", "取得日", "取得価額", "残存価額", "耐用年数", "減価償却累計額", "除却・売却日", "売却額"],
         ...assets.map((a) => [a.name, d(a.acquisitionDate), a.acquisitionCost, a.residualValue, a.usefulLifeYears, a.depreciationEntries.reduce((s, e) => s + e.amount, 0), d(a.disposedAt), a.disposalPrice ?? ""]),
+      ],
+    },
+    {
+      name: "日報(工数).csv",
+      rows: [
+        ["日付", "名前", "案件", "時間(分)", "時間単価", "作業内容"],
+        ...workLogs.map((l) => [d(l.date), l.user.name, l.project?.name ?? "社内の作業", l.minutes, l.hourlyCost, l.task ?? ""]),
       ],
     },
     {

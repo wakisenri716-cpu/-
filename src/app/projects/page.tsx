@@ -5,6 +5,8 @@ import { getFiscalStartMonth, periodQuery, resolvePeriod, toRange, type PeriodPa
 import { formatYen } from "@/lib/format";
 import { PeriodPicker } from "@/components/PeriodPicker";
 import { ProjectManager } from "./ProjectManager";
+import { laborByProject } from "@/lib/workLogs";
+import { formatDuration } from "@/lib/workLogFormat";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +15,10 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   const params = await searchParams;
   // 案件は期をまたぐことが多いので、既定は「すべての期間」
   const period = resolvePeriod({ preset: params.from || params.to ? undefined : "all", ...params }, await getFiscalStartMonth(companyId));
-  const { rows, total } = await getProjectSummaries(companyId, toRange(period));
+  const range = toRange(period);
+  const [{ rows, total }, labor] = await Promise.all([getProjectSummaries(companyId, range), laborByProject(companyId, range)]);
+  // 日報の工数があるときだけ、労務費(目安)と、それを引いた利益の列を出す
+  const hasLabor = labor.size > 0;
   const cell = "px-3 py-2 text-right tabular-nums whitespace-nowrap";
   const q = periodQuery(period);
 
@@ -22,7 +27,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
       <div>
         <h1 className="text-2xl font-semibold">案件別損益</h1>
         <p className="mt-1 text-sm text-slate-600">
-          工事・制作・受託などの案件ごとに、売上・原価と経費・利益を出します。請求書の発行、発注書の検収、仕訳の入力で案件を選ぶか、仕訳帳であとから案件を付けると集計されます。
+          工事・制作・受託などの案件ごとに、売上・原価と経費・利益を出します。請求書の発行、発注書の検収、仕訳の入力で案件を選ぶか、仕訳帳であとから案件を付けると集計されます。メンバーが「日報(工数)」で案件の作業時間を記録すると、労務費の目安も出ます。
         </p>
         <p className="mt-1 text-sm font-medium text-slate-800">{period.label}</p>
       </div>
@@ -52,6 +57,8 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                 <th className="px-3 py-2 text-right font-medium">原価・経費</th>
                 <th className="px-3 py-2 text-right font-medium">利益</th>
                 <th className="px-3 py-2 text-right font-medium">利益率</th>
+                {hasLabor && <th className="px-3 py-2 text-right font-medium">工数 / 労務費(目安)</th>}
+                {hasLabor && <th className="px-3 py-2 text-right font-medium">労務費を引いた利益</th>}
                 <th className="px-3 py-2 text-right font-medium">予算(受注額 / 原価)</th>
                 <th className="px-3 py-2 text-left font-medium">原価の予算の消化</th>
               </tr>
@@ -70,6 +77,14 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                   <td className={cell}>{formatYen(r.cost)}</td>
                   <td className={`${cell} font-semibold ${r.profit < 0 ? "text-rose-700" : ""}`}>{formatYen(r.profit)}</td>
                   <td className={`${cell} ${r.margin !== null && r.margin < 0 ? "text-rose-700" : ""}`}>{r.margin === null ? "-" : `${r.margin}%`}</td>
+                  {hasLabor && (
+                    <td className={`${cell} text-xs text-slate-600`}>
+                      {labor.get(r.id) ? `${formatDuration(labor.get(r.id)!.minutes)} / ${formatYen(labor.get(r.id)!.cost)}` : "-"}
+                    </td>
+                  )}
+                  {hasLabor && (
+                    <td className={`${cell} ${r.profit - (labor.get(r.id)?.cost ?? 0) < 0 ? "text-rose-700" : ""}`}>{formatYen(r.profit - (labor.get(r.id)?.cost ?? 0))}</td>
+                  )}
                   <td className={`${cell} text-xs text-slate-500`}>
                     {r.budgetRevenue === null && r.budgetCost === null ? "-" : `${r.budgetRevenue === null ? "-" : formatYen(r.budgetRevenue)} / ${r.budgetCost === null ? "-" : formatYen(r.budgetCost)}`}
                   </td>
@@ -89,7 +104,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-3 py-6 text-center text-slate-400">
+                  <td colSpan={hasLabor ? 9 : 7} className="px-3 py-6 text-center text-slate-400">
                     まだ案件がありません。下の「案件を登録」から登録してください。
                   </td>
                 </tr>

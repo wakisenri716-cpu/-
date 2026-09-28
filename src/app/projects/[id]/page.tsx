@@ -5,6 +5,8 @@ import { getProjectDetail } from "@/lib/accounting/projects";
 import { getFiscalStartMonth, resolvePeriod, toRange, type PeriodParams } from "@/lib/accounting/period";
 import { formatYen } from "@/lib/format";
 import { PeriodPicker } from "@/components/PeriodPicker";
+import { laborByUser } from "@/lib/workLogs";
+import { formatDuration } from "@/lib/workLogFormat";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +15,11 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const companyId = await requireCompanyId();
   const sp = await searchParams;
   const period = resolvePeriod({ preset: sp.from || sp.to ? undefined : "all", ...sp }, await getFiscalStartMonth(companyId));
-  const data = await getProjectDetail(companyId, id, toRange(period));
+  const range = toRange(period);
+  const [data, labor] = await Promise.all([getProjectDetail(companyId, id, range), laborByUser(companyId, id, range)]);
   if (!data) notFound();
+  const laborMinutes = labor.reduce((s, l) => s + l.minutes, 0);
+  const laborCost = labor.reduce((s, l) => s + l.cost, 0);
   const { project, totals } = data;
   const cell = "px-3 py-2 text-right tabular-nums whitespace-nowrap";
   const budgetProfit = project.budgetRevenue !== null && project.budgetCost !== null ? project.budgetRevenue - project.budgetCost : null;
@@ -100,6 +105,34 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
               </tr>
             </tbody>
           </table>
+          {labor.length > 0 && (
+            <div className="border-t">
+              <h2 className="px-4 pt-3 font-semibold">工数(日報)</h2>
+              <p className="px-4 text-xs text-slate-500">労務費は作業時間 × 時間単価の目安で、上の原価・経費には入っていません。</p>
+              <table className="mt-1 w-full text-sm">
+                <tbody className="divide-y">
+                  {labor.map((l) => (
+                    <tr key={l.name}>
+                      <td className="px-3 py-2">{l.name}</td>
+                      <td className={`${cell} text-slate-600`}>{formatDuration(l.minutes)}</td>
+                      <td className={cell}>{formatYen(l.cost)}</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t font-semibold">
+                    <td className="px-3 py-2">労務費の合計</td>
+                    <td className={cell}>{formatDuration(laborMinutes)}</td>
+                    <td className={cell}>{formatYen(laborCost)}</td>
+                  </tr>
+                  <tr className="bg-slate-50 font-semibold">
+                    <td className="px-3 py-2" colSpan={2}>
+                      労務費を引いた利益
+                    </td>
+                    <td className={`${cell} ${totals.profit - laborCost < 0 ? "text-rose-700" : ""}`}>{formatYen(totals.profit - laborCost)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

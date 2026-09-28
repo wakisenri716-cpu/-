@@ -90,7 +90,7 @@ export async function requireUser() {
 }
 
 // 従業員が使える画面。これ以外(帳票・銀行・給料など)は管理者と経理担当だけ。
-export const EMPLOYEE_PATHS = ["/expenses", "/timeclock", "/requests", "/notices", "/account", "/share", "/welcome", "/terms", "/privacy", "/guide"];
+export const EMPLOYEE_PATHS = ["/expenses", "/timeclock", "/worklogs", "/requests", "/notices", "/account", "/share", "/welcome", "/terms", "/privacy", "/guide"];
 
 // ログインしていなくても、ようこそ画面の途中でも読める画面
 export const OPEN_PATHS = ["/welcome", "/terms", "/privacy", "/guide"];

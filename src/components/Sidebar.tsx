@@ -37,6 +37,7 @@ import {
   FolderIcon,
   FileIcon,
   LaptopIcon,
+  NotebookIcon,
   MailIcon,
   SearchIcon,
   ShieldIcon,
@@ -99,6 +100,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/shifts", label: "シフト管理", icon: CalendarIcon },
       { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
       { href: "/attendance", label: "勤怠一覧", icon: ChecklistIcon },
+      { href: "/worklogs", label: "日報(工数)", icon: NotebookIcon },
       { href: "/leave", label: "有給・残業", icon: SunIcon },
       { href: "/payroll", label: "給与計算", icon: CoinsIcon },
       { href: "/bonus", label: "賞与", icon: CoinsIcon },
@@ -133,6 +135,7 @@ const EMPLOYEE_SECTIONS: NavSection[] = [
     items: [
       { href: "/expenses", label: "経費精算", icon: ReceiptIcon },
       { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
+      { href: "/worklogs", label: "日報(工数)", icon: NotebookIcon },
       { href: "/requests", label: "申請・稟議", icon: StampIcon },
       { href: "/notices", label: "社内のお知らせ", icon: MegaphoneIcon },
     ],
