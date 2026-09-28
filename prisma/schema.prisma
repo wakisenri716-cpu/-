@@ -192,6 +192,7 @@ model Company {
   departments      Department[]
   projects         Project[]
   cashAdvances     CashAdvance[]
+  announcements    Announcement[]
   monthlyCloseChecks MonthlyCloseCheck[]
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
@@ -232,6 +233,7 @@ model User {
 
   expenseReports ExpenseReport[]
   cashAdvances   CashAdvance[]
+  announcementReads AnnouncementRead[]
   sessions       Session[]
   passwordResets PasswordReset[]
   staffs         Staff[]
@@ -918,6 +920,34 @@ model MonthlyCloseCheck {
   checkedAt DateTime @default(now())
 
   @@unique([companyId, month, key])
+}
+
+// 社内のお知らせ(全員が見る掲示板)。読んだ人を記録して、誰がまだ読んでいないかを確かめられる
+model Announcement {
+  id         String             @id @default(cuid())
+  companyId  String
+  company    Company            @relation(fields: [companyId], references: [id])
+  title      String
+  body       String
+  pinned     Boolean            @default(false)
+  authorName String
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  reads      AnnouncementRead[]
+
+  @@index([companyId, createdAt])
+}
+
+model AnnouncementRead {
+  id             String       @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt         DateTime     @default(now())
+
+  @@unique([announcementId, userId])
 }
 
 // 仮払金: 出張などの前に従業員へ先に渡すお金。あとで経費精算と相殺し、差額を返してもらうか払う

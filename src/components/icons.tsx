@@ -400,3 +400,12 @@ export function BriefcaseIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function MegaphoneIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 10v4a1 1 0 0 0 1 1h2l6 4V5L7 9H5a1 1 0 0 0-1 1Z" />
+      <path d="M16.5 9a4 4 0 0 1 0 6M8 15l1 5h2.5" />
+    </svg>
+  );
+}

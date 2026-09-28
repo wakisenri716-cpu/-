@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { formatDate, formatYen } from "@/lib/format";
+import { UnreadNotices } from "@/components/UnreadNotices";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PrintButton } from "@/components/PrintButton";
 
@@ -45,11 +46,13 @@ export default function ExpensesPage() {
   const [limit, setLimit] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [advances, setAdvances] = useState<{ id: string; purpose: string; amount: number; paidDate: string }[]>([]);
+  const [notices, setNotices] = useState<{ count: number; latest: { id: string; title: string }[] }>({ count: 0, latest: [] });
 
   async function loadReports() {
-    const [res, setting, mine] = await Promise.all([fetch("/api/expense-reports"), fetch("/api/expense-reports/approval-setting"), fetch("/api/cash-advances/mine")]);
+    const [res, setting, mine, unread] = await Promise.all([fetch("/api/expense-reports"), fetch("/api/expense-reports/approval-setting"), fetch("/api/cash-advances/mine"), fetch("/api/notices?unread=1")]);
     setReports(await res.json());
     if (mine.ok) setAdvances(await mine.json());
+    if (unread.ok) setNotices(await unread.json());
     if (setting.ok) {
       const body = await setting.json();
       setApprovalRequired(body.required === true);
@@ -130,6 +133,8 @@ export default function ExpensesPage() {
       </div>
 
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
+
+      <UnreadNotices {...notices} />
 
       {advances.length > 0 && (
         <div className="rounded-md bg-amber-50 px-4 py-2 text-sm text-amber-900">

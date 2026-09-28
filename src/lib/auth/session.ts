@@ -85,7 +85,7 @@ export async function requireUser() {
 }
 
 // 従業員が使える画面。これ以外(帳票・銀行・給料など)は管理者と経理担当だけ。
-export const EMPLOYEE_PATHS = ["/expenses", "/timeclock", "/requests", "/account", "/share"];
+export const EMPLOYEE_PATHS = ["/expenses", "/timeclock", "/requests", "/notices", "/account", "/share"];
 
 // 従業員も使える機能(自分の経費精算・タイムカード)用。
 // 2段階認証が必須なのに設定していない人は、設定するまでアカウント画面へ戻す
