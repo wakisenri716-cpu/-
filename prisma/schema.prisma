@@ -197,6 +197,7 @@ model Company {
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
+  deals            Deal[]
   monthlyCloseChecks MonthlyCloseCheck[]
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
@@ -944,6 +945,41 @@ model MonthlyCloseCheck {
   @@unique([companyId, month, key])
 }
 
+// 商談(受注までの見込み)。見込み → 提案中 → 見積提出 → 受注 / 失注
+enum DealStage {
+  LEAD
+  PROPOSAL
+  QUOTED
+  WON
+  LOST
+}
+
+model Deal {
+  id             String    @id @default(cuid())
+  companyId      String
+  company        Company   @relation(fields: [companyId], references: [id])
+  title          String
+  customerName   String
+  amount         Int       @default(0)
+  stage          DealStage @default(LEAD)
+  // 受注の確度(%)。空なら段階ごとの目安を使う
+  probability    Int?
+  expectedClose  DateTime?
+  nextAction     String?
+  nextActionDate DateTime?
+  ownerName      String?
+  notes          String?
+  lostReason     String?
+  closedAt       DateTime?
+  // 受注したときに作った案件(案件別損益)
+  projectId      String?   @unique
+  project        Project?  @relation(fields: [projectId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([companyId, stage])
+}
+
 // 社内のお知らせ(全員が見る掲示板)。読んだ人を記録して、誰がまだ読んでいないかを確かめられる
 model Announcement {
   id         String             @id @default(cuid())
@@ -1018,6 +1054,7 @@ model Project {
   createdAt     DateTime  @default(now())
 
   journalEntries JournalEntry[]
+  deal           Deal?
 
   @@unique([companyId, name])
 }
