@@ -165,6 +165,10 @@ model Company {
   laborDefaults          Json?
   // 月次決算チェックリストに会社で足した確認項目(文字列の配列)
   closeChecklist         Json?
+  // 代表者名(書類に載せる)
+  representative         String?
+  // 最初の会社情報の入力(ようこそ画面)を済ませた日時。null なら管理者のログイン時に入力を案内する
+  onboardedAt            DateTime?
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -233,6 +237,9 @@ model User {
 
   expenseReports ExpenseReport[]
   cashAdvances   CashAdvance[]
+  // 利用規約・プライバシーポリシーに同意した日時と、同意した版
+  termsAcceptedAt DateTime?
+  termsVersion    String?
   announcementReads AnnouncementRead[]
   sessions       Session[]
   passwordResets PasswordReset[]

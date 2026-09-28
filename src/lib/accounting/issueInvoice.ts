@@ -244,6 +244,8 @@ const REGISTRATION = /^T\d{13}$/;
 
 export type CompanyInfoInput = {
   name: string;
+  // 代表者名。undefined なら変更しない
+  representative?: string;
   registrationNumber: string;
   address: string;
   phone: string;
@@ -270,6 +272,7 @@ export async function updateCompanyInfo(companyId: string, input: CompanyInfoInp
     where: { id: companyId },
     data: {
       name,
+      ...(input.representative !== undefined ? { representative: input.representative.trim().slice(0, 60) || null } : {}),
       registrationNumber: registrationNumber || null,
       address: clean(input.address),
       phone: clean(input.phone),
