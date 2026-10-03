@@ -343,6 +343,10 @@ model Customer {
   // 敬称: 御中 か 様(担当者名があるときは担当者に「様」)
   honorific   String?
   phone       String?
+  // 与信管理: 売掛金の上限(与信限度額)と、最後に見直した日・メモ
+  creditLimit      Int?
+  creditReviewedAt DateTime?
+  creditNote       String?
   createdAt  DateTime @default(now())
 
   invoices   Invoice[]
