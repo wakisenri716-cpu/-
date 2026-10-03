@@ -90,6 +90,7 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
   const [paymentTerms, setPaymentTerms] = useState(initial?.paymentTerms ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [credit, setCredit] = useState<{ limit: number | null; balance?: number; overdue?: number; after?: number; over?: boolean } | null>(null);
 
   useEffect(() => {
     // 発注書の相手は取引先(仕入先)、見積書・請求書の相手は顧客
@@ -117,12 +118,27 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
   const subtotal = byRate.reduce((s, r) => s + r.base, 0);
   const tax = byRate.reduce((s, r) => s + r.tax, 0);
 
+  // 請求書は、顧客の与信限度額を超えないか確かめる(入力が止まってから問い合わせる)
+  const grandTotal = subtotal + tax;
+  useEffect(() => {
+    if (kind !== "invoice" || correction || !customerName.trim()) return;
+    const timer = setTimeout(() => {
+      fetch(`/api/credit/check?customer=${encodeURIComponent(customerName.trim())}&amount=${grandTotal}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then(setCredit)
+        .catch(() => {});
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [kind, correction, customerName, grandTotal]);
+  const creditShown = kind === "invoice" && !correction && customerName.trim() ? credit : null;
+
   function update(i: number, patch: Partial<Line>) {
     setLines((prev) => prev.map((l, j) => (j === i ? { ...l, ...patch } : l)));
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (creditShown?.over && !confirm(`この請求書で「${customerName}」の売掛金が与信限度額(${formatYen(creditShown.limit!)})を超えます。このまま作成しますか?`)) return;
     setSaving(true);
     setError(null);
     try {
@@ -310,6 +326,17 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
               </p>
             )}
           </div>
+        )}
+
+        {creditShown && creditShown.limit !== null && creditShown.limit !== undefined && (
+          <div className={`rounded-md px-3 py-2 text-sm ${creditShown.over ? "bg-rose-50 text-rose-800" : "bg-slate-50 text-slate-700"}`}>
+            {creditShown.over ? "⚠ 与信限度額を超えます。" : "与信限度額の範囲内です。"}
+            {customerName}の与信限度額 {formatYen(creditShown.limit)}・今の売掛金 {formatYen(creditShown.balance ?? 0)} → この請求書のあと {formatYen(creditShown.after ?? 0)}
+            {!!creditShown.overdue && <span className="block text-xs">期日を過ぎた売掛金が {formatYen(creditShown.overdue)} あります。</span>}
+          </div>
+        )}
+        {creditShown && creditShown.limit === null && !!creditShown.overdue && (
+          <div className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">{customerName}には、期日を過ぎた売掛金が {formatYen(creditShown.overdue)} あります。</div>
         )}
 
         <div className="flex justify-end">

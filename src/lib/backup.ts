@@ -157,6 +157,13 @@ export async function buildBackup(companyId: string) {
       ],
     },
     {
+      name: "与信限度額.csv",
+      rows: [
+        ["顧客", "与信限度額", "見直した日", "メモ"],
+        ...customers.filter((c) => c.creditLimit !== null).map((c) => [c.name, c.creditLimit!, d(c.creditReviewedAt), c.creditNote ?? ""]),
+      ],
+    },
+    {
       name: "借入金の返済.csv",
       rows: [
         ["借入", "借入額", "年利(%)", "回数", "返済方法", "返済月", "元金", "利息"],
