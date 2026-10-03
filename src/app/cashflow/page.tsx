@@ -38,7 +38,7 @@ export default async function CashflowPage() {
           <PrintButton variant="outline" />
         </div>
         <p className="mt-1 text-sm text-slate-600">
-          今日の現預金(現金+普通預金)に、請求書の入金予定・支払予定、定期取引、立替経費の精算を足し引きして、この先3か月の残高を見込みます。
+          今日の現預金(現金+普通預金)に、請求書の入金予定・支払予定、定期取引、立替経費の精算、借入金の返済を足し引きして、この先3か月の残高を見込みます。
         </p>
       </div>
 
@@ -102,7 +102,7 @@ export default async function CashflowPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         {months.map((m) => (
-          <section key={m.month} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <section key={m.month} className="min-w-0 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <h2 className="font-semibold">{monthLabel(m.month)}の内訳</h2>
             <div>
               <h3 className="mb-1 text-xs font-semibold text-emerald-700">入金予定 {formatYen(m.inflow)}</h3>

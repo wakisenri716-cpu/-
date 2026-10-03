@@ -9,6 +9,7 @@ import { countDueDeals } from "@/lib/deals";
 import { countOverdueLoans } from "@/lib/equipment";
 import { countPendingYearEnd } from "@/lib/payroll/yearEnd";
 import { countDueAllocations } from "@/lib/accounting/allocations";
+import { countDueLoanPayments } from "@/lib/accounting/loans";
 import { countRemittanceAlerts } from "@/lib/withholding/service";
 import type { User } from "@prisma/client";
 import { jstDateKey } from "@/lib/jst";
@@ -99,7 +100,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -128,6 +129,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     countOverdueLoans(companyId, now),
     countPendingYearEnd(companyId, now),
     countDueAllocations(companyId, now),
+    countDueLoanPayments(companyId, now),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
@@ -143,6 +145,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     { key: "bank", label: "銀行・カード明細の確認待ち", detail: "勘定科目を選んで確定してください", count: bank, href: "/bank", tone: "amber" },
     { key: "overdue", label: "支払期限を過ぎた請求書", detail: "入金・支払の状況を確認してください", count: overdue, href: "/invoices", tone: "rose" },
     { key: "recurringInvoices", label: "定期請求の作成", detail: "請求日が来た毎月の請求書を作成してください", count: recurringInvoicesDue, href: "/recurring-invoices", tone: "amber" },
+    { key: "loans", label: "借入金の返済の記帳", detail: "返済日が来た借入金の返済を記帳してください(通帳の額と合っているかも確かめてください)", count: dueLoans, href: "/loans", tone: "amber" },
     { key: "allocations", label: "期間按分の計上", detail: "前払費用・前受金の今月までの分を、費用・売上に計上してください", count: dueAllocations, href: "/allocations", tone: "amber" },
     { key: "recurring", label: "定期取引の記帳", detail: "記帳日が来た家賃などを記帳してください", count: recurringDue, href: "/recurring", tone: "amber" },
     {

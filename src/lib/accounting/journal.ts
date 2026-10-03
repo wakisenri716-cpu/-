@@ -17,6 +17,7 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
   REIMBURSEMENT: "立替経費の精算",
   RECURRING: "定期取引",
   ALLOCATION: "期間按分",
+  LOAN: "借入金の返済",
   IMPORT: "CSV取込",
 };
 
