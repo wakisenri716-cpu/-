@@ -60,6 +60,7 @@ enum SourceType {
   RECURRING
   IMPORT
   ALLOCATION
+  LOAN
 }
 
 enum QuoteStatus {
@@ -205,6 +206,7 @@ model Company {
   workLogs         WorkLog[]
   yearEndAdjustments YearEndAdjustment[]
   allocations      Allocation[]
+  loans            Loan[]
   monthlyCloseChecks MonthlyCloseCheck[]
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
@@ -861,6 +863,8 @@ model JournalEntry {
   recurringPosting  RecurringPosting?
   allocationPosting AllocationPosting?
   allocationOpening Allocation?       @relation("AllocationOpening")
+  loanPayment       LoanPayment?
+  loanOpening       Loan?              @relation("LoanOpening")
 }
 
 // 毎月決まった日に同じ仕訳を記帳する定期取引(家賃・リース料・借入金の返済など)
@@ -1490,4 +1494,52 @@ model AllocationPosting {
   createdAt      DateTime     @default(now())
 
   @@unique([allocationId, month])
+}
+
+enum LoanMethod {
+  EQUAL_PAYMENT
+  EQUAL_PRINCIPAL
+}
+
+// 借入金: 返済予定表(元利均等・元金均等)を作り、毎月の返済を 借入金・支払利息 / 預金 で記帳する
+model Loan {
+  id                String       @id @default(cuid())
+  companyId         String
+  company           Company      @relation(fields: [companyId], references: [id])
+  name              String
+  principal         Int
+  // 年利(0.001%単位。1.5% → 1500)
+  annualRate        Int
+  months            Int
+  method            LoanMethod
+  borrowedAt        DateTime
+  firstPaymentMonth String
+  // 返済日(1〜31。月末より後の日は月末)
+  paymentDay        Int
+  // 返済に使う口座の科目
+  bankCode          String
+  notes             String?
+  active            Boolean      @default(true)
+  // 借入の仕訳(預金 / 借入金。任意)
+  openingEntryId    String?      @unique
+  openingEntry      JournalEntry? @relation("LoanOpening", fields: [openingEntryId], references: [id])
+  createdAt         DateTime     @default(now())
+
+  payments LoanPayment[]
+
+  @@index([companyId])
+}
+
+model LoanPayment {
+  id             String       @id @default(cuid())
+  loanId         String
+  loan           Loan         @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  month          String
+  principal      Int
+  interest       Int
+  journalEntryId String       @unique
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@unique([loanId, month])
 }

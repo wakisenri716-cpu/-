@@ -4,6 +4,7 @@ import { getAging } from "./receivables";
 import { getReimbursements } from "./reimbursement";
 import { listRecurring, postingDate } from "./recurring";
 import { cashAccountCodes } from "@/lib/bank/accounts";
+import { loanOutflows } from "./loans";
 
 const POSTED = ["AUTO_POSTED", "POSTED_MANUALLY"] as const;
 
@@ -15,7 +16,7 @@ function addMonths(month: string, n: number) {
   return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7);
 }
 
-// 資金繰り予測: 今日の現預金残高から、入金予定(売掛金)・支払予定(買掛金)・定期取引・立替経費の精算を月ごとに足し引きする。
+// 資金繰り予測: 今日の現預金残高から、入金予定(売掛金)・支払予定(買掛金)・定期取引・立替経費の精算・借入金の返済を月ごとに足し引きする。
 // 期日を過ぎた入金・支払や、記帳日が来ているのに未記帳の定期取引は「今月」に入れる。
 export async function getCashflow(companyId: string, today = jstDateKey(new Date()), monthCount = 3) {
   const current = today.slice(0, 7);
@@ -66,6 +67,9 @@ export async function getCashflow(companyId: string, today = jstDateKey(new Date
       push(net > 0 ? inflows : outflows, m, { label: `${e.name}(定期取引)`, amount: Math.abs(net), note: e.due.length && m === current ? "記帳日が来ています" : undefined });
     }
   }
+
+  // 借入金の返済(まだ記帳していない回)
+  for (const item of await loanOutflows(companyId, today, months)) push(outflows, item.month, { label: item.label, amount: item.amount, note: item.note });
 
   const reimburse = reimbursements.filter((r) => r.state === "READY");
   if (reimburse.length) {

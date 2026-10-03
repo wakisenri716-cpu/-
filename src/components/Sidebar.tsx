@@ -89,6 +89,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/withholding", label: "源泉徴収・納付", icon: PercentIcon },
       { href: "/recurring", label: "定期取引", icon: RepeatIcon },
       { href: "/allocations", label: "期間按分", icon: CalendarIcon },
+      { href: "/loans", label: "借入金", icon: BankIcon },
       { href: "/cashflow", label: "資金繰り予測", icon: CashflowIcon },
       { href: "/calendar", label: "入金・支払カレンダー", icon: CalendarIcon },
       { href: "/assets", label: "固定資産", icon: ArchiveIcon },
