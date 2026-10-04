@@ -20,6 +20,7 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
   LOAN: "借入金の返済",
   DEPT_ALLOCATION: "部門配賦",
   OPENING: "開始残高",
+  FOREIGN: "外貨建取引",
   IMPORT: "CSV取込",
 };
 

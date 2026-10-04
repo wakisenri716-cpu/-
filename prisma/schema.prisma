@@ -63,6 +63,7 @@ enum SourceType {
   LOAN
   DEPT_ALLOCATION
   OPENING
+  FOREIGN
 }
 
 enum QuoteStatus {
@@ -216,6 +217,7 @@ model Company {
   recurringInvoices RecurringInvoice[]
   departments      Department[]
   costAllocations  CostAllocation[]
+  foreignTransactions ForeignTransaction[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -1769,4 +1771,33 @@ model ServiceNotice {
   createdAt DateTime @default(now())
 
   @@index([startsAt])
+}
+
+// 外貨建ての取引(外貨の売上=売掛金、外貨の仕入・経費=買掛金)。計上したときのレートで円にして記帳し、
+// 入金・支払いのときの円との差を為替差益・為替差損にする。金額は外貨の最小単位(USD ならセント)で持つ
+model ForeignTransaction {
+  id                 String    @id @default(cuid())
+  companyId          String
+  company            Company   @relation(fields: [companyId], references: [id])
+  // SALE(売上・売掛金) / PURCHASE(仕入・経費・買掛金)
+  kind               String
+  partner            String
+  description        String
+  currency           String
+  amountMinor        BigInt
+  // 計上したときのレート(1通貨あたりの円)
+  rate               Decimal   @db.Decimal(14, 6)
+  jpyAmount          Int
+  // 売上・費用の科目
+  accountCode        String
+  date               DateTime
+  dueDate            DateTime?
+  journalEntryId     String?
+  // 入金・支払い
+  settledAt          DateTime?
+  settledJpy         Int?
+  settleJournalEntryId String?
+  createdAt          DateTime  @default(now())
+
+  @@index([companyId, settledAt])
 }
