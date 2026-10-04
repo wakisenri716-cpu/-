@@ -111,6 +111,12 @@ export default async function CashFlowStatementPage({ searchParams }: { searchPa
                         <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap">{yen(cf.interestPaid)}</td>
                       </tr>
                     )}
+                    {cf.taxesPaid !== 0 && (
+                      <tr>
+                        <td className="px-4 py-2 pl-8">法人税等の支払額</td>
+                        <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap">{yen(cf.taxesPaid)}</td>
+                      </tr>
+                    )}
                   </>
                 }
               />
@@ -161,7 +167,7 @@ export default async function CashFlowStatementPage({ searchParams }: { searchPa
           見方: △はマイナス(お金が出ていった)です。「売上債権の増減額」は売掛金が増えると△(売上は上がってもまだ入金されていない)、「仕入債務の増減額」は買掛金が増えるとプラス(まだ払っていない)になります。
         </p>
         <p>
-          作り方: 間接法(税引前当期純利益から、お金の出入りのない費用や、売掛金・買掛金などの増減を調整)で、記帳済みの仕訳から作っています。法人税等の科目がないため、税引前当期純利益は損益計算書の純利益と同じです。固定資産を未払金で買ったときは、取得が投資活動の支出に、未払金の増加が営業活動に入ります。
+          作り方: 間接法(税引前当期純利益から、お金の出入りのない費用や、売掛金・買掛金などの増減を調整)で、記帳済みの仕訳から作っています。税引前当期純利益は、損益計算書の純利益に法人税等を足し戻した金額です。法人税等は、実際に納めた額を小計の下の「法人税等の支払額」に出します。固定資産を未払金で買ったときは、取得が投資活動の支出に、未払金の増加が営業活動に入ります。
         </p>
         <p>
           今後のお金の見通しは

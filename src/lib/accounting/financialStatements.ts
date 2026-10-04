@@ -12,6 +12,7 @@ const EXTRAORDINARY_GAIN = new Set(["4030"]); // 固定資産売却益
 const NON_OPERATING_EXPENSE = new Set(["5150", "5180", "5190"]); // 支払利息・為替差損・雑損失
 const EXTRAORDINARY_LOSS = new Set(["5160"]); // 固定資産除売却損
 const RETAINED_EARNINGS = "3020";
+const INCOME_TAX = "5900"; // 法人税等(税引前当期純利益の下で引く)
 
 export type StatementRow = { code: string; name: string; amount: number };
 
@@ -39,7 +40,10 @@ export async function getFinancialStatements(companyId: string, fiscalYear?: num
   const sales = pl((b) => b.account.category === "REVENUE" && !NON_OPERATING_REVENUE.has(b.account.code) && !EXTRAORDINARY_GAIN.has(b.account.code));
   const costOfSales = pl((b) => b.account.code === COST_OF_SALES);
   const sga = pl(
-    (b) => b.account.category === "EXPENSE" && b.account.code !== COST_OF_SALES && !NON_OPERATING_EXPENSE.has(b.account.code) && !EXTRAORDINARY_LOSS.has(b.account.code),
+    (b) => b.account.category === "EXPENSE" && b.account.code !== COST_OF_SALES &&
+      b.account.code !== INCOME_TAX &&
+      !NON_OPERATING_EXPENSE.has(b.account.code) &&
+      !EXTRAORDINARY_LOSS.has(b.account.code),
   );
   const nonOpRevenue = pl((b) => NON_OPERATING_REVENUE.has(b.account.code));
   const nonOpExpense = pl((b) => NON_OPERATING_EXPENSE.has(b.account.code));
@@ -48,7 +52,9 @@ export async function getFinancialStatements(companyId: string, fiscalYear?: num
   const grossProfit = sum(sales) - sum(costOfSales);
   const operatingProfit = grossProfit - sum(sga);
   const ordinaryProfit = operatingProfit + sum(nonOpRevenue) - sum(nonOpExpense);
-  const netIncome = ordinaryProfit + sum(extraGain) - sum(extraLoss);
+  const pretaxIncome = ordinaryProfit + sum(extraGain) - sum(extraLoss);
+  const incomeTaxes = period.find((b) => b.account.code === INCOME_TAX)?.balance ?? 0;
+  const netIncome = pretaxIncome - incomeTaxes;
 
   // ---- 貸借対照表(期末の残高)
   const code = (b: Balance) => Number(b.account.code);
@@ -114,6 +120,8 @@ export async function getFinancialStatements(companyId: string, fiscalYear?: num
         ordinaryProfit,
         extraGain: sum(extraGain),
         extraLoss: sum(extraLoss),
+        pretaxIncome,
+        incomeTaxes,
         netIncome,
       },
     },

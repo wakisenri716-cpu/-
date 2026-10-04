@@ -14,6 +14,9 @@ const GAIN_ON_SALE = "4030"; // 固定資産売却益
 const LOSS_ON_DISPOSAL = "5160"; // 固定資産除売却損
 const INTEREST = "5150"; // 支払利息
 const RETAINED_EARNINGS = "3020";
+const INCOME_TAX = "5900"; // 法人税等
+// 法人税等に関わる流動の科目(小計の下の「法人税等の支払額」にまとめる): 仮払法人税等・未収還付法人税等・未払法人税等
+const TAX_ACCOUNTS = new Set(["1240", "1245", "2140"]);
 
 // まとめて1行にする流動の科目(それ以外は科目ごとに「〇〇の増減額」)
 const GROUPS: { label: string; codes: string[] }[] = [
@@ -42,7 +45,8 @@ export async function getCashFlowStatement(companyId: string, range: DateRange) 
   // ---- 営業活動
   const revenue = movement.filter((b) => b.account.category === "REVENUE").reduce((s, b) => s + b.balance, 0);
   const expense = movement.filter((b) => b.account.category === "EXPENSE").reduce((s, b) => s + b.balance, 0);
-  const netIncome = revenue - expense;
+  const incomeTaxes = of(INCOME_TAX);
+  const pretaxIncome = revenue - expense + incomeTaxes;
   const depreciation = of(DEPRECIATION);
   const gain = of(GAIN_ON_SALE);
   const loss = of(LOSS_ON_DISPOSAL);
@@ -52,6 +56,7 @@ export async function getCashFlowStatement(companyId: string, range: DateRange) 
   const working = movement.filter(
     (b) =>
       b.balance !== 0 &&
+      !TAX_ACCOUNTS.has(b.account.code) &&
       ((b.account.category === "ASSET" && !isCash(b) && num(b) < 1500) || (b.account.category === "LIABILITY" && num(b) >= 2000 && num(b) < 2200)),
   );
   const effect = (b: Balance) => (b.account.category === "ASSET" ? -b.balance : b.balance);
@@ -62,7 +67,7 @@ export async function getCashFlowStatement(companyId: string, range: DateRange) 
   ];
 
   const operatingRows = [
-    { label: "税引前当期純利益", amount: netIncome },
+    { label: "税引前当期純利益", amount: pretaxIncome },
     ...nonZero([
       { label: "減価償却費", amount: depreciation },
       { label: "固定資産除売却損", amount: loss },
@@ -73,7 +78,10 @@ export async function getCashFlowStatement(companyId: string, range: DateRange) 
   ];
   const subtotal = total(operatingRows);
   const interestPaid = -interest; // 利息は支払ったものとして、小計の下で支払額にする
-  const operating = subtotal + interestPaid;
+  // 法人税等の支払額: 費用にした法人税等から、未払の増加・仮払(中間納付)の増加を調整した、実際に納めた額
+  const taxEffect = movement.filter((b) => TAX_ACCOUNTS.has(b.account.code)).reduce((s, b) => s + (b.account.category === "ASSET" ? -b.balance : b.balance), 0);
+  const taxesPaid = -incomeTaxes + taxEffect;
+  const operating = subtotal + interestPaid + taxesPaid;
 
   // ---- 投資活動(固定資産): 取得は借方に入った額、残りは売却・除却で入ったお金
   const fixed = movement.filter((b) => b.account.category === "ASSET" && !isCash(b) && num(b) >= 1500);
@@ -113,6 +121,7 @@ export async function getCashFlowStatement(companyId: string, range: DateRange) 
     operatingRows,
     subtotal,
     interestPaid,
+    taxesPaid,
     operating,
     investingRows,
     investing,
@@ -136,6 +145,7 @@ export function cashFlowCsvRows(cf: CashFlowStatement): (string | number)[][] {
   for (const r of cf.operatingRows) rows.push(["営業活動", r.label, r.amount]);
   rows.push(["営業活動", "小計", cf.subtotal]);
   if (cf.interestPaid) rows.push(["営業活動", "利息の支払額", cf.interestPaid]);
+  if (cf.taxesPaid) rows.push(["営業活動", "法人税等の支払額", cf.taxesPaid]);
   rows.push(["", "営業活動によるキャッシュ・フロー", cf.operating]);
   for (const r of cf.investingRows) rows.push(["投資活動", r.label, r.amount]);
   rows.push(["", "投資活動によるキャッシュ・フロー", cf.investing]);
