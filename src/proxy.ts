@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   "/api/auth/login",
   "/api/auth/setup",
   "/signup",
+  "/verify-email",
   "/api/auth/signup",
   "/api/seed",
   "/manifest.webmanifest",

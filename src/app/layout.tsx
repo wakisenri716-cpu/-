@@ -11,6 +11,7 @@ import { listMyCompanies } from "@/lib/auth/companies";
 import { BILLING_OPEN_PATHS, isFreeCompany } from "@/lib/billing";
 import { BillingBanner } from "@/components/BillingBanner";
 import { isOperator } from "@/lib/operator";
+import { VerifyEmailBanner } from "@/components/VerifyEmailBanner";
 
 export const metadata: Metadata = {
   title: "AI経理オートメーション",
@@ -79,6 +80,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                     会社の設定で、2段階認証が必須になっています。下の「2段階認証」を設定すると、ほかの画面が使えるようになります。
                   </div>
                 )}
+                {user.needsEmailVerify && <VerifyEmailBanner email={user.email} />}
                 {user.role === "ADMIN" && !nativeApp && <BillingBanner billing={user.billing} companyId={user.companyId} />}
                 {children}
               </main>

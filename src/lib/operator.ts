@@ -43,7 +43,7 @@ export async function listCompanies(q?: string | null) {
       name: true,
       stripeCustomerId: true,
       ...BILLING_SELECT,
-      members: { where: { active: true }, select: { role: true, user: { select: { name: true, email: true } } }, orderBy: { createdAt: "asc" } },
+      members: { where: { active: true }, select: { role: true, user: { select: { name: true, email: true, emailVerifiedAt: true } } }, orderBy: { createdAt: "asc" } },
       _count: { select: { journalEntries: true } },
     },
     orderBy: { createdAt: "desc" },

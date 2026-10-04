@@ -267,6 +267,9 @@ model User {
   cashAdvances   CashAdvance[]
   // 利用規約・プライバシーポリシーに同意した日時と、同意した版
   termsAcceptedAt DateTime?
+  // メールアドレスを確かめた日時(新規登録した人は、届いたメールのリンクを開くまで空)
+  emailVerifiedAt DateTime? @default(now())
+  emailVerifications EmailVerification[]
   termsVersion    String?
   announcementReads AnnouncementRead[]
   equipmentLoans  EquipmentLoan[]
@@ -1716,4 +1719,17 @@ model ErrorLog {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// 新規登録したメールアドレスの確認(メールのリンク・24時間・1回だけ有効)
+model EmailVerification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }

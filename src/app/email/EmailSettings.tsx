@@ -11,7 +11,7 @@ const MODE = {
   test: { label: "テストモード(まだ送信の設定がありません。送らずに履歴へ記録だけします)", className: "bg-amber-50 text-amber-900 ring-amber-200" },
 } as const;
 
-const KIND: Record<string, string> = { INVOICE: "請求書", QUOTE: "見積書", REMINDER: "督促", PASSWORD_RESET: "パスワード再設定", DIGEST: "やることのお知らせ", APPROVAL: "稟議のお知らせ", SECURITY: "ログインのお知らせ", NOTICE: "社内のお知らせ", TEST: "テスト" };
+const KIND: Record<string, string> = { INVOICE: "請求書", QUOTE: "見積書", REMINDER: "督促", PASSWORD_RESET: "パスワード再設定", VERIFY: "メールアドレスの確認", DIGEST: "やることのお知らせ", APPROVAL: "稟議のお知らせ", SECURITY: "ログインのお知らせ", NOTICE: "社内のお知らせ", TEST: "テスト" };
 const STATUS: Record<string, { label: string; className: string }> = {
   SENT: { label: "送信済み", className: "bg-emerald-100 text-emerald-800" },
   TEST: { label: "テスト(未送信)", className: "bg-slate-100 text-slate-600" },

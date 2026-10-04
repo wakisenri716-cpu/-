@@ -104,7 +104,10 @@ export default async function OperatorPage({ searchParams }: { searchParams: Pro
                         {c.admins.slice(0, 2).map((a) => (
                           <span key={a.email} className="block">
                             {a.name}
-                            <span className="block text-slate-500">{a.email}</span>
+                            <span className="block text-slate-500">
+                              {a.email}
+                              {!a.emailVerifiedAt && <span className="ml-1 rounded bg-amber-50 px-1 text-amber-800">未確認</span>}
+                            </span>
                           </span>
                         ))}
                       </td>

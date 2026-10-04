@@ -10,6 +10,7 @@ import { UserError } from "@/lib/errors";
 export async function POST(request: Request) {
   const user = await requireMember();
   const body = await request.json().catch(() => ({}));
+  if (user.needsEmailVerify) return NextResponse.json({ error: "先にメールアドレスの確認を済ませてください(画面の上の案内から、確認のメールをもう一度送れます)" }, { status: 400 });
   try {
     return await respond(async () => {
       const url = await createCheckout(user, body.plan, appUrl(request));
