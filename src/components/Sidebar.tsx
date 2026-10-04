@@ -172,6 +172,7 @@ function sectionsFor(role: Role, operator = false): NavSection[] {
           ? []
           : [
               { href: "/accounts", label: "勘定科目", icon: BookIcon },
+              { href: "/opening-balances", label: "開始残高(乗り換え)", icon: ScaleIcon },
               { href: "/monthly-close", label: "月次決算チェック", icon: ChecklistIcon },
               { href: "/closing", label: "締め処理", icon: LockIcon },
               { href: "/accountant-export", label: "税理士向けデータ", icon: FileIcon },
