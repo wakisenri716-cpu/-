@@ -14,6 +14,8 @@ export const CHART_OF_ACCOUNTS: SeedAccount[] = [
   { code: "1210", name: "仮払金", category: "ASSET" },
   { code: "1220", name: "仮払消費税", category: "ASSET" },
   { code: "1230", name: "前払費用", category: "ASSET" },
+  { code: "1240", name: "仮払法人税等", category: "ASSET" },
+  { code: "1245", name: "未収還付法人税等", category: "ASSET" },
   { code: "1290", name: "配賦仮勘定", category: "ASSET" },
   { code: "1310", name: "商品", category: "ASSET" },
   { code: "1510", name: "固定資産", category: "ASSET" },
@@ -22,6 +24,7 @@ export const CHART_OF_ACCOUNTS: SeedAccount[] = [
   { code: "2110", name: "仮受消費税", category: "LIABILITY" },
   { code: "2120", name: "預り金", category: "LIABILITY" },
   { code: "2130", name: "前受金", category: "LIABILITY" },
+  { code: "2140", name: "未払法人税等", category: "LIABILITY" },
   { code: "2210", name: "借入金", category: "LIABILITY" },
   // 本来は資産の控除項目(contra-asset)だが、本アプリの残高計算は
   // 科目区分から正常残高の貸借を決めるだけのシンプルな仕組みのため、
@@ -54,6 +57,7 @@ export const CHART_OF_ACCOUNTS: SeedAccount[] = [
   { code: "5170", name: "保険料", category: "EXPENSE" },
   { code: "5180", name: "為替差損", category: "EXPENSE" },
   { code: "5190", name: "雑損失", category: "EXPENSE" },
+  { code: "5900", name: "法人税等", category: "EXPENSE" },
   { code: "5990", name: "雑費", category: "EXPENSE" },
 ];
 

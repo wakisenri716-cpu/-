@@ -24,6 +24,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   OPENING: "開始残高",
   FOREIGN: "外貨建取引",
   CASH_COUNT: "現金の実査",
+  CORPORATE_TAX: "法人税等",
   IMPORT: "CSV取込",
 };
 

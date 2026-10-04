@@ -65,6 +65,7 @@ enum SourceType {
   OPENING
   FOREIGN
   CASH_COUNT
+  CORPORATE_TAX
 }
 
 enum QuoteStatus {
@@ -222,6 +223,7 @@ model Company {
   cashCounts       CashCount[]
   travelPolicy     TravelPolicy?
   travelTrips      TravelTrip[]
+  corporateTaxRuns CorporateTaxRun[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -1861,4 +1863,21 @@ model TravelTrip {
   createdAt       DateTime @default(now())
 
   @@index([companyId, startDate])
+}
+
+// 法人税等の計算(年度ごと)。入力(加算・減算・繰越欠損金・均等割)と計算結果、計上した仕訳を持つ
+model CorporateTaxRun {
+  id             String    @id @default(cuid())
+  companyId      String
+  company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fiscalYear     Int
+  input          Json
+  result         Json
+  journalEntryId String?
+  postedByName   String?
+  postedAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([companyId, fiscalYear])
 }

@@ -232,11 +232,26 @@ export default async function FinancialStatementsPage({ searchParams }: { search
                 </Section>
               </>
             )}
-            <Total label="税引前当期純利益" amount={t.netIncome} strong />
+            <Total label="税引前当期純利益" amount={t.pretaxIncome} strong />
+            {t.incomeTaxes !== 0 && (
+              <tr>
+                <td className="py-0.5 pl-4">法人税、住民税及び事業税</td>
+                <td />
+                <td className="py-0.5 text-right tabular-nums">{yen(t.incomeTaxes)}</td>
+              </tr>
+            )}
             <Total label="当期純利益" amount={t.netIncome} strong />
           </tbody>
         </table>
-        <p className="mt-4 text-xs text-slate-500 print:hidden">※ 法人税等は計上していません(税引前当期純利益と当期純利益は同じ金額です)。</p>
+        {t.incomeTaxes === 0 && (
+          <p className="mt-4 text-xs text-slate-500 print:hidden">
+            ※ 法人税等はまだ計上していません(税引前当期純利益と当期純利益は同じ金額です)。
+            <Link href={`/corporate-tax?fy=${fs.fiscalYear}`} className="text-indigo-700 hover:underline">
+              法人税等の計算
+            </Link>
+            で計上できます。
+          </p>
+        )}
       </section>
 
       {/* 販売費及び一般管理費内訳書 */}
