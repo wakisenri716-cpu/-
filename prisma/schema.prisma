@@ -169,6 +169,8 @@ model Company {
   closeChecklist         Json?
   // 工数の標準の時間単価(円)。スタッフの時給がひも付いていない人の労務費に使う
   laborCostRate          Int?
+  // シフト希望の提出締め切り(前月の何日まで。空なら締め切りなし)
+  shiftRequestDeadline   Int?
   // 代表者名(書類に載せる)
   representative         String?
   // 最初の会社情報の入力(ようこそ画面)を済ませた日時。null なら管理者のログイン時に入力を案内する
@@ -207,6 +209,8 @@ model Company {
   yearEndAdjustments YearEndAdjustment[]
   allocations      Allocation[]
   loans            Loan[]
+  shiftRequests    ShiftRequest[]
+  manuals          Manual[]
   monthlyCloseChecks MonthlyCloseCheck[]
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
@@ -253,6 +257,7 @@ model User {
   announcementReads AnnouncementRead[]
   equipmentLoans  EquipmentLoan[]
   workLogs        WorkLog[]
+  manualReads     ManualRead[]
   sessions       Session[]
   passwordResets PasswordReset[]
   staffs         Staff[]
@@ -763,6 +768,7 @@ model Staff {
   user        User?    @relation(fields: [userId], references: [id])
   requests    ApprovalRequest[]
   yearEndAdjustments YearEndAdjustment[]
+  shiftRequests ShiftRequest[]
 
   @@unique([companyId, name])
   @@unique([companyId, userId])
@@ -1549,4 +1555,65 @@ model LoanPayment {
   createdAt      DateTime     @default(now())
 
   @@unique([loanId, month])
+}
+
+// シフト希望: スタッフが日ごとに「出勤できる(時間)」か「休みたい」を出す。管理者はこれを見てシフトを作る
+model ShiftRequest {
+  id           String   @id @default(cuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id])
+  staffId      String
+  staff        Staff    @relation(fields: [staffId], references: [id])
+  date         DateTime
+  available    Boolean
+  startMinutes Int?
+  endMinutes   Int?
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([staffId, date])
+  @@index([companyId, date])
+}
+
+// 社内マニュアル: 管理者が書き、スタッフがスマホで読む。更新されたら読み直してもらう
+model Manual {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  title     String
+  category  String?
+  body      String
+  pinned    Boolean  @default(false)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reads  ManualRead[]
+  images ManualImage[]
+
+  @@index([companyId])
+}
+
+model ManualRead {
+  id       String   @id @default(cuid())
+  manualId String
+  manual   Manual   @relation(fields: [manualId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+  readAt   DateTime @default(now())
+
+  @@unique([manualId, userId])
+}
+
+model ManualImage {
+  id        String   @id @default(cuid())
+  manualId  String
+  manual    Manual   @relation(fields: [manualId], references: [id], onDelete: Cascade)
+  mimeType  String
+  size      Int
+  data      Bytes
+  caption   String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
 }

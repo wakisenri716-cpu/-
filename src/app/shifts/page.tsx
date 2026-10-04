@@ -170,7 +170,12 @@ export default function ShiftsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">シフト管理</h1>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h1 className="text-2xl font-semibold">シフト管理</h1>
+          <Link href="/shifts/requests" className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50">
+            スタッフのシフト希望を見る →
+          </Link>
+        </div>
         <p className="mt-1 text-sm text-slate-600">
           スタッフのシフトを週ごとに組むと、勤務時間と人件費(深夜22時〜5時・1日8時間超の25%割増を含む)を自動で計算します。
           月末には「給料手当 / 未払金」として帳簿に計上できます。

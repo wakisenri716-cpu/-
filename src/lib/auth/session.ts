@@ -90,7 +90,7 @@ export async function requireUser() {
 }
 
 // 従業員が使える画面。これ以外(帳票・銀行・給料など)は管理者と経理担当だけ。
-export const EMPLOYEE_PATHS = ["/expenses", "/timeclock", "/worklogs", "/requests", "/notices", "/account", "/share", "/welcome", "/terms", "/privacy", "/guide"];
+export const EMPLOYEE_PATHS = ["/staff", "/expenses", "/timeclock", "/worklogs", "/requests", "/notices", "/account", "/share", "/welcome", "/terms", "/privacy", "/guide"];
 
 // ログインしていなくても、ようこそ画面の途中でも読める画面
 export const OPEN_PATHS = ["/welcome", "/terms", "/privacy", "/guide"];
@@ -103,10 +103,10 @@ export async function requireMember() {
   return user;
 }
 
-// 既定はこちら: 管理者・経理担当だけがデータに届く。従業員は経費精算へ戻す。
+// 既定はこちら: 管理者・経理担当だけがデータに届く。従業員はスタッフアプリへ戻す。
 export async function requireCompanyId(): Promise<string> {
   const user = await requireMember();
-  if (user.role === "EMPLOYEE") redirect("/expenses");
+  if (user.role === "EMPLOYEE") redirect("/staff");
   return user.companyId;
 }
 
