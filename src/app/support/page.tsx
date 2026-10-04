@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { operator } from "@/lib/legal";
 import { LegalLinks } from "@/components/LegalLinks";
+import { getCurrentUser } from "@/lib/auth/session";
+import { SupportForm } from "./SupportForm";
 
 export const metadata: Metadata = { title: "サポート・お問い合わせ | AI経理オートメーション" };
 
@@ -29,8 +31,9 @@ const FAQ = [
 ];
 
 // サポート・お問い合わせ(ログインしなくても見られる。App Store・Google Play のサポートURLにも使う)
-export default function SupportPage() {
+export default async function SupportPage() {
   const op = operator();
+  const user = await getCurrentUser();
   return (
     <div className="mx-auto max-w-2xl space-y-6 py-4">
       <div>
@@ -53,6 +56,11 @@ export default function SupportPage() {
           )}
         </dl>
         <p className="text-xs text-slate-500">いただいたお問い合わせには、通常3営業日以内にメールでお返事します。</p>
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="font-semibold">お問い合わせフォーム</h2>
+        <SupportForm name={user?.name} email={user?.email} />
       </section>
 
       <section className="space-y-3">

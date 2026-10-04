@@ -25,6 +25,7 @@ const PUBLIC_PATHS = [
   "/privacy",
   "/guide",
   "/support",
+  "/api/support",
   "/pricing",
   "/tokushoho",
   // Stripe からのお知らせ(署名で確かめる)

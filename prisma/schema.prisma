@@ -1733,3 +1733,37 @@ model EmailVerification {
 
   @@index([userId])
 }
+
+// お客様からのお問い合わせ(サポートページのフォーム)。運営者メニューで読んで、メールで返信する
+model SupportTicket {
+  id        String    @id @default(cuid())
+  // ログインしていた人なら、その会社と人
+  companyId String?
+  userId    String?
+  name      String
+  email     String
+  category  String
+  subject   String
+  body      String
+  // OPEN(未対応) / CLOSED(対応済み)
+  status    String    @default("OPEN")
+  reply     String?
+  repliedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([status, createdAt])
+}
+
+// 運営からのお知らせ(メンテナンス・新機能など)。表示期間のあいだ、ログインした全員の画面の上に出す
+model ServiceNotice {
+  id        String   @id @default(cuid())
+  title     String
+  body      String?
+  // info(お知らせ) / warning(メンテナンス・障害)
+  level     String   @default("info")
+  startsAt  DateTime @default(now())
+  endsAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([startsAt])
+}
