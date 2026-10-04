@@ -26,23 +26,13 @@
 
 社内のスタッフだけに配るなら、公開せずに「内部テスト」や「限定公開」のままでも使えます。
 
-## iPhone で使う・App Store で公開する
+## iPhone(App Store)に出す
 
-iPhone のアプリを作るには、Apple の決まりで次の2つが必要です。
+**Mac は要りません。** 手順は [APP_STORE.md](./APP_STORE.md) にまとめています(Apple Developer Program への登録 → App Store Connect でアプリ作成 → API キーを GitHub に登録 → ボタン1つでビルド・アップロード → TestFlight で確認 → 審査へ提出)。
 
-- **Apple Developer Program**(年 99ドル。日本では約1万5千円)への登録
-- **Mac と Xcode**(無料)。Mac がないときは、Codemagic などのクラウドでビルドするサービスを使います
-
-手順(Mac がある場合):
-
-1. `cd mobile && npm install && npx cap sync ios && npx cap open ios`
-2. Xcode で「App」→「Signing & Capabilities」で自分のチームを選ぶ
-3. iPhone をつないで ▶ で動かして確かめる
-4. 「Product → Archive」→ App Store Connect にアップロード
-5. **TestFlight** でスタッフに配って試す(審査なしで最大100人、外部テストは簡単な審査あり)
-6. 公開する場合は App Store の審査に出す
-
-社内のスタッフだけが使うアプリは、App Store の一般公開ではなく、Apple の「非表示(Unlisted)配信」や「カスタムApp(Apple Business Manager)」で配るのが向いています。ログインが必要なアプリは、審査用のテストアカウント(従業員の権限)を用意してください。
+- アップロード: GitHub の「Actions」→「iOS: App Store Connect にアップロード」(`.github/workflows/ios-release.yml`)
+- ストア用のスクリーンショット(6.9インチ・1320×2868)と、説明文・キーワード・プライバシーの答え・審査メモの下書き: `store/` と APP_STORE.md
+- iPhone 専用・縦向き専用にしています(iPad のスクリーンショット・審査が要らないように)
 
 ## 設定を変えるとき
 
@@ -63,4 +53,7 @@ iPhone のアプリを作るには、Apple の決まりで次の2つが必要で
 - `android/` … Android のプロジェクト(Android Studio で開ける)
 - `ios/` … iPhone のプロジェクト(Xcode で開ける。Swift Package Manager を使うので CocoaPods は不要)
 - `assets/` … アイコン・起動画面の元画像
+- `store/screenshots/` … App Store 用のスクリーンショット
+- `ios/ExportOptions.plist` … App Store Connect へ送るときの設定
 - `.github/workflows/mobile.yml`(リポジトリの一番上)… GitHub で Android の APK を作り、iPhone 用もビルドできるか確かめる
+- `.github/workflows/ios-release.yml` … iPhone 用に署名して App Store Connect(TestFlight)へ送る

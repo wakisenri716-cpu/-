@@ -1,0 +1,74 @@
+# スタッフアプリ(iPhone)を作って、App Store Connect(TestFlight)へアップロードする。Mac は不要。
+# 使う前に、リポジトリの Settings → Secrets and variables → Actions に次の4つを登録してください(手順は mobile/APP_STORE.md)。
+#   APPLE_TEAM_ID                … Apple Developer のチームID(10文字)
+#   APP_STORE_CONNECT_KEY_ID     … App Store Connect API キーのキーID
+#   APP_STORE_CONNECT_ISSUER_ID  … App Store Connect API キーの発行者ID
+#   APP_STORE_CONNECT_KEY        … ダウンロードした AuthKey_XXXX.p8 の中身(全部)
+# 実行: Actions →「iOS: App Store Connect にアップロード」→ Run workflow
+name: "iOS: App Store Connect にアップロード"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "バージョン(例: 1.0.0。空なら mobile/package.json の version)"
+        required: false
+
+jobs:
+  upload:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 設定(シークレット)があるか確かめる
+        run: |
+          for name in TEAM_ID KEY_ID ISSUER_ID; do
+            if [ -z "${!name}" ]; then echo "::error::GitHub の Secrets に APPLE_TEAM_ID / APP_STORE_CONNECT_KEY_ID / APP_STORE_CONNECT_ISSUER_ID / APP_STORE_CONNECT_KEY を登録してください(mobile/APP_STORE.md)"; exit 1; fi
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npx cap sync ios
+      - name: API キーを置く
+        env:
+          KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: |
+          if [ -z "$KEY_CONTENT" ]; then echo "::error::APP_STORE_CONNECT_KEY が登録されていません"; exit 1; fi
+          printf '%s' "$KEY_CONTENT" > "$RUNNER_TEMP/AuthKey.p8"
+      - name: バージョンと番号を決める
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [ -z "$VERSION" ]; then VERSION=$(node -p "require('./package.json').version"); fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          # ビルド番号はアップロードのたびに増やす(App Store Connect は同じ番号を受け付けない)
+          echo "BUILD=${{ github.run_number }}" >> "$GITHUB_ENV"
+          echo "バージョン $VERSION(ビルド ${{ github.run_number }})"
+      - name: アプリを作る(署名は Apple に自動で任せる)
+        run: |
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD"
+      - name: App Store Connect へアップロード
+        run: |
+          sed "s/TEAM_ID/$TEAM_ID/" ios/ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID"
+          echo "アップロードしました。15〜30分ほどで App Store Connect の TestFlight に出てきます。"
+      - name: API キーを消す
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"

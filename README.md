@@ -396,6 +396,10 @@ npm run dev
     - アイコン・起動画面(「AI」ロゴ)、アプリ名「スタッフアプリ」、カメラ・写真の権限(レシート・マニュアルの写真)、ネットにつながらないときの画面を用意しています。iPhoneのノッチ・Androidの全画面表示でも中身が隠れないよう、画面の余白を safe-area で取ります。
     - GitHub Actions(`.github/workflows/mobile.yml`)で Android の APK を作り(「Actions」の Artifacts からダウンロードしてインストール)、iPhone 用もビルドできるかを確かめます。
     - Google Play・App Store での公開手順(開発者登録・署名・TestFlight・社内向けの配り方)は `mobile/README.md` にまとめています。
+96. **App Store に出す準備** — `mobile/APP_STORE.md` に、Apple Developer Program の登録から審査への提出までの手順をまとめました。
+    - GitHub Actions の「iOS: App Store Connect にアップロード」(`.github/workflows/ios-release.yml`)で、Mac がなくても iPhone アプリに署名して App Store Connect(TestFlight)へ送れます(App Store Connect API キーを GitHub の Secrets に登録)。
+    - App Store 用のスクリーンショット(6.9インチ・5枚)を `mobile/store/screenshots/` に、説明文・キーワード・App のプライバシーの答え・審査メモの下書きを APP_STORE.md に用意しました。iPhone 専用・縦向き専用です。
+    - ログインしなくても見られるサポートページ `/support`(お問い合わせ先・よくある質問・アカウント削除の依頼方法)を追加しました。アプリの中では新規登録の画面を出しません。
 
 ### POSレジ連携の設定
 
