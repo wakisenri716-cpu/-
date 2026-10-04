@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">スタッフアプリ</string>
+    <string name="title_activity_main">スタッフアプリ</string>
+    <string name="package_name">com.saaserp.staffapp</string>
+    <string name="custom_url_scheme">com.saaserp.staffapp</string>
+</resources>
