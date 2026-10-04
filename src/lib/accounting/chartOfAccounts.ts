@@ -32,6 +32,7 @@ export const CHART_OF_ACCOUNTS: SeedAccount[] = [
   { code: "4010", name: "売上高", category: "REVENUE" },
   { code: "4020", name: "雑収入", category: "REVENUE" },
   { code: "4030", name: "固定資産売却益", category: "REVENUE" },
+  { code: "4040", name: "為替差益", category: "REVENUE" },
   { code: "5000", name: "売上原価", category: "EXPENSE" },
   { code: "5010", name: "旅費交通費", category: "EXPENSE" },
   { code: "5020", name: "会議費", category: "EXPENSE" },
@@ -51,6 +52,7 @@ export const CHART_OF_ACCOUNTS: SeedAccount[] = [
   { code: "5150", name: "支払利息", category: "EXPENSE" },
   { code: "5160", name: "固定資産除売却損", category: "EXPENSE" },
   { code: "5170", name: "保険料", category: "EXPENSE" },
+  { code: "5180", name: "為替差損", category: "EXPENSE" },
   { code: "5990", name: "雑費", category: "EXPENSE" },
 ];
 
