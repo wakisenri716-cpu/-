@@ -115,6 +115,7 @@ export default async function OperatorPage({ searchParams }: { searchParams: Pro
                     <tr key={c.id} className="align-top">
                       <td className="min-w-[9rem] px-3 py-2">
                         <span className="font-medium">{c.name}</span>
+                        {c.isDemo && <span className="ml-1 rounded bg-slate-100 px-1 text-xs text-slate-500">お試し</span>}
                         <span className="block text-xs text-slate-500">登録 {date(c.createdAt)}</span>
                       </td>
                       <td className="min-w-[10rem] px-3 py-2 text-xs">

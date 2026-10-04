@@ -188,6 +188,8 @@ model Company {
   stripeSubscriptionId   String?   @unique
   // 運営者が無料にした会社(招待した会社・取引先など)
   billingFree            Boolean   @default(false)
+  // お試し用にサンプルデータを入れた会社(課金しない・運営者メニューの数に入れない)
+  isDemo                 Boolean   @default(false)
   createdAt        DateTime @default(now())
 
   users            User[]

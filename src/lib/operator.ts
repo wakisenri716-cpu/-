@@ -84,6 +84,7 @@ export async function listCompanies(q?: string | null) {
       currentPeriodEnd: c.currentPeriodEnd,
       cancelAtPeriodEnd: c.cancelAtPeriodEnd,
       billingFree: !!c.billingFree,
+      isDemo: !!c.isDemo,
       stripeCustomerId: c.stripeCustomerId,
       lastSeen: lastSeen.get(c.id) ?? null,
     };
@@ -93,7 +94,9 @@ export async function listCompanies(q?: string | null) {
 export type OperatorCompany = Awaited<ReturnType<typeof listCompanies>>[number];
 
 // 数字のまとめ: 会社の数・契約の内訳・月の売上の見込み(契約中の会社 × 月額)
-export function summarize(companies: OperatorCompany[], now = new Date()) {
+export function summarize(all: OperatorCompany[], now = new Date()) {
+  // お試し用の会社(サンプルデータ)は数に入れない
+  const companies = all.filter((c) => !c.isDemo);
   const count = (phase: string) => companies.filter((c) => c.phase === phase).length;
   const p = plans();
   const paying = companies.filter((c) => c.phase === "active" || c.phase === "past_due");

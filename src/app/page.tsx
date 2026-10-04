@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getCashBalance, getDashboardSummary, getMonthlyTrend, getRankings, getSetupSteps, getTodos } from "@/lib/dashboard";
 import { SetupGuide } from "@/components/SetupGuide";
+import { TryDemoCard } from "@/components/DemoControls";
+import { findDemoCompany } from "@/lib/demo";
 import { RankList } from "@/components/RankList";
 import { requireCompanyId, requireUser } from "@/lib/auth/session";
 import { unreadAnnouncements } from "@/lib/announcements";
@@ -21,6 +23,8 @@ const TODO_TONES = {
 export default async function DashboardPage() {
   const companyId = await requireCompanyId();
   const user = await requireUser();
+  // 管理者・経理担当で、お試し用の会社をまだ作っていなければ案内する
+  const offerDemo = user.role !== "EMPLOYEE" && !user.isDemoCompany && !(await findDemoCompany(user.id));
   const [summary, trend, cash, todos, rankings, setupSteps, notices] = await Promise.all([
     getDashboardSummary(),
     getMonthlyTrend(companyId),
@@ -62,6 +66,7 @@ export default async function DashboardPage() {
 
       <UnreadNotices {...notices} />
 
+      {offerDemo && <TryDemoCard />}
       {setupSteps && <SetupGuide steps={setupSteps} />}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
