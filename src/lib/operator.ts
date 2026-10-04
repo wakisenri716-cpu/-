@@ -8,7 +8,7 @@ import { plans } from "@/lib/billing/plans";
 // 運営者メニュー: このサービスを運営する人(OPERATOR_EMAILS に入れたメールアドレス)だけが見られる。
 // 申し込んだ会社の一覧・契約の状態・売上の見込み・無料期間の延長・本番のエラー。
 
-function operatorEmails() {
+export function operatorEmails() {
   return (process.env.OPERATOR_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())

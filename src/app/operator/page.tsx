@@ -3,6 +3,9 @@ import { listCompanies, PHASE_LABELS, recentErrors, requireOperator, summarize }
 import { plans } from "@/lib/billing/plans";
 import { formatYen } from "@/lib/format";
 import { CompanyActions } from "./CompanyActions";
+import { Tickets } from "./Tickets";
+import { Notices } from "./Notices";
+import { countOpenTickets, listNotices, listTickets } from "@/lib/support";
 
 export const dynamic = "force-dynamic";
 
@@ -23,11 +26,15 @@ type Search = { q?: string; phase?: string; tab?: string };
 export default async function OperatorPage({ searchParams }: { searchParams: Promise<Search> }) {
   await requireOperator();
   const { q, phase, tab } = await searchParams;
-  const [all, errors] = await Promise.all([listCompanies(q?.trim() || null), recentErrors(7)]);
+  const [all, errors, openTickets] = await Promise.all([listCompanies(q?.trim() || null), recentErrors(7), countOpenTickets()]);
   const s = summarize(all);
   const companies = phase ? all.filter((c) => c.phase === phase) : all;
   const p = plans();
-  const showErrors = tab === "errors";
+  const active = tab === "errors" || tab === "tickets" || tab === "notices" ? tab : "companies";
+  const showErrors = active === "errors";
+  const [tickets, notices] = await Promise.all([active === "tickets" ? listTickets("ALL") : [], active === "notices" ? listNotices() : []]);
+  const now = new Date();
+  const tabClass = (key: string) => `px-3 py-2 text-sm font-medium whitespace-nowrap ${active === key ? "border-b-2 border-indigo-600 text-indigo-700" : "text-slate-500"}`;
 
   const tiles = [
     { label: "月の売上見込み", value: formatYen(s.mrr), note: `ライト ${s.light}社・スタンダード ${s.standard}社` },
@@ -54,16 +61,26 @@ export default async function OperatorPage({ searchParams }: { searchParams: Pro
         ))}
       </div>
 
-      <div className="flex gap-2 border-b">
-        <Link href="/operator" className={`px-3 py-2 text-sm font-medium ${!showErrors ? "border-b-2 border-indigo-600 text-indigo-700" : "text-slate-500"}`}>
+      <div className="flex gap-2 overflow-x-auto border-b">
+        <Link href="/operator" className={tabClass("companies")}>
           会社({s.total})
         </Link>
-        <Link href="/operator?tab=errors" className={`px-3 py-2 text-sm font-medium ${showErrors ? "border-b-2 border-indigo-600 text-indigo-700" : "text-slate-500"}`}>
+        <Link href="/operator?tab=tickets" className={tabClass("tickets")}>
+          お問い合わせ{openTickets > 0 && <span className="ml-1 rounded-full bg-rose-600 px-1.5 text-xs text-white">{openTickets}</span>}
+        </Link>
+        <Link href="/operator?tab=notices" className={tabClass("notices")}>
+          お知らせ
+        </Link>
+        <Link href="/operator?tab=errors" className={tabClass("errors")}>
           エラー(24時間 {errors.last24h}件)
         </Link>
       </div>
 
-      {!showErrors ? (
+      {active === "tickets" ? (
+        <Tickets tickets={JSON.parse(JSON.stringify(tickets))} />
+      ) : active === "notices" ? (
+        <Notices notices={JSON.parse(JSON.stringify(notices.map((n) => ({ ...n, showing: n.startsAt <= now && (!n.endsAt || n.endsAt > now) }))))} />
+      ) : !showErrors ? (
         <>
           <form className="flex flex-wrap items-center gap-2 text-sm">
             <input name="q" defaultValue={q ?? ""} placeholder="会社名・管理者のメールで検索" className="w-64 max-w-full rounded-md border px-3 py-1.5" />

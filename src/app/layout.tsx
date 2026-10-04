@@ -12,6 +12,8 @@ import { BILLING_OPEN_PATHS, isFreeCompany } from "@/lib/billing";
 import { BillingBanner } from "@/components/BillingBanner";
 import { isOperator } from "@/lib/operator";
 import { VerifyEmailBanner } from "@/components/VerifyEmailBanner";
+import { ServiceNotices } from "@/components/ServiceNotices";
+import { activeNotices } from "@/lib/support";
 
 export const metadata: Metadata = {
   title: "AI経理オートメーション",
@@ -44,7 +46,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   if (user && !user.billing.access && !billingOpen && !(await isFreeCompany(user.companyId))) redirect("/billing");
   const nativeApp = (headerList.get("user-agent") ?? "").includes("StaffAppNative");
 
-  const companies = user ? await listMyCompanies(user.id) : [];
+  const [companies, notices] = user ? await Promise.all([listMyCompanies(user.id), activeNotices()]) : [[], []];
   // スタッフアプリ(/staff)はスマホでアプリのように使うので、上のヘッダーを出さず下のタブで移動する
   const staffApp = pathname === "/staff" || pathname.startsWith("/staff/");
 
@@ -80,6 +82,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                     会社の設定で、2段階認証が必須になっています。下の「2段階認証」を設定すると、ほかの画面が使えるようになります。
                   </div>
                 )}
+                {notices.length > 0 && <ServiceNotices notices={notices} />}
                 {user.needsEmailVerify && <VerifyEmailBanner email={user.email} />}
                 {user.role === "ADMIN" && !nativeApp && <BillingBanner billing={user.billing} companyId={user.companyId} />}
                 {children}
