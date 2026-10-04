@@ -224,6 +224,7 @@ model Company {
   travelPolicy     TravelPolicy?
   travelTrips      TravelTrip[]
   corporateTaxRuns CorporateTaxRun[]
+  standardReviews  StandardReview[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -1880,4 +1881,17 @@ model CorporateTaxRun {
   updatedAt      DateTime  @updatedAt
 
   @@unique([companyId, fiscalYear])
+}
+
+// 社会保険の算定基礎(定時決定)。4〜6月に支払った報酬の平均から決めた新しい標準報酬月額と、反映前の値(取消用)を持つ
+model StandardReview {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  year          Int
+  details       Json
+  appliedByName String
+  createdAt     DateTime @default(now())
+
+  @@unique([companyId, year])
 }

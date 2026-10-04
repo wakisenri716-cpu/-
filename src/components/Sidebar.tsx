@@ -114,6 +114,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/leave", label: "有給・残業", icon: SunIcon },
       { href: "/payroll", label: "給与計算", icon: CoinsIcon },
       { href: "/bonus", label: "賞与", icon: CoinsIcon },
+      { href: "/payroll/standard", label: "算定基礎(標準報酬)", icon: ShieldIcon },
       { href: "/year-end", label: "年末調整・源泉徴収票", icon: FileIcon },
       { href: "/staff-records", label: "労働者名簿・賃金台帳", icon: ClipboardIcon },
     ],

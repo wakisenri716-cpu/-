@@ -143,7 +143,11 @@ export default function PayrollPage() {
 
       <p className="rounded-md bg-amber-50 px-4 py-2 text-xs text-amber-900 print:hidden">
         計算は目安です。源泉所得税は国税庁の「電子計算機等を使用して源泉徴収税額を計算する方法」の式(令和8年分)で計算しています。税額表と違うときや乙欄の人は、税額の欄で直せます。
-        標準報酬月額を入れていない人は、その月の支給額から等級を当てはめています(本来は4〜6月の平均で年1回決まります)。
+        標準報酬月額を入れていない人は、その月の支給額から等級を当てはめています(本来は4〜6月の平均で年1回決まります。
+        <Link href="/payroll/standard" className="underline">
+          算定基礎
+        </Link>
+        で計算して反映できます)。
       </p>
 
       {sheet === null ? (
