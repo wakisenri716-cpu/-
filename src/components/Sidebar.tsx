@@ -38,6 +38,7 @@ import {
   FileIcon,
   LaptopIcon,
   NotebookIcon,
+  PlaneIcon,
   MailIcon,
   SearchIcon,
   ShieldIcon,
@@ -87,6 +88,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/expenses", label: "経費精算", icon: ReceiptIcon },
       { href: "/reimbursements", label: "立替経費の精算", icon: WalletIcon },
+      { href: "/travel", label: "出張旅費・日当", icon: PlaneIcon },
       { href: "/advances", label: "仮払金", icon: CoinsIcon },
       { href: "/bank", label: "銀行・カード明細", icon: BankIcon },
       { href: "/cash-count", label: "現金の実査(金種表)", icon: CoinsIcon },
@@ -154,6 +156,7 @@ const EMPLOYEE_SECTIONS: NavSection[] = [
     items: [
       { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
       { href: "/expenses", label: "経費精算", icon: ReceiptIcon },
+      { href: "/travel", label: "出張旅費・日当", icon: PlaneIcon },
       { href: "/worklogs", label: "日報(工数)", icon: NotebookIcon },
       { href: "/requests", label: "申請・稟議", icon: StampIcon },
       { href: "/notices", label: "社内のお知らせ", icon: MegaphoneIcon },

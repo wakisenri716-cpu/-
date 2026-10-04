@@ -427,3 +427,11 @@ export function NotebookIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function PlaneIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M10.5 13.5 4 11l1.5-1.5 7 1L17 6a1.8 1.8 0 0 1 2.5 2.5L15 13l1 7-1.5 1.5-2.5-6.5-3 3V21l-1.5-1.5L6 17l-2.5-1.5L5 14h3z" />
+    </svg>
+  );
+}

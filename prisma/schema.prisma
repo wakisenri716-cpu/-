@@ -220,6 +220,8 @@ model Company {
   costAllocations  CostAllocation[]
   foreignTransactions ForeignTransaction[]
   cashCounts       CashCount[]
+  travelPolicy     TravelPolicy?
+  travelTrips      TravelTrip[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -1821,4 +1823,42 @@ model CashCount {
   createdAt      DateTime @default(now())
 
   @@index([companyId, date])
+}
+
+// 出張旅費規程: 日当と宿泊費の定額(円)。規程に沿った日当は、もらう人は非課税・会社は旅費交通費になる
+model TravelPolicy {
+  id                String   @id @default(cuid())
+  companyId         String   @unique
+  company           Company  @relation(fields: [companyId], references: [id])
+  // 日帰り出張の日当 / 宿泊を伴う出張の日当(1日あたり) / 宿泊費(1泊あたり)
+  dayTripAllowance  Int      @default(0)
+  dailyAllowance    Int      @default(0)
+  lodging           Int      @default(0)
+  // 海外出張
+  overseasDaily     Int      @default(0)
+  overseasLodging   Int      @default(0)
+  // 規程の施行日(印刷する規程に載せる)
+  effectiveDate     DateTime?
+  updatedAt         DateTime @updatedAt
+}
+
+// 出張(日当・宿泊費を計算して経費精算に入れる)
+model TravelTrip {
+  id              String   @id @default(cuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id])
+  userId          String
+  userName        String
+  destination     String
+  purpose         String
+  startDate       DateTime
+  endDate         DateTime
+  nights          Int
+  overseas        Boolean  @default(false)
+  allowance       Int
+  lodging         Int
+  expenseReportId String?
+  createdAt       DateTime @default(now())
+
+  @@index([companyId, startDate])
 }
