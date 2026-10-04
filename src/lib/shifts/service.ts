@@ -118,6 +118,7 @@ export async function deleteShift(companyId: string, id: string) {
   const existing = await prisma.shift.findFirst({ where: { id, companyId } });
   if (!existing) throw new ShiftError("シフトが見つかりません");
   await prisma.shift.delete({ where: { id } });
+  return existing;
 }
 
 // 前の週のシフトを今週の同じ曜日へ写す。すでにその日にシフトがあるスタッフの分は写さない。
@@ -144,7 +145,7 @@ export async function copyPreviousWeek(companyId: string, weekStart: string) {
       note,
     }));
   if (data.length > 0) await prisma.shift.createMany({ data });
-  return { copied: data.length, skipped: previous.length - data.length };
+  return { copied: data.length, skipped: previous.length - data.length, shifts: data };
 }
 
 // ---- 集計 ----

@@ -3,6 +3,7 @@ import { requireMember } from "@/lib/auth/session";
 import { createAnnouncement, listAnnouncements, unreadAnnouncements } from "@/lib/announcements";
 import { audit } from "@/lib/audit";
 import { UserError } from "@/lib/errors";
+import { notifyAnnouncement } from "@/lib/push/events";
 
 // お知らせの一覧(従業員も見られる)
 export async function GET(request: Request) {
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
   try {
     const { announcement, mailed } = await createAnnouncement(user, body, request);
     await audit("お知らせを書いた", `${announcement.title}${mailed ? `(メール ${mailed}通)` : ""}`);
+    notifyAnnouncement(user.companyId, user.id, announcement);
     return NextResponse.json({ id: announcement.id, mailed }, { status: 201 });
   } catch (error) {
     if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 400 });

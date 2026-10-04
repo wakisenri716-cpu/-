@@ -258,6 +258,7 @@ model User {
   equipmentLoans  EquipmentLoan[]
   workLogs        WorkLog[]
   manualReads     ManualRead[]
+  pushDevices     PushDevice[]
   sessions       Session[]
   passwordResets PasswordReset[]
   staffs         Staff[]
@@ -1616,4 +1617,17 @@ model ManualImage {
   caption   String?
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+// スマホアプリ(mobile/)のプッシュ通知を送る端末。token は Apple(APNs)・Google(FCM)の端末トークン
+model PushDevice {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform   String
+  token      String   @unique
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
 }

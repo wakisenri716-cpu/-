@@ -1,7 +1,8 @@
-import { requireCompanyId } from "@/lib/auth/session";
+import { getCurrentUser, requireCompanyId } from "@/lib/auth/session";
 import { respond } from "@/lib/shifts/http";
 import { createManual, listManualsForAdmin } from "@/lib/manuals";
 import { audit } from "@/lib/audit";
+import { notifyManual } from "@/lib/push/events";
 
 export async function GET() {
   const companyId = await requireCompanyId();
@@ -14,6 +15,7 @@ export async function POST(request: Request) {
   return respond(async () => {
     const m = await createManual(companyId, body);
     await audit("マニュアルを作成", m.title);
+    notifyManual(companyId, (await getCurrentUser())?.id, m, "new");
     return m;
   }, 201);
 }

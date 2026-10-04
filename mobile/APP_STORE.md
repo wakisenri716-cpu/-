@@ -49,11 +49,15 @@ GitHub が、あなたの代わりにアプリに署名して Apple に送るた
 
 ※ 画面(システム)の変更はアプリを作り直さなくても反映されます。作り直すのは、アイコン・名前・権限を変えたときや、Apple に新しいバージョンを出すときだけです。
 
+## 4-2. ★ 通知を使う(おすすめ・15分)
+
+シフトが決まったときなどにスマホへ通知を送れます。審査でも「Web サイトを包んだだけ」と言われにくくなります。手順は [PUSH.md](./PUSH.md)(Apple の通知用の鍵を作って Vercel に登録)。
+
 ## 5. ★ TestFlight で自分の iPhone で試す(10分)
 
 1. iPhone に「TestFlight」アプリ(無料)を入れる
 2. App Store Connect →「TestFlight」→「内部テスト」にグループを作り、自分(とスタッフ)を追加
-3. 届いた招待から入れて、ログイン・シフト提出・在庫・マニュアル・カメラ(経費精算のレシート)を試す
+3. 届いた招待から入れて、ログイン・シフト提出・在庫・マニュアル・カメラ(経費精算のレシート)・通知(「その他」→「通知」→「ためしに通知を送る」)を試す
 
 社内のスタッフに配るだけなら、**この TestFlight のままでも使えます**(内部テストは100人まで・ビルドは90日ごとに更新)。
 
@@ -106,6 +110,9 @@ Apple の審査員がログインして試せるアカウントが必要です�
 ・写真つきの手順書をいつでも確認
 ・読んだら「読みました」。新しいマニュアルや更新もすぐわかる
 
+■ 通知
+・シフトが決まった・変わったとき、新しいマニュアルや社内のお知らせが出たとき、申請が承認されたときにお知らせ
+
 ■ そのほか
 ・タイムカード(出勤・退勤・休憩の打刻)
 ・経費精算(レシートをカメラで撮って申請)
@@ -142,6 +149,9 @@ Please sign in with the demo staff account below. After signing in you can:
 - Stock tab: record stock usage or a stock count
 - Manual tab: read manuals with photos and tap "読みました"
 - その他 > 経費精算: take a photo of a receipt with the camera
+- その他 > 通知: allow notifications and tap "ためしに通知を送る" to receive a test push notification
+
+Push notifications are sent when a manager publishes/changes the staff member's shift, publishes a new manual or announcement, or approves/rejects their request.
 
 Camera / photo library access is used only to attach receipt photos and manual photos.
 Support: https://saas-erp-se-n.vercel.app/support
@@ -152,7 +162,7 @@ Support: https://saas-erp-se-n.vercel.app/support
 | 指摘 | 対応 |
 | --- | --- |
 | 2.1 テストアカウントでログインできない | アカウント・パスワードを確かめて、メモを直して再提出 |
-| 4.2 Web サイトをそのまま包んだだけ | 「このサービスを契約した会社のスタッフ向けの業務アプリで、シフト提出・在庫記録・カメラでのレシート撮影などスマホならではの使い方をする」と返信。通知機能(シフト確定・新しいマニュアルのお知らせ)を入れると通りやすくなります |
+| 4.2 Web サイトをそのまま包んだだけ | 「このサービスを契約した会社のスタッフ向けの業務アプリで、シフト提出・在庫記録・カメラでのレシート撮影などスマホならではの使い方をする」と返信。通知機能(シフト確定・新しいマニュアルのお知らせ。[PUSH.md](./PUSH.md))を設定してから出すと通りやすくなります |
 | 5.1.1 アカウント削除 | アプリ内で新規登録はできず、アカウントは会社の管理者が作成・削除する旨と、サポートページ(`/support`)で削除を依頼できる旨を返信 |
 | 3.2 社内向けアプリ | 特定の1社専用ではなく、契約したどの会社のスタッフも使えるサービスである旨を返信。1社専用で配るなら「非表示(Unlisted)配信」や Apple Business Manager の「カスタムApp」を使います |
 

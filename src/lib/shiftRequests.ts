@@ -212,7 +212,7 @@ export async function applyRequests(companyId: string, monthValue: unknown, staf
     .filter((r) => !has.has(`${r.staffId}:${jstDateKey(r.date)}`))
     .map((r) => ({ companyId, staffId: r.staffId, date: r.date, startMinutes: r.startMinutes!, endMinutes: r.endMinutes!, breakMinutes: breakFor(r.endMinutes! - r.startMinutes!), note: r.note }));
   if (create.length) await prisma.shift.createMany({ data: create });
-  return { month, created: create.length, skipped: requests.length - create.length };
+  return { month, created: create.length, skipped: requests.length - create.length, shifts: create };
 }
 
 export async function setDeadline(companyId: string, value: unknown) {

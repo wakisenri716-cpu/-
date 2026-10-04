@@ -29,6 +29,19 @@ jobs:
           distribution: temurin
           java-version: 21
       - run: npm ci
+      # Android の通知には Firebase の設定ファイルが要る。GitHub の Secrets に GOOGLE_SERVICES_JSON があれば使う
+      - name: 通知の設定(Firebase)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            # 通知が使えるアプリだと画面に知らせる(User-Agent の印)
+            node -e "const f='capacitor.config.json';const c=require('./'+f);c.appendUserAgent+=' fcm';require('fs').writeFileSync(f,JSON.stringify(c,null,2))"
+            echo "Firebase の設定を入れました(通知あり)"
+          else
+            echo "GOOGLE_SERVICES_JSON がないので、Android の通知なしで作ります"
+          fi
       - run: npx cap sync android
       - name: APK を作る
         working-directory: mobile/android

@@ -30,7 +30,8 @@ export async function createManual(companyId: string, input: Input) {
 export async function updateManual(companyId: string, id: string, input: Input) {
   const current = await prisma.manual.findFirst({ where: { id, companyId } });
   if (!current) throw new UserError("マニュアルが見つかりません");
-  return prisma.manual.update({ where: { id }, data: parse(input) });
+  const manual = await prisma.manual.update({ where: { id }, data: parse(input) });
+  return { manual, wasPublished: current.published };
 }
 
 export async function deleteManual(companyId: string, id: string) {

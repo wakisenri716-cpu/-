@@ -18,7 +18,7 @@ type Manual = {
   unread: Person[];
 };
 type Data = { members: Person[]; categories: string[]; manuals: Manual[] };
-type Draft = { id?: string; title: string; category: string; body: string; pinned: boolean; published: boolean };
+type Draft = { id?: string; title: string; category: string; body: string; pinned: boolean; published: boolean; notify?: boolean };
 
 const inputClass = "mt-1 w-full rounded-md border px-3 py-2 text-sm";
 const SAMPLE = `# 開店前の準備
@@ -251,6 +251,12 @@ export default function ManualsAdminPage() {
                 <input type="checkbox" checked={draft.published} onChange={(e) => setDraft({ ...draft, published: e.target.checked })} />
                 スタッフに公開する(外すと下書き)
               </label>
+              {editing?.published && draft.published && (
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={!!draft.notify} onChange={(e) => setDraft({ ...draft, notify: e.target.checked })} />
+                  更新をスタッフのスマホに通知する
+                </label>
+              )}
             </div>
 
             {editing && (

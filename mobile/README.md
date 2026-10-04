@@ -34,6 +34,10 @@
 - ストア用のスクリーンショット(6.9インチ・1320×2868)と、説明文・キーワード・プライバシーの答え・審査メモの下書き: `store/` と APP_STORE.md
 - iPhone 専用・縦向き専用にしています(iPad のスクリーンショット・審査が要らないように)
 
+## 通知(プッシュ通知)
+
+シフトが決まった・新しいマニュアル・お知らせ・申請の結果をスマホに通知します。使うには Apple の通知用の鍵と Firebase(Android)の設定が必要です。手順は [PUSH.md](./PUSH.md)。
+
 ## 設定を変えるとき
 
 `capacitor.config.json` を直して `npx cap sync` を実行します。
@@ -55,5 +59,7 @@
 - `assets/` … アイコン・起動画面の元画像
 - `store/screenshots/` … App Store 用のスクリーンショット
 - `ios/ExportOptions.plist` … App Store Connect へ送るときの設定
+- `ios/App/App/App.entitlements` … iPhone の通知を使うための設定
+- `PUSH.md` … 通知の設定の手順
 - `.github/workflows/mobile.yml`(リポジトリの一番上)… GitHub で Android の APK を作り、iPhone 用もビルドできるか確かめる
 - `.github/workflows/ios-release.yml` … iPhone 用に署名して App Store Connect(TestFlight)へ送る

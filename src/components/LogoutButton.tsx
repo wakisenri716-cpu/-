@@ -1,11 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { forgetPushDevice } from "@/lib/push/client";
 
 export function LogoutButton() {
   const router = useRouter();
 
   async function handleLogout() {
+    await forgetPushDevice();
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
