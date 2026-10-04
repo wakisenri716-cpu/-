@@ -36,6 +36,7 @@ const SOURCE_LABELS: Record<string, string> = {
   RECURRING: "定期取引",
   ALLOCATION: "期間按分",
   LOAN: "借入金の返済",
+  DEPT_ALLOCATION: "部門配賦",
   IMPORT: "CSV取込",
 };
 

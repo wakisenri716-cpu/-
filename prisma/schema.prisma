@@ -61,6 +61,7 @@ enum SourceType {
   IMPORT
   ALLOCATION
   LOAN
+  DEPT_ALLOCATION
 }
 
 enum QuoteStatus {
@@ -200,6 +201,7 @@ model Company {
   budgets          Budget[]
   recurringInvoices RecurringInvoice[]
   departments      Department[]
+  costAllocations  CostAllocation[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -1146,6 +1148,37 @@ model Department {
   journalEntries JournalEntry[]
 
   @@unique([companyId, name])
+}
+
+// 部門配賦: 部門の付いていない共通の費用(本部の家賃など)を、決めた割合で部門(店舗)に振り分ける。
+// accountCodes は配賦する費用の科目、weights は { 部門ID: 割合 }(basis が REVENUE のときは、その月の部門の売上の比で分ける)。
+model CostAllocation {
+  id           String              @id @default(cuid())
+  companyId    String
+  company      Company             @relation(fields: [companyId], references: [id])
+  name         String
+  accountCodes String[]
+  // FIXED(決めた割合) / REVENUE(その月の売上の比)
+  basis        String              @default("FIXED")
+  weights      Json                @default("{}")
+  active       Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  runs         CostAllocationRun[]
+}
+
+// 配賦した月の記録(同じ月は1回だけ。取り消すと仕訳も取消)
+model CostAllocationRun {
+  id              String         @id @default(cuid())
+  allocationId    String
+  allocation      CostAllocation @relation(fields: [allocationId], references: [id], onDelete: Cascade)
+  month           String
+  amount          Int
+  // 配賦の内訳 [{ departmentId, name, amount }]
+  detail          Json
+  journalEntryIds String[]
+  createdAt       DateTime       @default(now())
+
+  @@unique([allocationId, month])
 }
 
 // よく使う仕訳のひな形(会社ごとに登録)。lines は [{ accountId, debit, credit, memo }] の JSON。
