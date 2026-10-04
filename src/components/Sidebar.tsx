@@ -125,6 +125,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/departments", label: "部門別損益", icon: StoreIcon },
       { href: "/projects", label: "案件別損益", icon: BriefcaseIcon },
       { href: "/balance-sheet", label: "貸借対照表", icon: ClipboardIcon },
+      { href: "/cash-flow-statement", label: "キャッシュ・フロー計算書", icon: TrendIcon },
       { href: "/financial-statements", label: "決算報告書", icon: FileIcon },
       { href: "/tax", label: "消費税集計", icon: PercentIcon },
       { href: "/analysis", label: "経営分析", icon: GaugeIcon },

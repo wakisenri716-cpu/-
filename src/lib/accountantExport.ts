@@ -7,6 +7,7 @@ import { getAccountBalances, normalSide, signedMovement } from "@/lib/accounting
 import { getConsumptionTax } from "@/lib/accounting/consumptionTax";
 import { getAging } from "@/lib/accounting/receivables";
 import { getFixedAssetsWithSummary } from "@/lib/accounting/fixedAssets";
+import { cashFlowCsvRows, getCashFlowStatement } from "@/lib/accounting/cashFlowStatement";
 import { SOURCE_LABELS } from "@/lib/accounting/journal";
 import { CHART_OF_ACCOUNTS } from "@/lib/accounting/chartOfAccounts";
 import { nextDay, toRange, type Period } from "@/lib/accounting/period";
@@ -196,6 +197,7 @@ export const EXPORT_FILES = [
   ["10_消費税集計.csv", "期間の仮受・仮払消費税"],
   ["11_給与の人別集計.csv", "月別・人別の総支給額と源泉所得税など(源泉徴収票・法定調書の資料)"],
   ["12_証憑の一覧.csv", "期間のレシート・請求書の一覧(画像は各画面から)"],
+  ["13_キャッシュ・フロー計算書.csv", "期間の営業・投資・財務活動ごとの現金・預金の増減(間接法)"],
 ] as const;
 
 export async function buildAccountantPackage(companyId: string, period: Period) {
@@ -392,6 +394,7 @@ export async function buildAccountantPackage(companyId: string, period: Period) 
     { name: EXPORT_FILES[9][0], data: buildCsv(taxRows) },
     { name: EXPORT_FILES[10][0], data: buildCsv(payroll) },
     { name: EXPORT_FILES[11][0], data: buildCsv(docs) },
+    { name: EXPORT_FILES[12][0], data: buildCsv(cashFlowCsvRows(await getCashFlowStatement(companyId, range))) },
   ];
   return { zip: buildZip(files), company: company.name, entries: entries.length };
 }
