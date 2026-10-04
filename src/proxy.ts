@@ -21,6 +21,7 @@ const PUBLIC_PATHS = [
   "/terms",
   "/privacy",
   "/guide",
+  "/support",
 ];
 
 const SAFE_METHODS = ["GET", "HEAD", "OPTIONS"];

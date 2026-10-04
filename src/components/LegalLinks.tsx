@@ -13,6 +13,9 @@ export function LegalLinks() {
       <Link href="/guide" className="hover:underline">
         使い方ガイド
       </Link>
+      <Link href="/support" className="hover:underline">
+        サポート
+      </Link>
     </nav>
   );
 }
