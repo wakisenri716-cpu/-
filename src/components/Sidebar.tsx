@@ -181,6 +181,7 @@ function sectionsFor(role: Role): NavSection[] {
         ...(role === "ADMIN"
           ? [
               { href: "/company", label: "会社情報", icon: BuildingIcon },
+              { href: "/billing", label: "契約・お支払い", icon: CoinsIcon },
               { href: "/users", label: "ユーザー管理", icon: ShieldIcon },
               { href: "/security", label: "安全の設定", icon: LockIcon },
               { href: "/audit", label: "操作ログ", icon: HistoryIcon },

@@ -7,8 +7,9 @@ import { LegalLinks } from "@/components/LegalLinks";
 
 const inputClass = "mt-1 w-full rounded-md border px-3 py-2 text-sm";
 
-// 新規登録: 最初の管理者のアカウントと、会社の情報・規約への同意をまとめて受け付ける
-export function SetupForm() {
+// 新規登録: 管理者のアカウントと、会社の情報・規約への同意をまとめて受け付ける
+// (最初の1社は /api/auth/setup、サービスとして公開してからの会社は /api/auth/signup)
+export function SetupForm({ endpoint = "/api/auth/setup", trialDays }: { endpoint?: string; trialDays?: number }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +25,7 @@ export function SetupForm() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/auth/setup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "登録できませんでした");
       router.push("/");
@@ -43,7 +44,15 @@ export function SetupForm() {
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">AI</span>
         <span className="font-semibold">経理オートメーション</span>
       </div>
-      <h1 className="text-xl font-semibold">新規登録</h1>
+      <h1 className="text-xl font-semibold">新規登録{trialDays ? `(${trialDays}日間無料)` : ""}</h1>
+      {trialDays && (
+        <p className="mt-1 text-sm text-indigo-700">
+          カードの登録なしで、{trialDays}日間すべての機能を無料で使えます。続けて使うときだけ、管理者が有料プランに申し込みます。
+          <a href="/pricing" className="ml-1 underline">
+            料金プラン
+          </a>
+        </p>
+      )}
       <p className="mt-1 text-sm text-slate-600">
         あなたのアカウント(管理者)と会社の情報を、この1ページで登録します。会社の情報はあとから「会社情報」で直せます。ほかのメンバーは、登録後に「ユーザー管理」から追加できます。
       </p>

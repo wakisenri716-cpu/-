@@ -5,3 +5,8 @@ import { prisma } from "@/lib/prisma";
 export async function needsInitialSetup() {
   return (await prisma.user.count({ where: { passwordHash: { not: null } } })) === 0;
 }
+
+// サービスとして新規登録を受け付けるか(有料プランの設定をしたとき、または ALLOW_SIGNUP=true のとき)
+export function signupOpen() {
+  return !!process.env.STRIPE_SECRET_KEY || process.env.ALLOW_SIGNUP === "true";
+}

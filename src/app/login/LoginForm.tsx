@@ -4,17 +4,17 @@ import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LegalLinks } from "@/components/LegalLinks";
 
-export function LoginForm() {
+export function LoginForm({ signupOpen = false }: { signupOpen?: boolean }) {
   return (
     <Suspense>
-      <LoginFormInner />
+      <LoginFormInner signupOpen={signupOpen} />
     </Suspense>
   );
 }
 
 const inputClass = "mt-1 w-full rounded-md border px-3 py-2 text-sm";
 
-function LoginFormInner() {
+function LoginFormInner({ signupOpen }: { signupOpen: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [submitting, setSubmitting] = useState(false);
@@ -106,7 +106,15 @@ function LoginFormInner() {
         </a>
       </form>
       )}
-      <p className="mt-4 text-center text-xs text-slate-500">アカウントは、会社の管理者が「ユーザー管理」から作ります。</p>
+      {signupOpen ? (
+        <p className="mt-4 text-center text-sm text-slate-600">
+          はじめての方は
+          <a href="/signup" className="mx-1 font-medium text-indigo-700 hover:underline">
+            新規登録(無料でお試し)
+          </a>
+        </p>
+      ) : null}
+      <p className="mt-2 text-center text-xs text-slate-500">会社のメンバーのアカウントは、会社の管理者が「ユーザー管理」から作ります。</p>
       <LegalLinks />
     </div>
   );

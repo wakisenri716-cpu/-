@@ -9,6 +9,8 @@ const PUBLIC_PATHS = [
   "/login",
   "/api/auth/login",
   "/api/auth/setup",
+  "/signup",
+  "/api/auth/signup",
   "/api/seed",
   "/manifest.webmanifest",
   "/pwa-icon",
@@ -22,6 +24,10 @@ const PUBLIC_PATHS = [
   "/privacy",
   "/guide",
   "/support",
+  "/pricing",
+  "/tokushoho",
+  // Stripe からのお知らせ(署名で確かめる)
+  "/api/stripe/webhook",
 ];
 
 const SAFE_METHODS = ["GET", "HEAD", "OPTIONS"];

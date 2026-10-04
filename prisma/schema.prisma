@@ -176,6 +176,15 @@ model Company {
   representative         String?
   // 最初の会社情報の入力(ようこそ画面)を済ませた日時。null なら管理者のログイン時に入力を案内する
   onboardedAt            DateTime?
+  // 有料プラン(Stripe)。plan は LIGHT / STANDARD。subscriptionStatus は Stripe の状態(active・past_due・canceled など)、未契約は null。
+  // trialEndsAt が空なら、会社を作った日から30日が無料期間
+  plan                   String?
+  subscriptionStatus     String?
+  trialEndsAt            DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean   @default(false)
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
   createdAt        DateTime @default(now())
 
   users            User[]
