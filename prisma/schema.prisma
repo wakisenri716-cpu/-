@@ -613,6 +613,9 @@ model FixedAsset {
   disposalPrice   Int?
   disposalEntryId String?  @unique
   disposalEntry   JournalEntry? @relation("FixedAssetDisposal", fields: [disposalEntryId], references: [id])
+  // 償却資産申告(固定資産税)の資産の種類: "1"〜"6"(構築物・機械及び装置・船舶・航空機・車両及び運搬具・工具器具備品)、
+  // "EXCLUDED"(建物・自動車税の車・ソフトウェアなど対象外)。空は未分類
+  taxAssetType    String?
   createdAt       DateTime @default(now())
 
   depreciationEntries DepreciationEntry[]

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { formatDate, formatYen } from "@/lib/format";
 import { PrintButton } from "@/components/PrintButton";
@@ -139,7 +140,12 @@ export default function AssetsPage() {
       <div>
         <div className="flex items-start justify-between gap-3">
           <h1 className="text-2xl font-semibold">固定資産管理</h1>
-          <PrintButton variant="outline" />
+          <div className="flex gap-2">
+            <Link href="/assets/property-tax" className="shrink-0 self-start rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-slate-700 hover:bg-slate-50 print:hidden">
+              償却資産申告
+            </Link>
+            <PrintButton variant="outline" />
+          </div>
         </div>
         <p className="mt-1 text-sm text-slate-600">
           資産を登録すると取得の仕訳(固定資産/普通預金)が自動で記帳されます。「当月分を計上」を押すと
