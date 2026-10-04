@@ -22,6 +22,13 @@
     "SystemBars": {
       "insetsHandling": "native",
       "initialViewportFitValueHint": "cover"
+    },
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
     }
   }
 }

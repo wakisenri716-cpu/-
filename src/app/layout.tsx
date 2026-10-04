@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { EMPLOYEE_PATHS, OPEN_PATHS, getCurrentUser } from "@/lib/auth/session";
 import { Sidebar, MobileNav } from "@/components/Sidebar";
+import { NativePush } from "@/components/NativePush";
 import { LogoutButton } from "@/components/LogoutButton";
 import { CompanySwitcher } from "@/components/CompanySwitcher";
 import { listMyCompanies } from "@/lib/auth/companies";
@@ -73,6 +74,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 {children}
               </main>
             </div>
+            <NativePush />
           </div>
         ) : (
           <main className="mx-auto w-full max-w-5xl px-4 py-6">{children}</main>

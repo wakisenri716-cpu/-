@@ -3,6 +3,7 @@ import { respond } from "@/lib/shifts/http";
 import { applyRequests, getRequestBoard, setDeadline } from "@/lib/shiftRequests";
 import { audit } from "@/lib/audit";
 import { NextResponse } from "next/server";
+import { notifyShiftsBulk } from "@/lib/push/events";
 
 export async function GET(request: Request) {
   const companyId = await requireCompanyId();
@@ -15,8 +16,9 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   if (body.action === "apply") {
     return respond(async () => {
-      const r = await applyRequests(companyId, body.month, body.staffId ? String(body.staffId) : undefined);
+      const { shifts, ...r } = await applyRequests(companyId, body.month, body.staffId ? String(body.staffId) : undefined);
       await audit("シフト希望からシフトを作成", `${r.month} ${r.created}件`);
+      notifyShiftsBulk(companyId, shifts);
       return r;
     });
   }

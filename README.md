@@ -400,6 +400,10 @@ npm run dev
     - GitHub Actions の「iOS: App Store Connect にアップロード」(`.github/workflows/ios-release.yml`)で、Mac がなくても iPhone アプリに署名して App Store Connect(TestFlight)へ送れます(App Store Connect API キーを GitHub の Secrets に登録)。
     - App Store 用のスクリーンショット(6.9インチ・5枚)を `mobile/store/screenshots/` に、説明文・キーワード・App のプライバシーの答え・審査メモの下書きを APP_STORE.md に用意しました。iPhone 専用・縦向き専用です。
     - ログインしなくても見られるサポートページ `/support`(お問い合わせ先・よくある質問・アカウント削除の依頼方法)を追加しました。アプリの中では新規登録の画面を出しません。
+97. **スマホアプリの通知(プッシュ通知)** — スタッフアプリ(iPhone・Android)に通知を送ります。シフトを入れた・変えた・消したとき(本人に)、前の週の写しやシフト希望からシフトを作ったとき(何日分入ったか)、新しいマニュアルや社内のお知らせを公開したとき(会社のメンバーに)、申請が承認・却下されたとき(申請した人に)。タップするとその画面が開きます。
+    - アプリを開くと「通知を受け取りますか?」と聞きます。「その他」→「通知」で受け取りの状態を確かめたり、ためしの通知を送ったりできます。ログアウトするとその端末には届きません。
+    - 公開中のマニュアルを直したときは、「更新をスタッフのスマホに通知する」にチェックしたときだけ通知します。
+    - 設定は `mobile/PUSH.md`: iPhone は Apple の通知用の鍵(.p8)を Vercel の環境変数 `APNS_KEY_ID` / `APNS_TEAM_ID` / `APNS_KEY` に、Android は Firebase の `google-services.json` を GitHub の Secrets `GOOGLE_SERVICES_JSON` に、サービスアカウントの JSON を Vercel の `FCM_SERVICE_ACCOUNT` に入れます。設定がなければ通知を送らないだけで、ほかはそのまま使えます。
 
 ### POSレジ連携の設定
 

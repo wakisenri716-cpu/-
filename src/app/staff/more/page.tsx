@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth/session";
 import { LogoutButton } from "@/components/LogoutButton";
+import { PushSettings } from "./PushSettings";
 import { BookIcon, ClockIcon, KeyIcon, MegaphoneIcon, NotebookIcon, ReceiptIcon, StampIcon } from "@/components/icons";
 
 const LINKS = [
@@ -35,6 +36,7 @@ export default async function StaffMore() {
           </li>
         ))}
       </ul>
+      <PushSettings />
       {!nativeApp && (
         <section className="space-y-2 rounded-2xl bg-white p-4 text-sm shadow-sm ring-1 ring-slate-200">
           <h2 className="font-semibold">ホーム画面に追加して、アプリのように使う</h2>

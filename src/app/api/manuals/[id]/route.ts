@@ -1,7 +1,8 @@
-import { requireCompanyId } from "@/lib/auth/session";
+import { getCurrentUser, requireCompanyId } from "@/lib/auth/session";
 import { respond } from "@/lib/shifts/http";
 import { deleteManual, updateManual } from "@/lib/manuals";
 import { audit } from "@/lib/audit";
+import { notifyManual } from "@/lib/push/events";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -10,8 +11,11 @@ export async function PATCH(request: Request, { params }: Params) {
   const companyId = await requireCompanyId();
   const body = await request.json().catch(() => ({}));
   return respond(async () => {
-    const m = await updateManual(companyId, id, body);
+    const { manual: m, wasPublished } = await updateManual(companyId, id, body);
     await audit("マニュアルを変更", m.title);
+    // 下書きから公開にしたら「新しい」、公開中のものを直したら「更新」(更新の知らせは notify を付けたときだけ)
+    if (!wasPublished) notifyManual(companyId, (await getCurrentUser())?.id, m, "new");
+    else if (body.notify) notifyManual(companyId, (await getCurrentUser())?.id, m, "updated");
     return m;
   });
 }

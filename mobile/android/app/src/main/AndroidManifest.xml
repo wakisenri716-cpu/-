@@ -35,4 +35,6 @@
     <!-- レシート・マニュアルの写真をカメラで撮るため(使うときだけ確認します) -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- プッシュ通知(Android 13 以降は、通知を出してよいか確認します) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

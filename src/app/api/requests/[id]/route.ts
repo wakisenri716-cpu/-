@@ -4,6 +4,7 @@ import { respond } from "@/lib/shifts/http";
 import { ACTION_LABELS, actOnRequest, getRequest } from "@/lib/approvals/service";
 import { appUrl } from "@/lib/mail";
 import { audit } from "@/lib/audit";
+import { notifyRequestDecided } from "@/lib/push/events";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,6 +22,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const result = await actOnRequest(user, id, body, appUrl(request));
     const label = ACTION_LABELS[String(body.action ?? "").toUpperCase()];
     if (label && body.action !== "comment") await audit(`稟議を${label}`, result.number, user);
+    notifyRequestDecided(user.companyId, result.number, result.status);
     return result;
   });
 }
