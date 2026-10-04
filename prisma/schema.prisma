@@ -64,6 +64,7 @@ enum SourceType {
   DEPT_ALLOCATION
   OPENING
   FOREIGN
+  CASH_COUNT
 }
 
 enum QuoteStatus {
@@ -218,6 +219,7 @@ model Company {
   departments      Department[]
   costAllocations  CostAllocation[]
   foreignTransactions ForeignTransaction[]
+  cashCounts       CashCount[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -1800,4 +1802,23 @@ model ForeignTransaction {
   createdAt          DateTime  @default(now())
 
   @@index([companyId, settledAt])
+}
+
+// 現金の実査(金種表): お札・硬貨の枚数を数えて、帳簿の現金残高と比べる。差があれば雑収入・雑損失で合わせる
+model CashCount {
+  id             String   @id @default(cuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id])
+  date           DateTime
+  // { "10000": 枚数, "5000": 枚数, … "1": 枚数 }
+  counts         Json
+  counted        Int
+  book           Int
+  diff           Int
+  note           String?
+  countedByName  String
+  journalEntryId String?
+  createdAt      DateTime @default(now())
+
+  @@index([companyId, date])
 }
