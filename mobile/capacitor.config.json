@@ -1,0 +1,27 @@
+{
+  "appId": "com.saaserp.staffapp",
+  "appName": "スタッフアプリ",
+  "webDir": "www",
+  "backgroundColor": "#f8fafc",
+  "appendUserAgent": "StaffAppNative/1.0",
+  "server": {
+    "url": "https://saas-erp-se-n.vercel.app/staff",
+    "allowNavigation": [
+      "saas-erp-se-n.vercel.app"
+    ],
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "never",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "native",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

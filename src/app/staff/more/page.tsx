@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth/session";
 import { LogoutButton } from "@/components/LogoutButton";
 import { BookIcon, ClockIcon, KeyIcon, MegaphoneIcon, NotebookIcon, ReceiptIcon, StampIcon } from "@/components/icons";
@@ -15,6 +16,8 @@ const LINKS = [
 
 export default async function StaffMore() {
   const user = await getCurrentUser();
+  // スマホアプリ(mobile/ の Capacitor)から開いているときは、ホーム画面に追加の説明はいらない
+  const nativeApp = ((await headers()).get("user-agent") ?? "").includes("StaffAppNative");
   return (
     <div className="space-y-4">
       <div>
@@ -32,15 +35,17 @@ export default async function StaffMore() {
           </li>
         ))}
       </ul>
-      <section className="space-y-2 rounded-2xl bg-white p-4 text-sm shadow-sm ring-1 ring-slate-200">
-        <h2 className="font-semibold">ホーム画面に追加して、アプリのように使う</h2>
-        <p className="text-slate-600">
-          <strong>iPhone</strong>: Safariで開き、下の共有ボタン(□に↑)→「ホーム画面に追加」
-        </p>
-        <p className="text-slate-600">
-          <strong>Android</strong>: Chromeで開き、右上の「︙」→「ホーム画面に追加」(または「アプリをインストール」)
-        </p>
-      </section>
+      {!nativeApp && (
+        <section className="space-y-2 rounded-2xl bg-white p-4 text-sm shadow-sm ring-1 ring-slate-200">
+          <h2 className="font-semibold">ホーム画面に追加して、アプリのように使う</h2>
+          <p className="text-slate-600">
+            <strong>iPhone</strong>: Safariで開き、下の共有ボタン(□に↑)→「ホーム画面に追加」
+          </p>
+          <p className="text-slate-600">
+            <strong>Android</strong>: Chromeで開き、右上の「︙」→「ホーム画面に追加」(または「アプリをインストール」)
+          </p>
+        </section>
+      )}
       <div className="text-center">
         <LogoutButton />
       </div>

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // スマホアプリ(Capacitor)のネイティブ側は Next.js とは別に作る
+    "mobile/**",
   ]),
 ]);
 

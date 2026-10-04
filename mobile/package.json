@@ -1,0 +1,21 @@
+{
+  "name": "staff-app-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "スタッフアプリ(iPhone・Android)。本番のスタッフアプリ(/staff)を表示するネイティブアプリ",
+  "scripts": {
+    "sync": "cap sync",
+    "android": "cap open android",
+    "ios": "cap open ios",
+    "icons": "capacitor-assets generate --iconBackgroundColor '#4f46e5' --iconBackgroundColorDark '#4f46e5' --splashBackgroundColor '#4f46e5' --splashBackgroundColorDark '#4f46e5'"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.2"
+  }
+}
