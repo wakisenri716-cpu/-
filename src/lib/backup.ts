@@ -46,6 +46,8 @@ export async function buildBackup(companyId: string) {
       prisma.auditLog.findMany({ where: { companyId }, orderBy: { createdAt: "asc" } }),
     ]);
   const projects = await prisma.project.findMany({ where: { companyId }, include: { journalEntries: { select: { date: true, description: true } } }, orderBy: { createdAt: "asc" } });
+  const manuals = await prisma.manual.findMany({ where: { companyId }, orderBy: { createdAt: "asc" } });
+  const shiftRequests = await prisma.shiftRequest.findMany({ where: { companyId }, include: { staff: { select: { name: true } } }, orderBy: [{ date: "asc" }] });
   const loans = await prisma.loan.findMany({ where: { companyId }, include: { payments: { orderBy: { month: "asc" } } }, orderBy: { createdAt: "asc" } });
   const allocations = await prisma.allocation.findMany({ where: { companyId }, include: { postings: true }, orderBy: { createdAt: "asc" } });
   const yearEnds = await prisma.yearEndAdjustment.findMany({ where: { companyId, finalizedAt: { not: null } }, include: { staff: { select: { name: true } } }, orderBy: [{ year: "asc" }] });
@@ -154,6 +156,17 @@ export async function buildBackup(companyId: string) {
       rows: [
         ["資産名", "取得日", "取得価額", "残存価額", "耐用年数", "減価償却累計額", "除却・売却日", "売却額"],
         ...assets.map((a) => [a.name, d(a.acquisitionDate), a.acquisitionCost, a.residualValue, a.usefulLifeYears, a.depreciationEntries.reduce((s, e) => s + e.amount, 0), d(a.disposedAt), a.disposalPrice ?? ""]),
+      ],
+    },
+    {
+      name: "マニュアル.csv",
+      rows: [["タイトル", "分類", "公開", "更新日", "本文"], ...manuals.map((m) => [m.title, m.category ?? "", m.published ? "公開" : "下書き", d(m.updatedAt), m.body])],
+    },
+    {
+      name: "シフト希望.csv",
+      rows: [
+        ["日付", "スタッフ", "希望", "開始", "終了", "ひとこと"],
+        ...shiftRequests.map((r) => [d(r.date), r.staff.name, r.available ? "出られる" : "休み", r.startMinutes === null ? "" : minutes(r.startMinutes), r.endMinutes === null ? "" : minutes(r.endMinutes), r.note ?? ""]),
       ],
     },
     {

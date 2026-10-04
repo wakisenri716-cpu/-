@@ -61,6 +61,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/review", label: "レビューキュー", icon: InboxIcon },
       { href: "/requests", label: "申請・稟議", icon: StampIcon },
       { href: "/notices", label: "社内のお知らせ", icon: MegaphoneIcon },
+      { href: "/manuals", label: "マニュアル", icon: NotebookIcon },
+      { href: "/staff", label: "スタッフアプリ", icon: DashboardIcon },
       { href: "/files", label: "書類フォルダ", icon: FolderIcon },
     ],
   },
@@ -101,6 +103,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "人事・勤怠",
     items: [
       { href: "/shifts", label: "シフト管理", icon: CalendarIcon },
+      { href: "/shifts/requests", label: "シフト希望", icon: CalendarIcon },
       { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
       { href: "/attendance", label: "勤怠一覧", icon: ChecklistIcon },
       { href: "/worklogs", label: "日報(工数)", icon: NotebookIcon },
@@ -135,10 +138,19 @@ type Role = "ADMIN" | "ACCOUNTANT" | "EMPLOYEE";
 
 const EMPLOYEE_SECTIONS: NavSection[] = [
   {
+    title: "スタッフアプリ",
+    items: [
+      { href: "/staff", label: "ホーム", icon: DashboardIcon },
+      { href: "/staff/shifts", label: "シフト提出・確認", icon: CalendarIcon },
+      { href: "/staff/stock", label: "在庫", icon: BoxIcon },
+      { href: "/staff/manuals", label: "マニュアル", icon: NotebookIcon },
+    ],
+  },
+  {
     title: "業務",
     items: [
-      { href: "/expenses", label: "経費精算", icon: ReceiptIcon },
       { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
+      { href: "/expenses", label: "経費精算", icon: ReceiptIcon },
       { href: "/worklogs", label: "日報(工数)", icon: NotebookIcon },
       { href: "/requests", label: "申請・稟議", icon: StampIcon },
       { href: "/notices", label: "社内のお知らせ", icon: MegaphoneIcon },
