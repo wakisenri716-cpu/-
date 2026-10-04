@@ -23,9 +23,10 @@ export type BillingFields = {
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
   createdAt: Date;
+  billingFree?: boolean;
 };
 
-export const BILLING_SELECT = { plan: true, subscriptionStatus: true, trialEndsAt: true, currentPeriodEnd: true, cancelAtPeriodEnd: true, createdAt: true } as const;
+export const BILLING_SELECT = { plan: true, subscriptionStatus: true, trialEndsAt: true, currentPeriodEnd: true, cancelAtPeriodEnd: true, createdAt: true, billingFree: true } as const;
 
 // Stripe の状態のうち、使えるもの(past_due は支払いの再試行中なので、しばらくは使える)
 const PAYING = ["active", "trialing", "past_due"];
@@ -34,12 +35,14 @@ export function trialEnd(c: BillingFields) {
   return c.trialEndsAt ?? new Date(c.createdAt.getTime() + TRIAL_DAYS * 86_400_000);
 }
 
-// off: 課金の設定なし / trial: 無料期間中 / active: 契約中 / past_due: 支払いが失敗して再試行中 / expired: 無料期間が終わって未契約
+// off: 課金の設定なし / free: 運営者が無料にした会社 / trial: 無料期間中 / active: 契約中 / past_due: 支払いが失敗して再試行中 / expired: 無料期間が終わって未契約
 export function billingState(c: BillingFields, now = new Date()) {
   const end = trialEnd(c);
   const daysLeft = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / 86_400_000));
   const base = { trialEndsAt: end, daysLeft, plan: (c.plan as PlanKey | null) ?? null, cancelAtPeriodEnd: c.cancelAtPeriodEnd, currentPeriodEnd: c.currentPeriodEnd };
   if (!billingEnabled()) return { ...base, phase: "off" as const, access: true };
+  // 運営者メニューで無料にした会社
+  if (c.billingFree) return { ...base, phase: "free" as const, access: true };
   if (c.subscriptionStatus && PAYING.includes(c.subscriptionStatus)) {
     return { ...base, phase: c.subscriptionStatus === "past_due" ? ("past_due" as const) : ("active" as const), access: true };
   }
@@ -67,7 +70,7 @@ export async function companyBilling(companyId: string) {
 }
 
 // 期限切れでも開ける画面(契約の手続き・データの持ち出し・規約など)
-export const BILLING_OPEN_PATHS = ["/billing", "/account", "/backup", "/accountant-export", "/pricing", "/tokushoho"];
+export const BILLING_OPEN_PATHS = ["/billing", "/account", "/backup", "/accountant-export", "/pricing", "/tokushoho", "/operator"];
 
 // ライトプランは管理者・経理担当の人数に上限がある(無料期間中は上限なし)
 export async function checkSeat(companyId: string, role: string, exceptUserId?: string) {
