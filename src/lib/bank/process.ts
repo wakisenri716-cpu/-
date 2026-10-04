@@ -9,15 +9,22 @@ import type { StatementRow } from "./statement";
 import { UserError } from "@/lib/errors";
 import { createHash } from "crypto";
 import { cardsWithKeyword, ensureBankAccounts, getBankAccount, matchesKeyword } from "./accounts";
+import { activeRules, countHits, matchRule, normalizeText } from "./rules";
+import type { BankRule } from "@prisma/client";
 const SETTLEABLE_INVOICE_STATUSES = ["CONFIRMED", "SENT", "PARTIALLY_PAID", "OVERDUE"] as const;
 
 export class BankError extends UserError {}
 
-type Suggestion = { accountCode: string; confidence: number; source: "RULE" | "HISTORY" | "AI"; reason: string };
+// review: 会社のルールで「提案だけ」にしたもの(信頼度に関係なく確認待ちに残す)
+type Suggestion = { accountCode: string; confidence: number; source: "USER_RULE" | "RULE" | "HISTORY" | "AI"; reason: string; review?: boolean; ruleId?: string };
 
-// 銀行の摘要は半角カナ・全角英数が混ざるので、NFKCで全角カナ・半角英数にそろえてから照合する
-function normalize(description: string): string {
-  return description.normalize("NFKC").toUpperCase().replace(/\s+/g, " ").trim();
+const normalize = normalizeText;
+
+// 会社が登録した自動仕訳ルールからの提案
+function userRuleSuggestion(rule: BankRule): Suggestion {
+  return rule.autoPost
+    ? { accountCode: rule.accountCode, confidence: 1, source: "USER_RULE", reason: `自動仕訳ルール「${rule.keyword}」`, ruleId: rule.id }
+    : { accountCode: rule.accountCode, confidence: 1, source: "USER_RULE", reason: `自動仕訳ルール「${rule.keyword}」の提案(確認してから記帳する設定)`, review: true, ruleId: rule.id };
 }
 
 type Rule = { pattern: RegExp; out?: string; in?: string; confidence: number; reason: string };
@@ -189,6 +196,8 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
   const needsAi: BankTransaction[] = [];
   // 銀行口座の明細で、カード代金の引落しを見分ける
   const cards = isCard ? [] : await cardsWithKeyword(companyId);
+  const rules = await activeRules(companyId);
+  const hits = new Map<string, number>();
 
   for (const row of created) {
     // 請求書の消込は銀行口座の明細だけ(カードの利用は請求書の入金・支払ではない)
@@ -210,9 +219,13 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
       continue;
     }
     const card = row.withdrawal > 0 ? cards.find((c) => matchesKeyword(row.description, c.keyword)) : undefined;
+    const userRule = card ? null : matchRule(rules, row, { id: bank.id, kind: bank.kind, code: own.code });
     let suggestion: Suggestion | null = card
       ? { accountCode: card.code, confidence: 0.95, source: "RULE", reason: `${card.name}の代金の引落し(摘要に「${card.keyword}」)` }
-      : ((await historySuggestion(row, own.code)) ?? ruleSuggestion(row, isCard));
+      : userRule
+        ? userRuleSuggestion(userRule)
+        : ((await historySuggestion(row, own.code)) ?? ruleSuggestion(row, isCard));
+    if (userRule) hits.set(userRule.id, (hits.get(userRule.id) ?? 0) + 1);
     if (suggestion?.source === "RULE" && suggestion.accountCode === "5110" && salaryAccrued) {
       suggestion = { ...suggestion, accountCode: "2020", reason: "給与の振込(シフトから計上済みの未払金の支払い)" };
     }
@@ -250,27 +263,67 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
   for (const row of created) {
     const suggestion = suggestions.get(row.id);
     if (!suggestion) continue;
-    const decision = await evaluateAutomation(companyId, "BANK", suggestion.confidence, row.withdrawal || row.deposit);
-    if (decision.auto) {
-      await postBankJournal(row, suggestion.accountCode, own, { auto: true, suggestion });
-      summary.autoPosted++;
-    } else {
-      await prisma.bankTransaction.update({
-        where: { id: row.id },
-        data: {
-          suggestedAccountCode: suggestion.accountCode,
-          confidence: suggestion.confidence,
-          suggestionSource: suggestion.source,
-          suggestionReason:
-            suggestion.confidence < decision.minConfidence
-              ? `${suggestion.reason}(信頼度が自動記帳の基準 ${Math.round(decision.minConfidence * 100)}% 未満のため確認待ち)`
-              : `${suggestion.reason}(${decision.reason})`,
-        },
-      });
-      summary.pending++;
+    if (await postOrSuggest(companyId, row, own, suggestion)) summary.autoPosted++;
+    else summary.pending++;
+  }
+  await countHits(hits);
+  return summary;
+}
+
+// 自動記帳の基準を満たせば記帳し、満たさなければ提案を付けて確認待ちに残す。記帳したら true
+async function postOrSuggest(companyId: string, row: BankTransaction, own: Own, suggestion: Suggestion) {
+  const decision = suggestion.review ? null : await evaluateAutomation(companyId, "BANK", suggestion.confidence, row.withdrawal || row.deposit);
+  if (decision?.auto) {
+    await postBankJournal(row, suggestion.accountCode, own, { auto: true, suggestion });
+    return true;
+  }
+  await prisma.bankTransaction.update({
+    where: { id: row.id },
+    data: {
+      suggestedAccountCode: suggestion.accountCode,
+      confidence: suggestion.confidence,
+      suggestionSource: suggestion.source,
+      suggestionReason: !decision
+        ? suggestion.reason
+        : suggestion.confidence < decision.minConfidence
+          ? `${suggestion.reason}(信頼度が自動記帳の基準 ${Math.round(decision.minConfidence * 100)}% 未満のため確認待ち)`
+          : `${suggestion.reason}(${decision.reason})`,
+    },
+  });
+  return false;
+}
+
+// 確認待ちの明細に、いまの自動仕訳ルールを当てはめる(ルールを作ったあとに使う)
+export async function applyRulesToPending(companyId: string) {
+  const rules = await activeRules(companyId);
+  const rows = await prisma.bankTransaction.findMany({ where: { companyId, status: "PENDING" }, orderBy: [{ date: "asc" }, { createdAt: "asc" }] });
+  const result = { checked: rows.length, matched: 0, posted: 0, suggested: 0 };
+  if (!rules.length) return result;
+  const banks = new Map<string, { id: string; own: Own }>();
+  const hits = new Map<string, number>();
+  for (const row of rows) {
+    const key = row.bankAccountId ?? "";
+    if (!banks.has(key)) {
+      const bank = await getBankAccount(companyId, row.bankAccountId);
+      banks.set(key, { id: bank.id, own: { code: bank.account.code, name: bank.name, kind: bank.kind } });
+    }
+    const { id, own } = banks.get(key)!;
+    const rule = matchRule(rules, row, { id, kind: own.kind, code: own.code });
+    if (!rule) continue;
+    // 前に同じルールで提案済みのまま残っている明細は、数え直さない
+    if (!rule.autoPost && row.suggestionSource === "USER_RULE" && row.suggestedAccountCode === rule.accountCode) continue;
+    result.matched++;
+    hits.set(rule.id, (hits.get(rule.id) ?? 0) + 1);
+    try {
+      if (await postOrSuggest(companyId, row, own, userRuleSuggestion(rule))) result.posted++;
+      else result.suggested++;
+    } catch (error) {
+      // 同時に別の操作で処理された明細は飛ばす
+      if (!(error instanceof BankError)) throw error;
     }
   }
-  return summary;
+  await countHits(hits);
+  return result;
 }
 
 async function findRow(companyId: string, id: string) {

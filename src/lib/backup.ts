@@ -53,6 +53,7 @@ export async function buildBackup(companyId: string) {
   const yearEnds = await prisma.yearEndAdjustment.findMany({ where: { companyId, finalizedAt: { not: null } }, include: { staff: { select: { name: true } } }, orderBy: [{ year: "asc" }] });
   const workLogs = await prisma.workLog.findMany({ where: { companyId }, include: { user: { select: { name: true } }, project: { select: { name: true } } }, orderBy: [{ date: "asc" }, { createdAt: "asc" }] });
   const equipment = await prisma.equipment.findMany({ where: { companyId }, include: { loans: { orderBy: { lentAt: "asc" } } }, orderBy: [{ code: "asc" }, { name: "asc" }] });
+  const bankRules = await prisma.bankRule.findMany({ where: { companyId }, include: { bankAccount: { select: { name: true } } }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] });
   const orders = await prisma.purchaseOrder.findMany({ where: { companyId }, include: { vendor: true, lines: { orderBy: { sortOrder: "asc" } } }, orderBy: { issueDate: "asc" } });
 
   const minutes = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
@@ -272,6 +273,13 @@ export async function buildBackup(companyId: string) {
     { name: "シフト.csv", rows: [["日付", "スタッフ", "開始", "終了", "休憩(分)", "メモ"], ...shifts.map((s) => [d(s.date), s.staff.name, minutes(s.startMinutes), minutes(s.endMinutes), s.breakMinutes, s.note ?? ""])] },
     { name: "勤怠(打刻).csv", rows: [["勤務日", "スタッフ", "出勤", "退勤", "休憩(分)", "修正済み"], ...records.map((r) => [d(r.date), r.staff.name, t(r.clockIn), t(r.clockOut), r.breakMinutes, r.edited ? "はい" : ""])] },
     { name: "銀行明細.csv", rows: [["口座・カード", "日付", "摘要", "出金(カードは利用)", "入金(カードは返品)", "残高", "状態"], ...bank.map((b) => [b.bankAccount?.name ?? "普通預金", d(b.date), b.description, b.withdrawal || "", b.deposit || "", b.balance ?? "", b.status])] },
+    {
+      name: "自動仕訳ルール.csv",
+      rows: [
+        ["順番", "キーワード", "向き", "金額(以上)", "金額(以下)", "口座・カード", "勘定科目コード", "記帳", "状態", "使った回数", "メモ"],
+        ...bankRules.map((r, i) => [i + 1, r.keyword, { OUT: "出金・利用", IN: "入金", BOTH: "両方" }[r.direction] ?? r.direction, r.minAmount ?? "", r.maxAmount ?? "", r.bankAccount?.name ?? "すべて", r.accountCode, r.autoPost ? "確認なし" : "提案だけ", r.active ? "有効" : "停止中", r.hits, r.memo ?? ""]),
+      ],
+    },
     {
       name: "定期取引.csv",
       rows: [

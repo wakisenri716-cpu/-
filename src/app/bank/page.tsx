@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { formatDate, formatYen } from "@/lib/format";
 import { PrintButton } from "@/components/PrintButton";
@@ -39,6 +40,7 @@ type ImportSummary = { received: number; imported: number; matched: number; auto
 
 const SOURCE_LABELS: Record<string, string> = {
   INVOICE: "請求書消込",
+  USER_RULE: "自動仕訳ルール",
   HISTORY: "過去の記帳から学習",
   RULE: "キーワード",
   AI: "AI",
@@ -219,7 +221,12 @@ export default function BankPage() {
       <div>
         <div className="flex items-start justify-between gap-3">
           <h1 className="text-2xl font-semibold">銀行・カード明細</h1>
-          <PrintButton variant="outline" />
+          <div className="flex items-center gap-2 print:hidden">
+            <Link href="/bank/rules" className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-slate-700 hover:bg-slate-50">
+              自動仕訳ルール
+            </Link>
+            <PrintButton variant="outline" />
+          </div>
         </div>
         <p className="mt-1 text-sm text-slate-600">
           ネットバンキングやカード会社のサイトからダウンロードした明細のCSVを取り込むと、請求書と金額が一致するものは自動で消込み、
@@ -491,6 +498,17 @@ export default function BankPage() {
                         >
                           対象外
                         </button>
+                        <Link
+                          href={`/bank/rules?${new URLSearchParams({
+                            keyword: row.description.slice(0, 40),
+                            direction: row.withdrawal > 0 || isCard ? "OUT" : "IN",
+                            bankAccountId: data?.bankAccount.id ?? "",
+                            code: accounts.find((a) => a.id === choices[row.id])?.code ?? row.suggestedAccountCode ?? "",
+                          })}`}
+                          className="self-center text-xs text-slate-500 hover:text-indigo-700 hover:underline"
+                        >
+                          ルールにする
+                        </Link>
                       </div>
                     ) : (
                       row.status !== "MATCHED" && (
