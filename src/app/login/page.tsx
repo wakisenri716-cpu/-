@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth/session";
-import { needsInitialSetup } from "@/lib/auth/setup";
+import { needsInitialSetup, signupOpen } from "@/lib/auth/setup";
 import { LoginForm } from "./LoginForm";
 import { SetupForm } from "./SetupForm";
 
@@ -23,5 +23,5 @@ export default async function LoginPage() {
     );
   }
   // まだ誰も登録していなければ新規登録(最初の管理者と会社の情報)、あとはログイン
-  return setup ? <SetupForm /> : <LoginForm />;
+  return setup ? <SetupForm /> : <LoginForm signupOpen={signupOpen() && !nativeApp} />;
 }

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, passwordProblem } from "@/lib/auth/password";
 import { adminOr403, PUBLIC_USER_FIELDS, ROLES, toPublicUser } from "@/lib/auth/users";
 import { audit } from "@/lib/audit";
+import { checkSeat } from "@/lib/billing";
+import { UserError } from "@/lib/errors";
 
 const ROLE_LABELS = { ADMIN: "管理者", ACCOUNTANT: "経理担当", EMPLOYEE: "従業員" } as const;
 
@@ -44,6 +46,13 @@ export async function POST(request: Request) {
     select: { ...PUBLIC_USER_FIELDS, companyId: true, memberships: { where: { companyId: admin.companyId }, select: { id: true } } },
   });
 
+  // ライトプランは管理者・経理担当の人数に上限がある
+  try {
+    await checkSeat(admin.companyId, role);
+  } catch (error) {
+    if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 400 });
+    throw error;
+  }
   // すでにアカウントがある人(ほかの会社のメンバー)は、今のパスワードのまま、この会社のメンバーに加える
   if (existing?.passwordHash) {
     if (existing.memberships.length) return NextResponse.json({ error: "この人はすでにこの会社のメンバーです" }, { status: 409 });

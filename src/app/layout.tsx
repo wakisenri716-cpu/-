@@ -8,6 +8,8 @@ import { NativePush } from "@/components/NativePush";
 import { LogoutButton } from "@/components/LogoutButton";
 import { CompanySwitcher } from "@/components/CompanySwitcher";
 import { listMyCompanies } from "@/lib/auth/companies";
+import { BILLING_OPEN_PATHS, isFreeCompany } from "@/lib/billing";
+import { BillingBanner } from "@/components/BillingBanner";
 
 export const metadata: Metadata = {
   title: "AI経理オートメーション",
@@ -25,7 +27,8 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
-  const pathname = (await headers()).get("x-pathname") ?? "/";
+  const headerList = await headers();
+  const pathname = headerList.get("x-pathname") ?? "/";
   const open = OPEN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   // 利用規約への同意・会社情報の入力がまだなら、ようこそ画面でまとめて済ませてもらう
   if (user && (user.needsTerms || user.needsCompanyInfo) && !open) redirect("/welcome");
@@ -34,6 +37,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   if (user?.role === "EMPLOYEE") {
     if (!EMPLOYEE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) redirect("/staff");
   }
+  // 無料期間が終わって契約がない会社は、契約の画面へ(データの持ち出し・規約などは開ける)
+  const billingOpen = open || BILLING_OPEN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  if (user && !user.billing.access && !billingOpen && !(await isFreeCompany(user.companyId))) redirect("/billing");
+  const nativeApp = (headerList.get("user-agent") ?? "").includes("StaffAppNative");
 
   const companies = user ? await listMyCompanies(user.id) : [];
   // スタッフアプリ(/staff)はスマホでアプリのように使うので、上のヘッダーを出さず下のタブで移動する
@@ -71,6 +78,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                     会社の設定で、2段階認証が必須になっています。下の「2段階認証」を設定すると、ほかの画面が使えるようになります。
                   </div>
                 )}
+                {user.role === "ADMIN" && !nativeApp && <BillingBanner billing={user.billing} companyId={user.companyId} />}
                 {children}
               </main>
             </div>

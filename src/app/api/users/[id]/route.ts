@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, passwordProblem } from "@/lib/auth/password";
 import { adminOr403, PUBLIC_USER_FIELDS, ROLES, toPublicUser } from "@/lib/auth/users";
 import { audit } from "@/lib/audit";
+import { checkSeat } from "@/lib/billing";
+import { UserError } from "@/lib/errors";
 
 const ROLE_LABELS = { ADMIN: "管理者", ACCOUNTANT: "経理担当", EMPLOYEE: "従業員" } as const;
 
@@ -28,6 +30,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   // 自分自身を管理者から外したり停止したりすると、誰も管理できなくなるので禁止する
   if (target.id === admin.id && ((role && role !== "ADMIN") || active === false)) {
     return NextResponse.json({ error: "自分自身の管理者権限を外したり、停止したりはできません" }, { status: 400 });
+  }
+  // 従業員から管理者・経理担当にする・利用停止から戻すときは、ライトプランの人数の上限を確かめる
+  const nextRole = role ?? member.role;
+  if ((role && role !== "EMPLOYEE" && member.role === "EMPLOYEE") || (active === true && !member.active && nextRole !== "EMPLOYEE")) {
+    try {
+      await checkSeat(admin.companyId, nextRole, target.id);
+    } catch (error) {
+      if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 400 });
+      throw error;
+    }
   }
   // パスワードと2段階認証はアカウント全体の設定なので、ほかの会社にも入っている人のものは変えない
   if ((password !== undefined || resetTotp) && (target.companyId !== admin.companyId || target._count.memberships > 1)) {

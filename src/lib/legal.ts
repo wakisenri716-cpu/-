@@ -9,6 +9,9 @@ export function operator() {
     name: process.env.SERVICE_OPERATOR_NAME || "本サービスの運営者",
     contact: process.env.SERVICE_CONTACT_EMAIL || null,
     address: process.env.SERVICE_OPERATOR_ADDRESS || null,
+    // 特定商取引法に基づく表記用: 運営責任者(代表者)と電話番号
+    representative: process.env.SERVICE_OPERATOR_REPRESENTATIVE || null,
+    phone: process.env.SERVICE_PHONE || null,
     configured: !!process.env.SERVICE_OPERATOR_NAME,
   };
 }

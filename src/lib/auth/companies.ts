@@ -1,3 +1,4 @@
+import { BILLING_SELECT } from "@/lib/billing";
 import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { UserError } from "@/lib/errors";
@@ -14,7 +15,7 @@ export async function pickMembership(user: { id: string; companyId: string; role
   const find = () =>
     prisma.companyMember.findMany({
       where: { userId: user.id },
-      include: { company: { select: { name: true, require2fa: true, sessionIdleMinutes: true, allowedIps: true, loginAlert: true, onboardedAt: true } } },
+      include: { company: { select: { name: true, require2fa: true, sessionIdleMinutes: true, allowedIps: true, loginAlert: true, onboardedAt: true, ...BILLING_SELECT } } },
       orderBy: { createdAt: "asc" },
     });
   let members = await find();

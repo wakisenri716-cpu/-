@@ -16,6 +16,12 @@ export function LegalLinks() {
       <Link href="/support" className="hover:underline">
         サポート
       </Link>
+      <Link href="/pricing" className="hover:underline">
+        料金プラン
+      </Link>
+      <Link href="/tokushoho" className="hover:underline">
+        特定商取引法に基づく表記
+      </Link>
     </nav>
   );
 }
