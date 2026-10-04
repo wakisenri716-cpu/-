@@ -24,9 +24,10 @@ export type BillingFields = {
   cancelAtPeriodEnd: boolean;
   createdAt: Date;
   billingFree?: boolean;
+  isDemo?: boolean;
 };
 
-export const BILLING_SELECT = { plan: true, subscriptionStatus: true, trialEndsAt: true, currentPeriodEnd: true, cancelAtPeriodEnd: true, createdAt: true, billingFree: true } as const;
+export const BILLING_SELECT = { plan: true, subscriptionStatus: true, trialEndsAt: true, currentPeriodEnd: true, cancelAtPeriodEnd: true, createdAt: true, billingFree: true, isDemo: true } as const;
 
 // Stripe の状態のうち、使えるもの(past_due は支払いの再試行中なので、しばらくは使える)
 const PAYING = ["active", "trialing", "past_due"];
@@ -42,7 +43,7 @@ export function billingState(c: BillingFields, now = new Date()) {
   const base = { trialEndsAt: end, daysLeft, plan: (c.plan as PlanKey | null) ?? null, cancelAtPeriodEnd: c.cancelAtPeriodEnd, currentPeriodEnd: c.currentPeriodEnd };
   if (!billingEnabled()) return { ...base, phase: "off" as const, access: true };
   // 運営者メニューで無料にした会社
-  if (c.billingFree) return { ...base, phase: "free" as const, access: true };
+  if (c.billingFree || c.isDemo) return { ...base, phase: "free" as const, access: true };
   if (c.subscriptionStatus && PAYING.includes(c.subscriptionStatus)) {
     return { ...base, phase: c.subscriptionStatus === "past_due" ? ("past_due" as const) : ("active" as const), access: true };
   }

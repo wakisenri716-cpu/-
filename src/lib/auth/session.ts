@@ -77,6 +77,8 @@ export const getCurrentUser = cache(async () => {
     needsEmailVerify: !session.user.emailVerifiedAt && verificationRequired(),
     // 有料プランの状態(無料期間・契約中・期限切れ)
     billing: billingState(member.company),
+    // サンプルデータを入れたお試し用の会社を開いている
+    isDemoCompany: !!member.company.isDemo,
   };
 });
 

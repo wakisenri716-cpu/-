@@ -13,6 +13,7 @@ import { BillingBanner } from "@/components/BillingBanner";
 import { isOperator } from "@/lib/operator";
 import { VerifyEmailBanner } from "@/components/VerifyEmailBanner";
 import { ServiceNotices } from "@/components/ServiceNotices";
+import { DemoBanner } from "@/components/DemoControls";
 import { activeNotices } from "@/lib/support";
 
 export const metadata: Metadata = {
@@ -83,6 +84,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                   </div>
                 )}
                 {notices.length > 0 && <ServiceNotices notices={notices} />}
+                {user.isDemoCompany && <DemoBanner />}
                 {user.needsEmailVerify && <VerifyEmailBanner email={user.email} />}
                 {user.role === "ADMIN" && !nativeApp && <BillingBanner billing={user.billing} companyId={user.companyId} />}
                 {children}
