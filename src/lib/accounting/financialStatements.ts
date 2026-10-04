@@ -9,7 +9,7 @@ const COST_OF_SALES = "5000";
 const ACCUMULATED_DEPRECIATION = "1519"; // 資産のマイナス(科目の区分上は負債に置いている)
 const NON_OPERATING_REVENUE = new Set(["4020", "4040"]); // 雑収入・為替差益
 const EXTRAORDINARY_GAIN = new Set(["4030"]); // 固定資産売却益
-const NON_OPERATING_EXPENSE = new Set(["5150", "5180"]); // 支払利息・為替差損
+const NON_OPERATING_EXPENSE = new Set(["5150", "5180", "5190"]); // 支払利息・為替差損・雑損失
 const EXTRAORDINARY_LOSS = new Set(["5160"]); // 固定資産除売却損
 const RETAINED_EARNINGS = "3020";
 

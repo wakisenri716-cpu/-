@@ -89,6 +89,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/reimbursements", label: "立替経費の精算", icon: WalletIcon },
       { href: "/advances", label: "仮払金", icon: CoinsIcon },
       { href: "/bank", label: "銀行・カード明細", icon: BankIcon },
+      { href: "/cash-count", label: "現金の実査(金種表)", icon: CoinsIcon },
       { href: "/transfers", label: "振込データ", icon: CashflowIcon },
       { href: "/withholding", label: "源泉徴収・納付", icon: PercentIcon },
       { href: "/recurring", label: "定期取引", icon: RepeatIcon },

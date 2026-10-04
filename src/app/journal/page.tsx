@@ -39,6 +39,7 @@ const SOURCE_LABELS: Record<string, string> = {
   DEPT_ALLOCATION: "部門配賦",
   OPENING: "開始残高",
   FOREIGN: "外貨建取引",
+  CASH_COUNT: "現金の実査",
   IMPORT: "CSV取込",
 };
 
