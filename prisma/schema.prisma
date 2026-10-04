@@ -62,6 +62,7 @@ enum SourceType {
   ALLOCATION
   LOAN
   DEPT_ALLOCATION
+  OPENING
 }
 
 enum QuoteStatus {

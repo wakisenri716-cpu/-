@@ -37,6 +37,7 @@ const SOURCE_LABELS: Record<string, string> = {
   ALLOCATION: "期間按分",
   LOAN: "借入金の返済",
   DEPT_ALLOCATION: "部門配賦",
+  OPENING: "開始残高",
   IMPORT: "CSV取込",
 };
 
