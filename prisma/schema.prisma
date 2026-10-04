@@ -215,6 +215,7 @@ model Company {
   journalTemplates JournalTemplate[]
   emailLogs        EmailLog[]
   bankAccounts     BankAccount[]
+  bankRules        BankRule[]
   leaveGrants      LeaveGrant[]
   leaveTaken       LeaveTaken[]
   approvalRequests ApprovalRequest[]
@@ -1275,8 +1276,35 @@ model BankAccount {
   active       Boolean           @default(true)
   createdAt    DateTime          @default(now())
   transactions BankTransaction[]
+  rules        BankRule[]
 
   @@unique([companyId, name])
+}
+
+// 銀行・カード明細の自動仕訳ルール(会社が決める)。摘要にキーワードがあり、入出金の向き・金額・口座が合えば、その科目で記帳する。
+// 上から順に見て、最初に当てはまったものを使う。autoPost が false なら科目の提案だけ(確認待ちに残す)。
+model BankRule {
+  id            String       @id @default(cuid())
+  companyId     String
+  company       Company      @relation(fields: [companyId], references: [id])
+  keyword       String
+  // OUT(出金・カードの利用) / IN(入金) / BOTH
+  direction     String       @default("OUT")
+  minAmount     Int?
+  maxAmount     Int?
+  // 空ならすべての口座・カード
+  bankAccountId String?
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  accountCode   String
+  autoPost      Boolean      @default(true)
+  memo          String?
+  sortOrder     Int          @default(0)
+  active        Boolean      @default(true)
+  hits          Int          @default(0)
+  lastUsedAt    DateTime?
+  createdAt     DateTime     @default(now())
+
+  @@index([companyId, sortOrder])
 }
 
 // 有給休暇の付与。auto は入社日から自動で付与したもの。日数は半日単位(halfDays = 日数×2)。付与から2年で時効。
