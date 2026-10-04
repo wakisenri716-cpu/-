@@ -6,6 +6,8 @@ import { signupOpen } from "@/lib/auth/setup";
 import { ensureChartOfAccounts } from "@/lib/accounting/accounts";
 import { acceptTerms, agreed, parseCompanyOnboarding, saveCompanyOnboarding } from "@/lib/onboarding";
 import { UserError } from "@/lib/errors";
+import { sendVerification, verificationRequired } from "@/lib/auth/emailVerification";
+import { appUrl } from "@/lib/mail";
 
 // 1時間に受け付ける新規登録の上限(いたずらで大量に作られないように)
 const HOURLY_LIMIT = 30;
@@ -39,7 +41,8 @@ export async function POST(request: Request) {
   try {
     created = await prisma.$transaction(async (tx) => {
       const company = await tx.company.create({ data: { name: String(body.companyName ?? "").trim().slice(0, 100) || name } });
-      const user = await tx.user.create({ data: { companyId: company.id, name, email, role: "ADMIN", passwordHash } });
+      // メールを送れるときは、届いたリンクを開くまで「未確認」にする
+      const user = await tx.user.create({ data: { companyId: company.id, name, email, role: "ADMIN", passwordHash, ...(verificationRequired() ? { emailVerifiedAt: null } : {}) } });
       await tx.companyMember.create({ data: { userId: user.id, companyId: company.id, role: "ADMIN" } });
       return { company, user };
     });
@@ -51,5 +54,6 @@ export async function POST(request: Request) {
   await saveCompanyOnboarding(created.company.id, body);
   await acceptTerms(created.user.id);
   await createSession(created.user.id, created.company.id);
+  if (verificationRequired()) await sendVerification(created.user.id, appUrl(request)).catch((e) => console.error("verification mail failed", e));
   return NextResponse.json({ ok: true }, { status: 201 });
 }
