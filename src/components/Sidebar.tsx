@@ -160,7 +160,7 @@ const EMPLOYEE_SECTIONS: NavSection[] = [
 ];
 
 // 従業員には自分が使える画面だけを見せる(実際のアクセス制限はサーバー側で行う)
-function sectionsFor(role: Role): NavSection[] {
+function sectionsFor(role: Role, operator = false): NavSection[] {
   return [
     ...(role === "EMPLOYEE" ? EMPLOYEE_SECTIONS : NAV_SECTIONS),
     {
@@ -189,6 +189,8 @@ function sectionsFor(role: Role): NavSection[] {
           : []),
       ],
     },
+    // このサービスの運営者だけ(OPERATOR_EMAILS)
+    ...(operator ? [{ title: "運営者", items: [{ href: "/operator", label: "運営者メニュー", icon: GaugeIcon }] }] : []),
   ];
 }
 
@@ -207,7 +209,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-export function Sidebar({ userName, role, companies, companyId }: { userName: string; role: Role; companies: { id: string; name: string }[]; companyId: string }) {
+export function Sidebar({ userName, role, companies, companyId, operator = false }: { userName: string; role: Role; companies: { id: string; name: string }[]; companyId: string; operator?: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -223,7 +225,7 @@ export function Sidebar({ userName, role, companies, companyId }: { userName: st
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-2">
-        {sectionsFor(role).map((section, i) => (
+        {sectionsFor(role, operator).map((section, i) => (
           <div key={section.title ?? i}>
             {section.title && (
               <div className="px-3 pb-1.5 text-xs font-semibold tracking-wide text-slate-400">{section.title}</div>

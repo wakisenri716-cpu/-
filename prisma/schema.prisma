@@ -185,6 +185,8 @@ model Company {
   cancelAtPeriodEnd      Boolean   @default(false)
   stripeCustomerId       String?   @unique
   stripeSubscriptionId   String?   @unique
+  // 運営者が無料にした会社(招待した会社・取引先など)
+  billingFree            Boolean   @default(false)
   createdAt        DateTime @default(now())
 
   users            User[]
@@ -1700,4 +1702,18 @@ model PushDevice {
   lastSeenAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// 本番で起きたサーバーのエラー(運営者メニューで見る)。古いものは90日で消す
+model ErrorLog {
+  id        String   @id @default(cuid())
+  message   String
+  digest    String?
+  stack     String?
+  method    String?
+  path      String?
+  routeType String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

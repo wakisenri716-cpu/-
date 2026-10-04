@@ -10,6 +10,7 @@ import { CompanySwitcher } from "@/components/CompanySwitcher";
 import { listMyCompanies } from "@/lib/auth/companies";
 import { BILLING_OPEN_PATHS, isFreeCompany } from "@/lib/billing";
 import { BillingBanner } from "@/components/BillingBanner";
+import { isOperator } from "@/lib/operator";
 
 export const metadata: Metadata = {
   title: "AI経理オートメーション",
@@ -51,7 +52,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full bg-slate-50 text-slate-900 print:bg-white">
         {user ? (
           <div className="flex min-h-screen">
-            <Sidebar userName={user.name} role={user.role} companies={companies} companyId={user.companyId} />
+            <Sidebar userName={user.name} role={user.role} companies={companies} companyId={user.companyId} operator={isOperator(user.email)} />
             <div className="flex min-w-0 flex-1 flex-col">
               <header className={`border-b bg-white px-4 py-3 md:hidden print:hidden ${staffApp ? "hidden" : ""}`}>
                 <div className="flex items-center justify-between gap-3">
