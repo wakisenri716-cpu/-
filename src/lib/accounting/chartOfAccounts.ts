@@ -14,6 +14,7 @@ export const CHART_OF_ACCOUNTS: SeedAccount[] = [
   { code: "1210", name: "仮払金", category: "ASSET" },
   { code: "1220", name: "仮払消費税", category: "ASSET" },
   { code: "1230", name: "前払費用", category: "ASSET" },
+  { code: "1290", name: "配賦仮勘定", category: "ASSET" },
   { code: "1310", name: "商品", category: "ASSET" },
   { code: "1510", name: "固定資産", category: "ASSET" },
   { code: "2010", name: "買掛金", category: "LIABILITY" },
