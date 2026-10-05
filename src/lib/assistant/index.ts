@@ -47,6 +47,7 @@ const SCREENS = [
   ["/po-matching", "発注書と請求書の突き合わせ"],
   ["/briefing", "AIの朝のまとめ"],
   ["/customer-insights", "顧客の見守り"],
+  ["/vendor-insights", "仕入先の見守り"],
 ];
 
 function systemPrompt(companyName: string) {
@@ -166,6 +167,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("get_customer_insights")) as { insights: { customer: string; kind: string; detail: string }[] };
     if (!r.insights.length) return { reply: "目立った変化のある顧客はいません。", tools: ["get_customer_insights"], mode: "simple" };
     return { reply: ["顧客の変化:", ...r.insights.slice(0, 5).map((i) => `・${i.customer}(${i.kind}): ${i.detail}`), "[顧客の見守り](/customer-insights)"].join("\n"), tools: ["get_customer_insights"], mode: "simple" };
+  }
+  if (/仕入先|値上が|インボイス登録|登録番号/.test(q)) {
+    const r = (await run("get_vendor_insights")) as { insights: { vendor: string; kind: string; detail: string }[] };
+    if (!r.insights.length) return { reply: "目立った変化のある仕入先はありません。", tools: ["get_vendor_insights"], mode: "simple" };
+    return { reply: ["仕入先の変化:", ...r.insights.slice(0, 5).map((i) => `・${i.vendor}(${i.kind}): ${i.detail}`), "[仕入先の見守り](/vendor-insights)"].join("\n"), tools: ["get_vendor_insights"], mode: "simple" };
   }
   if (/発注書/.test(q)) {
     const r = (await run("get_po_matching")) as { items: { kind: string; vendor: string; message: string }[] };
