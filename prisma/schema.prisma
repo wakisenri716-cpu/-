@@ -240,6 +240,7 @@ model Company {
   closeReviews     MonthlyCloseReview[]
   cashAdvices      CashAdvice[]
   aiCorrections    AiCorrection[]
+  bookChecks       BookCheck[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -2155,4 +2156,22 @@ model AiCorrection {
   createdAt DateTime @default(now())
 
   @@index([companyId, kind, key])
+}
+
+// 帳簿の健康診断のAIの所見(会社・年度ごとに最新の1つ)
+model BookCheck {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  // 年度の初日(YYYY-MM-DD)
+  period    String
+  score     Int
+  summary   String
+  // [{ text, href }]
+  priorities Json
+  mode      String
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, period])
 }
