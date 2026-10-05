@@ -49,6 +49,8 @@ const SCREENS = [
   ["/ai-watch", "AIの見張り"],
   ["/customer-insights", "顧客の見守り"],
   ["/vendor-insights", "仕入先の見守り"],
+  ["/quick-expense", "ひとことで経費入力"],
+  ["/vendors", "取引先"],
 ];
 
 function systemPrompt(companyName: string) {
@@ -56,7 +58,7 @@ function systemPrompt(companyName: string) {
     `あなたは「${companyName}」の経理・事務を手伝うAIアシスタントです。使う人は経理の専門家ではないことが多いので、やさしい日本語で、結論から短く答えてください。`,
     "数字は必ず道具で会社のデータを調べてから答え、推測で数字を作らないでください。データにないことは「データがありません」と言ってください。",
     "金額は「1,234,567円」のように円で書いてください。税務の判断が必要なことは「目安」と添え、税理士への確認をすすめてください。",
-    "請求書の発行・仕訳の記帳・督促メールを頼まれたら、propose_ の道具で下書きを作ってください。下書きは利用者が画面で確かめて「実行する」を押したときだけ確定します。あなたが確定したとは言わず、「下書きを作りました。内容を確かめて実行してください」と伝えてください。必要な情報(金額・相手など)が足りないときは、推測せずに聞き返してください。",
+    "請求書の発行・仕訳の記帳・督促メール・契約の終了・発注書の検収や二重に取り込んだ請求書の取り消し・取引先のいつもの科目の変更・経費の入力を頼まれたら、propose_ の道具で下書きを作ってください。下書きは利用者が画面で確かめて「実行する」を押したときだけ確定します。あなたが確定したとは言わず、「下書きを作りました。内容を確かめて実行してください」と伝えてください。必要な情報(金額・相手など)が足りないときは、推測せずに聞き返してください。",
     "それ以外の変更(取消・削除・設定の変更など)はできないので、どの画面でできるかを案内してください。",
     "関係する画面があれば、答えの最後に [画面の名前](/パス) の形でリンクを1〜3個つけてください。使えるパスは次のとおりです(道具の結果に link があればそれも使えます):",
     SCREENS.map(([href, label]) => `${label}: ${href}`).join(" / "),
@@ -126,8 +128,8 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   const label = { "last-month": "先月", "last-fy": "前期", "this-fy": "今期", "this-month": "今月" }[preset];
   const run = (name: string, input: Record<string, unknown> = {}) => runAssistantTool({ companyId, userId: "" }, name, input) as Promise<Record<string, unknown>>;
 
-  if (/(請求書|仕訳|督促).*(作|発行|記帳|送)/.test(q)) {
-    return { reply: "請求書・仕訳・督促メールの下書きを作るには、AIのAPIキー(ANTHROPIC_API_KEY)の設定が必要です。いまは各画面から作ってください。\n[請求書](/invoices) [仕訳帳](/journal)", tools: [], mode: "simple" };
+  if (/(請求書|仕訳|督促).*(作|発行|記帳|送)|契約.*(終了にして|解約して)|経費.*(入れて|入力して)|科目.*(にして|変えて)/.test(q)) {
+    return { reply: "請求書・仕訳・督促メール・契約の終了・経費の入力などの下書きを作るには、AIのAPIキー(ANTHROPIC_API_KEY)の設定が必要です。いまは各画面から作ってください。\n[請求書](/invoices) [仕訳帳](/journal) [ひとことで経費入力](/quick-expense) [契約書](/contracts)", tools: [], mode: "simple" };
   }
   if (/やること|タスク|何をすれば|todo/i.test(q)) {
     const r = (await run("get_todos")) as { todos: { label: string; count: number; link: string }[] };

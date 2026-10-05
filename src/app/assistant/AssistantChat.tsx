@@ -3,11 +3,29 @@
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 
-type Proposal = { id: string; kind: "INVOICE" | "JOURNAL" | "REMINDER"; summary: string; details: string[]; status: string; resultNote: string | null };
+type Proposal = { id: string; kind: "INVOICE" | "JOURNAL" | "REMINDER" | "END_CONTRACT" | "LINK_PO" | "CANCEL_INVOICE" | "VENDOR_ACCOUNT" | "EXPENSE"; summary: string; details: string[]; status: string; resultNote: string | null };
 type Turn = { role: "user" | "assistant"; text: string; tools?: string[]; proposals?: Proposal[] };
 
-const KIND_LABEL: Record<Proposal["kind"], string> = { INVOICE: "請求書の下書き", JOURNAL: "仕訳の下書き", REMINDER: "督促メールの下書き" };
-const ACTION_LABEL: Record<Proposal["kind"], string> = { INVOICE: "この内容で請求書を発行する", JOURNAL: "この内容で記帳する", REMINDER: "この内容でメールを送る" };
+const KIND_LABEL: Record<Proposal["kind"], string> = {
+  INVOICE: "請求書の下書き",
+  JOURNAL: "仕訳の下書き",
+  REMINDER: "督促メールの下書き",
+  END_CONTRACT: "契約の終了",
+  LINK_PO: "発注書の検収",
+  CANCEL_INVOICE: "請求書の取り消し",
+  VENDOR_ACCOUNT: "取引先の科目",
+  EXPENSE: "経費の入力",
+};
+const ACTION_LABEL: Record<Proposal["kind"], string> = {
+  INVOICE: "この内容で請求書を発行する",
+  JOURNAL: "この内容で記帳する",
+  REMINDER: "この内容でメールを送る",
+  END_CONTRACT: "契約を終了にする",
+  LINK_PO: "この請求書で検収する",
+  CANCEL_INVOICE: "この請求書を取り消す",
+  VENDOR_ACCOUNT: "この科目にする",
+  EXPENSE: "経費精算に入れる",
+};
 
 // AIの下書き。人がボタンを押したときだけ実行する
 function ProposalCard({ proposal, onChange }: { proposal: Proposal; onChange: (p: Proposal) => void }) {
@@ -48,7 +66,7 @@ function ProposalCard({ proposal, onChange }: { proposal: Proposal; onChange: (p
   );
 }
 
-const SUGGESTIONS = ["今月の利益はいくら?", "入金が遅れている取引先は?", "今月は何にお金を使った?", "予算を超えそうな科目は?", "何かおかしいところはある?", "いまやることは?", "A社に保守費用5万円の請求書を作って", "期限切れの請求書に督促して"];
+const SUGGESTIONS = ["今月の利益はいくら?", "入金が遅れている取引先は?", "今月は何にお金を使った?", "予算を超えそうな科目は?", "何かおかしいところはある?", "いまやることは?", "A社に保守費用5万円の請求書を作って", "期限切れの請求書に督促して", "昨日のタクシー2,300円を経費に入れて"];
 const TOOL_LABEL: Record<string, string> = {
   get_business_summary: "損益・現預金",
   list_receivables: "売掛金",
@@ -63,6 +81,10 @@ const TOOL_LABEL: Record<string, string> = {
   propose_invoice: "請求書の下書き",
   propose_journal: "仕訳の下書き",
   propose_reminder: "督促メールの下書き",
+  propose_end_contract: "契約の終了",
+  propose_po_action: "発注書の検収",
+  propose_vendor_account: "取引先の科目",
+  propose_expense: "経費の入力",
 };
 
 // [名前](/パス) の形のリンクだけをアプリ内リンクにする(外のURLはリンクにしない)
@@ -134,7 +156,7 @@ export function AssistantChat({ initialQuestion, aiEnabled }: { initialQuestion:
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <div>
         <h1 className="text-2xl font-semibold">AIアシスタント</h1>
-        <p className="mt-1 text-sm text-slate-600">会社の帳簿・請求書・予算・やることについて、ふつうの言葉で聞いてください。AIが実際のデータを調べて答えます。請求書・仕訳・督促メールは、AIが下書きを作り、あなたが内容を確かめてボタンを押したときだけ確定します。</p>
+        <p className="mt-1 text-sm text-slate-600">会社の帳簿・請求書・予算・やることについて、ふつうの言葉で聞いてください。AIが実際のデータを調べて答えます。請求書・仕訳・督促メール・経費の入力・契約の終了なども頼めます。AIが下書きを作り、あなたが内容を確かめてボタンを押したときだけ確定します。</p>
         {!aiEnabled && <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">AIのAPIキー(ANTHROPIC_API_KEY)が未設定のため、決まった質問にだけ答える簡易モードです。</p>}
       </div>
 
@@ -154,11 +176,11 @@ export function AssistantChat({ initialQuestion, aiEnabled }: { initialQuestion:
         {turns.map((t, i) =>
           t.role === "user" ? (
             <div key={i} className="flex justify-end">
-              <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-indigo-600 px-4 py-2 text-sm whitespace-pre-wrap text-white">{t.text}</div>
+              <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-indigo-600 px-4 py-2 text-sm whitespace-pre-wrap break-words text-white [overflow-wrap:anywhere]">{t.text}</div>
             </div>
           ) : (
             <div key={i} className="flex justify-start">
-              <div className="max-w-[90%] rounded-2xl rounded-bl-sm border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed shadow-sm">
+              <div className="max-w-[90%] rounded-2xl rounded-bl-sm border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed shadow-sm [overflow-wrap:anywhere]">
                 <Rich text={t.text} />
                 {t.proposals?.map((p) => (
                   <ProposalCard

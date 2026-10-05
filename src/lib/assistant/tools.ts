@@ -9,7 +9,7 @@ import { getSalesAnalysis } from "@/lib/accounting/salesAnalysis";
 import { getBudgetProgress } from "@/lib/accounting/budgetProgress";
 import { getCashBalance, getTodos } from "@/lib/dashboard";
 import { getFiscalStartMonth, nextDay, resolvePeriod, toRange } from "@/lib/accounting/period";
-import { proposeInvoice, proposeJournal, proposeReminder } from "./proposals";
+import { proposeEndContract, proposeExpense, proposeInvoice, proposeJournal, proposePoAction, proposeReminder, proposeVendorAccount } from "./proposals";
 import { findAnomalies } from "@/lib/anomalies";
 import { getCollections, STAGE_LABELS } from "@/lib/collections";
 import { listContracts, CONTRACT_KINDS } from "@/lib/contracts";
@@ -21,7 +21,8 @@ import { getPoMatches } from "@/lib/poMatching";
 import { findCustomerInsights, INSIGHT_LABELS } from "@/lib/customerInsights";
 import { findVendorInsights, VENDOR_INSIGHT_LABELS } from "@/lib/vendorInsights";
 
-// AIアシスタントが使う道具。どれも会社のデータを読むだけで、書き換えはしない。
+// AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
+// 書き換えは利用者が画面で「実行する」を押したときだけ行う。
 // 結果はAIが読む JSON 文字列(金額は円の整数)。
 
 const PERIOD = {
@@ -151,6 +152,50 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { invoice: { type: "string", description: "請求書番号か顧客名" } }, required: ["invoice"] },
   },
   {
+    name: "propose_end_contract",
+    description: "契約書の台帳で、契約を「終了」にする下書きを作る(まだ変えない)。解約した・更新しないと決めた契約に使う。契約の名前か相手の名前で指定する。相手への解約の連絡はしない。",
+    input_schema: { type: "object", properties: { contract: { type: "string", description: "契約の名前か相手の名前" } }, required: ["contract"] },
+  },
+  {
+    name: "propose_po_action",
+    description:
+      "発注書と受け取った請求書の突き合わせを片付ける下書きを作る(まだ変えない)。action=link: 合う発注書をこの請求書で検収済みにする。action=cancel: 発注書の検収ですでに計上したのに二重に取り込んだ請求書を取り消す。請求書番号・発注書番号・取引先名で指定する。先に get_po_matching で確かめること。",
+    input_schema: {
+      type: "object",
+      properties: { invoice: { type: "string", description: "請求書番号・発注書番号・取引先名のどれか" }, action: { type: "string", enum: ["link", "cancel"] } },
+      required: ["invoice", "action"],
+    },
+  },
+  {
+    name: "propose_vendor_account",
+    description: "取引先(支払先)のいつもの勘定科目を決める下書きを作る(まだ変えない)。「〇〇はいつも通信費にして」などに使う。次からその取引先の経費・請求書をAIが読み取るときにこの科目を使う。経費の科目(旅費交通費・通信費・消耗品費・会議費・交際費・地代家賃・水道光熱費・広告宣伝費・支払手数料・雑費など)だけ指定できる。",
+    input_schema: { type: "object", properties: { vendor: { type: "string", description: "取引先の名前" }, account: { type: "string", description: "勘定科目の名前かコード" } }, required: ["vendor", "account"] },
+  },
+  {
+    name: "propose_expense",
+    description: "利用者本人の経費精算(下書きの精算書)に経費を入れる下書きを作る(まだ入れない)。「昨日タクシー2,300円、取引先と打ち合わせのコーヒー1,200円」などに使う。日付は YYYY-MM-DD(省略すると今日)、金額は税込の円。",
+    input_schema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              date: { type: "string", description: "日付 YYYY-MM-DD(任意)" },
+              description: { type: "string", description: "内容(例: タクシー 新宿→渋谷)" },
+              amount: { type: "integer", description: "金額(税込・円)" },
+              account: { type: "string", description: "勘定科目の名前(例: 旅費交通費・会議費)" },
+              vendorName: { type: "string", description: "支払先(任意)" },
+            },
+            required: ["description", "amount"],
+          },
+        },
+      },
+      required: ["items"],
+    },
+  },
+  {
     name: "get_anomalies",
     description: "いつもと違うお金の動き(過去6か月と比べた費用の急増・売上の急減・いつもより大きい支払い・初めての取引先への大きな支払い)を返す。「何かおかしいところはある?」などに使う。",
     input_schema: { type: "object", properties: { month: { type: "string", description: "対象の月 YYYY-MM(任意。省略すると今月)" } }, additionalProperties: false },
@@ -225,6 +270,14 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string 
       return proposeJournal(ctx, input);
     case "propose_reminder":
       return proposeReminder(ctx, input);
+    case "propose_end_contract":
+      return proposeEndContract(ctx, input);
+    case "propose_po_action":
+      return proposePoAction(ctx, input);
+    case "propose_vendor_account":
+      return proposeVendorAccount(ctx, input);
+    case "propose_expense":
+      return proposeExpense(ctx, input);
     case "get_business_summary": {
       const period = await periodOf(companyId, input);
       const [is, cash] = await Promise.all([getIncomeStatement(companyId, toRange(period)), getCashBalance(companyId)]);
