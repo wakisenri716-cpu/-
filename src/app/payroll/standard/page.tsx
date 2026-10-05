@@ -26,7 +26,12 @@ export default async function StandardReviewPage({ searchParams }: { searchParam
               毎年7月10日までに出す「算定基礎届」のための計算です。4・5・6月に支払った給与(通勤手当を含む)の平均から、9月分からの新しい標準報酬月額(健康保険・厚生年金)を決めます。反映すると、給与計算の社会保険料がその金額で計算されます。
             </p>
           </div>
-          <PrintButton variant="outline" />
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/payroll/monthly-change" className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+              月額変更(随時改定)
+            </Link>
+            <PrintButton variant="outline" />
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Link href={`/payroll/standard?year=${review.year - 1}`} className="rounded-md border px-2 py-1 hover:bg-slate-50" aria-label="前の年">
