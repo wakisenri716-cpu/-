@@ -229,6 +229,7 @@ model Company {
   consumptionTaxCloses ConsumptionTaxClose[]
   wageChanges      WageChange[]
   transportRoutes  TransportRoute[]
+  duplicateDismissals DuplicateDismissal[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -1954,4 +1955,16 @@ model TransportRoute {
   createdAt DateTime @default(now())
 
   @@index([companyId, userId])
+}
+
+// 二重計上のチェックで「重複ではない」とした組み合わせ(明細・請求書のIDを並べたキー)
+model DuplicateDismissal {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  key       String
+  byName    String
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, key])
 }
