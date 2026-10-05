@@ -641,6 +641,8 @@ model FixedAsset {
   acquisitionCost Int
   residualValue   Int      @default(1)
   usefulLifeYears Int
+  // 償却方法: STRAIGHT(定額法) / DECLINING(200%定率法)
+  method          String   @default("STRAIGHT")
   journalEntryId  String?  @unique
   journalEntry    JournalEntry? @relation("FixedAssetAcquisition", fields: [journalEntryId], references: [id])
   // 除却・売却した日と売却額(除却なら0)、その仕訳

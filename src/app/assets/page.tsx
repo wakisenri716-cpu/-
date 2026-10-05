@@ -12,6 +12,7 @@ type FixedAsset = {
   acquisitionCost: number;
   residualValue: number;
   usefulLifeYears: number;
+  method: string;
   accumulatedDepreciation: number;
   bookValue: number;
   monthlyDepreciation: number;
@@ -65,6 +66,7 @@ export default function AssetsPage() {
           acquisitionCost: Number(formData.get("acquisitionCost")),
           usefulLifeYears: Number(formData.get("usefulLifeYears")),
           residualValue: formData.get("residualValue"),
+          method: formData.get("method"),
         }),
       });
       const body = await res.json();
@@ -149,7 +151,7 @@ export default function AssetsPage() {
         </div>
         <p className="mt-1 text-sm text-slate-600">
           資産を登録すると取得の仕訳(固定資産/普通預金)が自動で記帳されます。「当月分を計上」を押すと
-          定額法で計算した減価償却費(減価償却費/減価償却累計額)が記帳されます。同じ月に二重計上はできません。
+          定額法または定率法(200%定率法。年度の償却額を月数で割り、年度の最後の月で端数を合わせます)で計算した減価償却費(減価償却費/減価償却累計額)が記帳されます。同じ月に二重計上はできません。建物・建物附属設備・構築物は定額法です。
           売ったり捨てたりした資産は「除却・売却」で帳簿から外します(帳簿価額との差額は売却益・除売却損になります)。
         </p>
       </div>
@@ -206,6 +208,13 @@ export default function AssetsPage() {
           />
         </div>
         <div>
+          <label className="block text-xs text-slate-500">償却方法</label>
+          <select name="method" defaultValue="STRAIGHT" className="mt-1 rounded border px-2 py-1.5 text-sm">
+            <option value="STRAIGHT">定額法</option>
+            <option value="DECLINING">定率法(200%)</option>
+          </select>
+        </div>
+        <div>
           <label className="block text-xs text-slate-500">残存価額(任意)</label>
           <input type="number" name="residualValue" min={0} className="mt-1 w-24 rounded border px-2 py-1.5 text-sm" placeholder="1" />
         </div>
@@ -231,7 +240,7 @@ export default function AssetsPage() {
                   <th className="px-4 py-2 text-right">取得価額</th>
                   <th className="px-4 py-2 text-right">減価償却累計額</th>
                   <th className="px-4 py-2 text-right">帳簿価額</th>
-                  <th className="px-4 py-2 text-right">月次償却額</th>
+                  <th className="px-4 py-2 text-right">今月の償却額</th>
                   <th className="px-4 py-2">減価償却</th>
                   <th className="px-4 py-2" />
                 </tr>
@@ -242,7 +251,15 @@ export default function AssetsPage() {
                   return (
                     <Fragment key={asset.id}>
                     <tr className={asset.disposedAt ? "text-slate-400" : ""}>
-                      <td className="px-4 py-2 whitespace-nowrap">{asset.name}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        {asset.name}
+                        <span className="block text-xs text-slate-500">
+                          {asset.method === "DECLINING" ? "定率法" : "定額法"}・{asset.usefulLifeYears}年・
+                          <Link href={`/assets/${asset.id}/schedule`} className="text-indigo-700 hover:underline">
+                            償却予定表
+                          </Link>
+                        </span>
+                      </td>
                       <td className="px-4 py-2 whitespace-nowrap">{formatDate(asset.acquisitionDate)}</td>
                       <td className="px-4 py-2 text-right whitespace-nowrap">{formatYen(asset.acquisitionCost)}</td>
                       <td className="px-4 py-2 text-right whitespace-nowrap">{formatYen(asset.accumulatedDepreciation)}</td>
