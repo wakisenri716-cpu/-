@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatDate, formatYen } from "@/lib/format";
 
@@ -37,6 +38,7 @@ export default function ReviewQueuePage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [learned, setLearned] = useState<string | null>(null);
 
   async function load() {
     const [entriesRes, accountsRes] = await Promise.all([fetch("/api/review-queue"), fetch("/api/accounts")]);
@@ -65,6 +67,7 @@ export default function ReviewQueuePage() {
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "処理に失敗しました");
       setEntries((prev) => prev.filter((entry) => entry.id !== entryId));
+      setLearned(body.learned ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "エラーが発生しました");
     } finally {
@@ -82,6 +85,15 @@ export default function ReviewQueuePage() {
       </div>
 
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
+      {learned && (
+        <div className="rounded-md bg-indigo-50 px-4 py-2 text-sm text-indigo-900">
+          {learned}(
+          <Link href="/ai-learning" className="underline">
+            AIが覚えたこと
+          </Link>
+          )
+        </div>
+      )}
       {loading && <p className="text-sm text-slate-500">読み込み中...</p>}
       {!loading && entries.length === 0 && (
         <p className="rounded-xl border border-slate-200 bg-white shadow-sm p-6 text-center text-sm text-slate-400">

@@ -192,6 +192,7 @@ export default function BankPage() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "処理に失敗しました");
+      if (body.learned) setMessage(body.learned);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "エラーが発生しました");

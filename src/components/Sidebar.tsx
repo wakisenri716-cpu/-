@@ -65,6 +65,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/inbox", label: "AI受付箱", icon: SparkleIcon },
       { href: "/reports/monthly", label: "AIの月次レポート", icon: SparkleIcon },
       { href: "/anomalies", label: "いつもと違う動き", icon: SparkleIcon },
+      { href: "/ai-learning", label: "AIが覚えたこと", icon: SparkleIcon },
       { href: "/review", label: "レビューキュー", icon: InboxIcon },
       { href: "/requests", label: "申請・稟議", icon: StampIcon },
       { href: "/notices", label: "社内のお知らせ", icon: MegaphoneIcon },

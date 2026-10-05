@@ -239,6 +239,7 @@ model Company {
   approvalChecks   ApprovalCheck[]
   closeReviews     MonthlyCloseReview[]
   cashAdvices      CashAdvice[]
+  aiCorrections    AiCorrection[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -2131,4 +2132,27 @@ model CashAdvice {
   createdAt DateTime @default(now())
 
   @@unique([companyId, date])
+}
+
+// 人がAIの勘定科目を直した記録。同じ取引先・同じ摘要で同じ科目に2回直されたら、AIが覚える
+// (取引先の既定科目にする / 銀行明細のルールを作る)
+model AiCorrection {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  // EXPENSE(経費) / INVOICE(受け取った請求書) / BANK(銀行・カード明細)
+  kind      String
+  // 取引先のID(EXPENSE・INVOICE)か、明細の摘要のキーワード(BANK)
+  key       String
+  label     String
+  fromCode  String?
+  toCode    String
+  amount    Int      @default(0)
+  // このときに覚えた: VENDOR_DEFAULT(取引先の既定科目) / BANK_RULE(明細のルール)
+  learned   String?
+  ruleId    String?
+  forgotten Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([companyId, kind, key])
 }
