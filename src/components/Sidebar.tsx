@@ -98,6 +98,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/reimbursements", label: "立替経費の精算", icon: WalletIcon },
       { href: "/travel", label: "出張旅費・日当", icon: PlaneIcon },
       { href: "/transport", label: "交通費精算", icon: CashflowIcon },
+      { href: "/quick-expense", label: "ひとことで経費入力", icon: SparkleIcon },
       { href: "/duplicates", label: "二重計上のチェック", icon: SearchIcon },
       { href: "/advances", label: "仮払金", icon: CoinsIcon },
       { href: "/bank", label: "銀行・カード明細", icon: BankIcon },
@@ -170,6 +171,7 @@ const EMPLOYEE_SECTIONS: NavSection[] = [
     items: [
       { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
       { href: "/expenses", label: "経費精算", icon: ReceiptIcon },
+      { href: "/quick-expense", label: "ひとことで経費入力", icon: SparkleIcon },
       { href: "/travel", label: "出張旅費・日当", icon: PlaneIcon },
       { href: "/transport", label: "交通費精算", icon: CashflowIcon },
       { href: "/worklogs", label: "日報(工数)", icon: NotebookIcon },

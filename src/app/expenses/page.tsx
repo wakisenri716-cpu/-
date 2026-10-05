@@ -120,7 +120,11 @@ export default function ExpensesPage() {
             <PrintButton variant="outline" />
           </div>
           <p className="mt-1 text-sm text-slate-600">
-            レシート画像をアップロードすると、AIが勘定科目・金額を読み取り、信頼度が高ければ自動で仕訳を記帳します。
+            レシート画像をアップロードすると、AIが勘定科目・金額を読み取り、信頼度が高ければ自動で仕訳を記帳します。レシートがないものは
+            <a href="/quick-expense" className="mx-1 text-indigo-700 hover:underline">
+              ひとことで経費入力
+            </a>
+            で文章から入れられます。
           </p>
         </div>
         <button
