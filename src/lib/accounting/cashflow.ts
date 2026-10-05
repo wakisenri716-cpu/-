@@ -18,7 +18,8 @@ function addMonths(month: string, n: number) {
 
 // 資金繰り予測: 今日の現預金残高から、入金予定(売掛金)・支払予定(買掛金)・定期取引・立替経費の精算・借入金の返済を月ごとに足し引きする。
 // 期日を過ぎた入金・支払や、記帳日が来ているのに未記帳の定期取引は「今月」に入れる。
-export async function getCashflow(companyId: string, today = jstDateKey(new Date()), monthCount = 3) {
+// receiptDates を渡すと、売掛金の入金を期日ではなくその日(入金予測)で数える
+export async function getCashflow(companyId: string, today = jstDateKey(new Date()), monthCount = 3, options: { receiptDates?: Map<string, { date: string; note?: string }> } = {}) {
   const current = today.slice(0, 7);
   const months = Array.from({ length: monthCount }, (_, i) => addMonths(current, i));
   const bucket = (date: string | null) => {
@@ -48,7 +49,9 @@ export async function getCashflow(companyId: string, today = jstDateKey(new Date
   const push = (map: Map<string, CashItem[]>, month: string, item: CashItem) => map.get(month)?.push(item);
 
   for (const r of receivables.rows) {
-    push(inflows, bucket(r.dueDate), { label: `${r.partyName} ${r.invoiceNumber ?? ""}`.trim(), amount: r.remaining, note: r.overdueDays > 0 ? `期日超過${r.overdueDays}日` : undefined });
+    const predicted = options.receiptDates?.get(r.id);
+    const notes = [r.overdueDays > 0 ? `期日超過${r.overdueDays}日` : null, predicted?.note ?? null].filter(Boolean);
+    push(inflows, bucket(predicted?.date ?? r.dueDate), { label: `${r.partyName} ${r.invoiceNumber ?? ""}`.trim(), amount: r.remaining, note: notes.length ? notes.join("・") : undefined });
   }
   for (const r of payables.rows) {
     push(outflows, bucket(r.dueDate), { label: `${r.partyName} ${r.invoiceNumber ?? ""}`.trim(), amount: r.remaining, note: r.overdueDays > 0 ? `期日超過${r.overdueDays}日` : undefined });

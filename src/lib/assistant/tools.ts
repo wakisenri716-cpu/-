@@ -21,6 +21,7 @@ import { getPoMatches } from "@/lib/poMatching";
 import { findCustomerInsights, INSIGHT_LABELS } from "@/lib/customerInsights";
 import { findVendorInsights, VENDOR_INSIGHT_LABELS } from "@/lib/vendorInsights";
 import { getAccountReview, SOURCE_LABELS as ACCOUNT_SOURCE_LABELS } from "@/lib/accountReview";
+import { getReceiptForecast, CONFIDENCE_LABELS } from "@/lib/receiptForecast";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
 // 書き換えは利用者が画面で「実行する」を押したときだけ行う。
@@ -252,6 +253,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { lineId: { type: "string" }, account: { type: "string", description: "直す先の勘定科目の名前かコード(任意)" } }, required: ["lineId"] },
   },
   {
+    name: "get_receipt_forecast",
+    description: "入金待ちの請求書が実際にはいつ入りそうか(顧客ごとの過去の払い方から見込んだ予測日・期日とのずれ・確からしさ・督促が必要か)と、月ごとの期日どおりと予測の入金額を返す。「来月いくら入金されそう?」「入金が遅れそうな取引先は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
     name: "get_todos",
     description: "いま会社でやるべきこと(レビュー待ち・承認待ち・期限切れの請求書・納付期限など)の一覧を返す。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
@@ -291,6 +297,17 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string 
       return proposeExpense(ctx, input);
     case "propose_fix_account":
       return proposeFixAccount(ctx, input);
+    case "get_receipt_forecast": {
+      const f = await getReceiptForecast(companyId);
+      return {
+        total: f.total,
+        laterThanDue: f.later,
+        months: f.months,
+        invoices: f.rows.slice(0, 30).map((r) => ({ customer: r.customer, invoice: r.invoiceNumber, remaining: r.remaining, dueDate: r.dueDate, predictedDate: r.predictedDate, shiftDays: r.shiftDays, confidence: CONFIDENCE_LABELS[r.confidence], needsReminder: r.risk, basis: r.basis, aiReason: r.aiReason })),
+        aiSummary: f.review?.summary ?? null,
+        screen: "/receipt-forecast",
+      };
+    }
     case "get_account_review": {
       const r = await getAccountReview(companyId);
       return {

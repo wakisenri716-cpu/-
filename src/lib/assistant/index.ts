@@ -51,6 +51,7 @@ const SCREENS = [
   ["/vendor-insights", "仕入先の見守り"],
   ["/quick-expense", "ひとことで経費入力"],
   ["/account-review", "科目の見直し"],
+  ["/receipt-forecast", "入金予測"],
   ["/vendors", "取引先"],
 ];
 
@@ -171,6 +172,15 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("get_customer_insights")) as { insights: { customer: string; kind: string; detail: string }[] };
     if (!r.insights.length) return { reply: "目立った変化のある顧客はいません。", tools: ["get_customer_insights"], mode: "simple" };
     return { reply: ["顧客の変化:", ...r.insights.slice(0, 5).map((i) => `・${i.customer}(${i.kind}): ${i.detail}`), "[顧客の見守り](/customer-insights)"].join("\n"), tools: ["get_customer_insights"], mode: "simple" };
+  }
+  if (/入金.*(予測|され(そう|る)|入りそう|いつ)|いつ入金/.test(q)) {
+    const r = (await run("get_receipt_forecast")) as { total: number; laterThanDue: number; months: { month: string; due: number; predicted: number }[] };
+    if (!r.total) return { reply: "入金待ちの請求書はありません。", tools: ["get_receipt_forecast"], mode: "simple" };
+    return {
+      reply: [`入金待ちは ${formatYen(r.total)} で、そのうち ${formatYen(r.laterThanDue)} は期日より遅れて入りそうです。`, ...r.months.map((m) => `・${Number(m.month.slice(5))}月: 予測 ${formatYen(m.predicted)}(期日どおりなら ${formatYen(m.due)})`), "[入金予測](/receipt-forecast)"].join("\n"),
+      tools: ["get_receipt_forecast"],
+      mode: "simple",
+    };
   }
   if (/科目.*(間違|違って|違う|見直|合って)/.test(q)) {
     const r = (await run("get_account_review")) as { checked: number; suggestions: { date: string; description: string; from: string; to: string }[] };
