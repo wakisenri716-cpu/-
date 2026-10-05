@@ -25,6 +25,7 @@ import { getReceiptForecast, CONFIDENCE_LABELS } from "@/lib/receiptForecast";
 import { getPaymentPlan, GROUP_LABELS } from "@/lib/paymentPlan";
 import { getBillingGaps, GAP_LABELS } from "@/lib/billingGaps";
 import { draftQuote } from "@/lib/quoteAssist";
+import { getDuplicateParties } from "@/lib/partyMerge";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
 // 書き換えは利用者が画面で「実行する」を押したときだけ行う。
@@ -276,6 +277,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { customerName: { type: "string" }, text: { type: "string", description: "見積の内容(品目・数量・単価など)" } }, required: ["text"] },
   },
   {
+    name: "get_duplicate_parties",
+    description: "同じ相手が2つ以上登録されているかもしれない仕入先・顧客の組(名前の表記ゆれ・似ている名前)と、それぞれの使われ方・AIの見立てを返す。「取引先がダブっていない?」などに使う。まとめるのは「取引先の重複」の画面で人が行う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
     name: "get_todos",
     description: "いま会社でやるべきこと(レビュー待ち・承認待ち・期限切れの請求書・納付期限など)の一覧を返す。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
@@ -344,6 +350,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string 
       const user = await prisma.user.findUniqueOrThrow({ where: { id: ctx.userId }, select: { id: true, name: true } });
       const d = await draftQuote({ ...user, companyId }, input);
       return { lines: d.lines.map((l) => ({ description: l.description, quantity: l.quantity, unit: l.unit, unitPrice: l.unitPrice, taxRate: l.taxRate, pastPrices: l.history ? `${l.history.min}〜${l.history.max}円(${l.history.count}件)` : null, warning: l.priceWarning })), subtotal: d.subtotal, link: `/quotes/new?draft=${d.draftId}`, note: "下書きです。リンクを開いて内容を確かめ、見積書を作ってください。" };
+    }
+    case "get_duplicate_parties": {
+      const r = await getDuplicateParties(companyId);
+      return { count: r.groups.length, groups: r.groups.slice(0, 20).map((g) => ({ kind: g.kind === "vendor" ? "仕入先・支払先" : "顧客", strength: g.strength === "same" ? "同じ名前" : "似ている名前", names: g.parties.map((p) => p.name), aiSame: g.aiSame, aiNote: g.aiNote })), screen: "/party-duplicates" };
     }
     case "get_billing_gaps": {
       const r = await getBillingGaps(companyId);
