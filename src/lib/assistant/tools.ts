@@ -18,6 +18,7 @@ import { runBookCheck } from "@/lib/bookCheck";
 import { getMonthlyClose } from "@/lib/monthlyClose";
 import { findMissingEntries, getCloseTasks } from "./closeAssistant";
 import { getPoMatches } from "@/lib/poMatching";
+import { findCustomerInsights, INSIGHT_LABELS } from "@/lib/customerInsights";
 
 // AIアシスタントが使う道具。どれも会社のデータを読むだけで、書き換えはしない。
 // 結果はAIが読む JSON 文字列(金額は円の整数)。
@@ -181,6 +182,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_po_matching",
     description: "取り込んだ受け取った請求書と発注書の突き合わせ結果(金額が違う・二重計上の疑い・発注書なし)を返す。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_customer_insights",
+    description: "顧客ごとの変化(売上の減少・注文の途絶え・支払いが遅くなった・売上の偏り・大きな伸び)と次の一手を返す。「最近元気のない顧客は?」「売上が減っている取引先は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -355,6 +361,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string 
     case "get_po_matching": {
       const rows = await getPoMatches(companyId);
       return { items: rows.slice(0, 20).map((r) => ({ kind: r.kind, vendor: r.vendor, invoice: r.invoice.number, invoiceTotal: r.invoice.total, order: r.order?.number ?? null, orderTotal: r.order?.total ?? null, message: r.message })), link: "/po-matching" };
+    }
+    case "get_customer_insights": {
+      const r = await findCustomerInsights(companyId);
+      return { customers: r.customers, insights: r.insights.map((i) => ({ customer: i.name, kind: INSIGHT_LABELS[i.kind], detail: i.detail, nextStep: i.action, link: `/vendors/customer/${i.customerId}` })), link: "/customer-insights" };
     }
     case "get_todos": {
       const todos = await getTodos(companyId);

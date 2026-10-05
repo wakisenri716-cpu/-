@@ -242,6 +242,7 @@ model Company {
   aiCorrections    AiCorrection[]
   bookChecks       BookCheck[]
   contracts        Contract[]
+  aiNotes          AiNote[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -2210,4 +2211,19 @@ model Contract {
   updatedAt    DateTime  @updatedAt
 
   @@index([companyId, status])
+}
+
+// AIが作った文章・提案の保存(機能ごと・対象ごとに最新の1つ)。例: kind=CUSTOMER_INSIGHTS, key=日付
+model AiNote {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  kind      String
+  key       String
+  data      Json
+  mode      String
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, kind, key])
 }
