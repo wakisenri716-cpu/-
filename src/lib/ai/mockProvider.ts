@@ -3,6 +3,7 @@ import type {
   AiProvider,
   BankClassification,
   BankClassificationInput,
+  DocumentClassification,
   InvoiceExtraction,
   ReceiptExtraction,
 } from "./types";
@@ -23,6 +24,29 @@ function hashToUnit(bytes: Uint8Array): number {
 const SAMPLE_VENDORS = ["株式会社サンプル商事", "みらいオフィス用品", "東京タクシー", "スターカフェ", "クラウド印刷"];
 
 export class MockAiProvider implements AiProvider {
+  // ファイル名の言葉で見分ける(APIキーがないときの代わり)
+  async classifyDocument(input: { base64: string; mediaType: string; fileName: string }): Promise<DocumentClassification> {
+    const name = input.fileName.normalize("NFKC").toLowerCase();
+    const kind = /契約|規約|覚書|contract|agreement/.test(name)
+      ? "CONTRACT"
+      : /請求|invoice|bill/.test(name)
+        ? "RECEIVED_INVOICE"
+        : /領収|レシート|receipt/.test(name)
+          ? "RECEIPT"
+          : "OTHER";
+    const title = { CONTRACT: "契約書", RECEIVED_INVOICE: "受け取った請求書", RECEIPT: "領収書", OTHER: "書類" }[kind];
+    return {
+      kind,
+      title,
+      counterparty: null,
+      documentDate: null,
+      amount: null,
+      endDate: null,
+      summary: `ファイル名から「${title}」と判定しました(ANTHROPIC_API_KEY 未設定のためモック)。`,
+      confidence: kind === "OTHER" ? 0.3 : 0.6,
+    };
+  }
+
   async extractReceipt(input: { imageBase64: string; mediaType: string }): Promise<ReceiptExtraction> {
     const bytes = Buffer.from(input.imageBase64, "base64");
     const unit = hashToUnit(bytes.length ? bytes : Buffer.from(input.mediaType));

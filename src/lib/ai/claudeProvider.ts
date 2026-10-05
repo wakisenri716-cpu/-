@@ -4,6 +4,7 @@ import type {
   AiProvider,
   BankClassification,
   BankClassificationInput,
+  DocumentClassification,
   InvoiceExtraction,
   ReceiptExtraction,
 } from "./types";
@@ -102,6 +103,35 @@ function bankClassificationTool(accountCodes: string[]): Anthropic.Tool {
   };
 }
 
+// 画像は image、PDF は document のブロックにする
+function mediaBlock(base64: string, mediaType: string): Anthropic.ContentBlockParam {
+  if (mediaType === "application/pdf") return { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } };
+  return { type: "image", source: { type: "base64", media_type: mediaType as "image/jpeg" | "image/png" | "image/webp" | "image/gif", data: base64 } };
+}
+
+const documentTool: Anthropic.Tool = {
+  name: "record_document_classification",
+  description: "Record what kind of business document this is and its key fields.",
+  input_schema: {
+    type: "object",
+    properties: {
+      kind: {
+        type: "string",
+        enum: ["RECEIVED_INVOICE", "RECEIPT", "CONTRACT", "OTHER"],
+        description: "RECEIVED_INVOICE: an invoice/bill the company received and must pay. RECEIPT: a receipt for something already paid. CONTRACT: a contract, agreement, or terms with a period. OTHER: anything else.",
+      },
+      title: { type: "string", description: "Short Japanese name of the document" },
+      counterparty: { type: ["string", "null"], description: "The other party's name" },
+      documentDate: { type: ["string", "null"], description: "Document date, YYYY-MM-DD" },
+      amount: { type: ["number", "null"], description: "Total amount including tax, integer JPY" },
+      endDate: { type: ["string", "null"], description: "For contracts: expiry or renewal date, YYYY-MM-DD" },
+      summary: { type: "string", description: "One or two sentence summary in Japanese" },
+      confidence: { type: "number", description: "Confidence 0.0-1.0 in the kind" },
+    },
+    required: ["kind", "title", "counterparty", "documentDate", "amount", "endDate", "summary", "confidence"],
+  },
+};
+
 function extractToolInput<T>(message: Anthropic.Message, toolName: string): T {
   const toolUse = message.content.find(
     (block): block is Anthropic.ToolUseBlock => block.type === "tool_use" && block.name === toolName,
@@ -113,6 +143,28 @@ function extractToolInput<T>(message: Anthropic.Message, toolName: string): T {
 }
 
 export class ClaudeAiProvider implements AiProvider {
+  async classifyDocument(input: { base64: string; mediaType: string; fileName: string }): Promise<DocumentClassification> {
+    const message = await client().messages.create({
+      model: MODEL,
+      max_tokens: 2048,
+      tools: [documentTool],
+      tool_choice: { type: "tool", name: documentTool.name },
+      messages: [
+        {
+          role: "user",
+          content: [
+            mediaBlock(input.base64, input.mediaType),
+            {
+              type: "text",
+              text: `会社に届いた書類です(ファイル名: ${input.fileName})。どんな書類かを見分けて、record_document_classification ツールで報告してください。日付は YYYY-MM-DD、金額は税込の整数円で。分からない項目は null にしてください。`,
+            },
+          ],
+        },
+      ],
+    });
+    return extractToolInput<DocumentClassification>(message, documentTool.name);
+  }
+
   async extractReceipt(input: { imageBase64: string; mediaType: string }): Promise<ReceiptExtraction> {
     const message = await client().messages.create({
       model: MODEL,
@@ -123,14 +175,7 @@ export class ClaudeAiProvider implements AiProvider {
         {
           role: "user",
           content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: input.mediaType as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
-                data: input.imageBase64,
-              },
-            },
+            mediaBlock(input.imageBase64, input.mediaType),
             {
               type: "text",
               text: "この領収書/レシート画像から経費精算に必要な情報を抽出し、record_receipt_extraction ツールで報告してください。金額は税込の整数円で。勘定科目は選択肢から最も適切なものを選んでください。読み取りにくい・判断に迷う場合は confidence を低くしてください。",
@@ -161,14 +206,7 @@ export class ClaudeAiProvider implements AiProvider {
         {
           role: "user",
           content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: input.mediaType as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
-                data: input.imageBase64,
-              },
-            },
+            mediaBlock(input.imageBase64, input.mediaType),
             {
               type: "text",
               text: `この請求書画像から情報を抽出し、record_invoice_extraction ツールで報告してください。${directionHint} 金額はすべて整数円で。読み取りにくい・判断に迷う場合は confidence を低くしてください。`,

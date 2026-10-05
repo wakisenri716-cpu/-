@@ -234,6 +234,7 @@ model Company {
   assistantProposals AssistantProposal[]
   monthlyReports   MonthlyReport[]
   anomalyChecks    AnomalyCheck[]
+  inboxItems       InboxItem[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -2031,4 +2032,26 @@ model AnomalyCheck {
   createdAt DateTime @default(now())
 
   @@unique([companyId, key])
+}
+
+// AI受付箱に入れた書類と、AIが見分けた結果・振り分け先
+model InboxItem {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId     String
+  userName   String
+  fileName   String
+  kind       String
+  title      String
+  summary    String
+  confidence Float
+  status     String
+  resultType String
+  resultId   String?
+  href       String
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, createdAt])
 }
