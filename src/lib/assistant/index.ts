@@ -50,6 +50,7 @@ const SCREENS = [
   ["/customer-insights", "顧客の見守り"],
   ["/vendor-insights", "仕入先の見守り"],
   ["/quick-expense", "ひとことで経費入力"],
+  ["/account-review", "科目の見直し"],
   ["/vendors", "取引先"],
 ];
 
@@ -58,7 +59,7 @@ function systemPrompt(companyName: string) {
     `あなたは「${companyName}」の経理・事務を手伝うAIアシスタントです。使う人は経理の専門家ではないことが多いので、やさしい日本語で、結論から短く答えてください。`,
     "数字は必ず道具で会社のデータを調べてから答え、推測で数字を作らないでください。データにないことは「データがありません」と言ってください。",
     "金額は「1,234,567円」のように円で書いてください。税務の判断が必要なことは「目安」と添え、税理士への確認をすすめてください。",
-    "請求書の発行・仕訳の記帳・督促メール・契約の終了・発注書の検収や二重に取り込んだ請求書の取り消し・取引先のいつもの科目の変更・経費の入力を頼まれたら、propose_ の道具で下書きを作ってください。下書きは利用者が画面で確かめて「実行する」を押したときだけ確定します。あなたが確定したとは言わず、「下書きを作りました。内容を確かめて実行してください」と伝えてください。必要な情報(金額・相手など)が足りないときは、推測せずに聞き返してください。",
+    "請求書の発行・仕訳の記帳・督促メール・契約の終了・発注書の検収や二重に取り込んだ請求書の取り消し・取引先のいつもの科目の変更・経費の入力・科目の間違いの振替を頼まれたら、propose_ の道具で下書きを作ってください。下書きは利用者が画面で確かめて「実行する」を押したときだけ確定します。あなたが確定したとは言わず、「下書きを作りました。内容を確かめて実行してください」と伝えてください。必要な情報(金額・相手など)が足りないときは、推測せずに聞き返してください。",
     "それ以外の変更(取消・削除・設定の変更など)はできないので、どの画面でできるかを案内してください。",
     "関係する画面があれば、答えの最後に [画面の名前](/パス) の形でリンクを1〜3個つけてください。使えるパスは次のとおりです(道具の結果に link があればそれも使えます):",
     SCREENS.map(([href, label]) => `${label}: ${href}`).join(" / "),
@@ -170,6 +171,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("get_customer_insights")) as { insights: { customer: string; kind: string; detail: string }[] };
     if (!r.insights.length) return { reply: "目立った変化のある顧客はいません。", tools: ["get_customer_insights"], mode: "simple" };
     return { reply: ["顧客の変化:", ...r.insights.slice(0, 5).map((i) => `・${i.customer}(${i.kind}): ${i.detail}`), "[顧客の見守り](/customer-insights)"].join("\n"), tools: ["get_customer_insights"], mode: "simple" };
+  }
+  if (/科目.*(間違|違って|違う|見直|合って)/.test(q)) {
+    const r = (await run("get_account_review")) as { checked: number; suggestions: { date: string; description: string; from: string; to: string }[] };
+    if (!r.suggestions.length) return { reply: `経費の仕訳 ${r.checked}件 に、科目が違いそうなものは見つかりませんでした。`, tools: ["get_account_review"], mode: "simple" };
+    return { reply: [`科目を見直したい仕訳が ${r.suggestions.length}件 あります:`, ...r.suggestions.slice(0, 5).map((x) => `・${x.date} ${x.description}: ${x.from} → ${x.to}`), "[科目の見直し](/account-review)"].join("\n"), tools: ["get_account_review"], mode: "simple" };
   }
   if (/仕入先|値上が|インボイス登録|登録番号/.test(q)) {
     const r = (await run("get_vendor_insights")) as { insights: { vendor: string; kind: string; detail: string }[] };
