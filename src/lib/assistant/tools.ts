@@ -11,6 +11,13 @@ import { getCashBalance, getTodos } from "@/lib/dashboard";
 import { getFiscalStartMonth, nextDay, resolvePeriod, toRange } from "@/lib/accounting/period";
 import { proposeInvoice, proposeJournal, proposeReminder } from "./proposals";
 import { findAnomalies } from "@/lib/anomalies";
+import { getCollections, STAGE_LABELS } from "@/lib/collections";
+import { listContracts, CONTRACT_KINDS } from "@/lib/contracts";
+import { buildCashFacts, riskOf } from "./cashAdvice";
+import { runBookCheck } from "@/lib/bookCheck";
+import { getMonthlyClose } from "@/lib/monthlyClose";
+import { findMissingEntries, getCloseTasks } from "./closeAssistant";
+import { getPoMatches } from "@/lib/poMatching";
 
 // AIアシスタントが使う道具。どれも会社のデータを読むだけで、書き換えはしない。
 // 結果はAIが読む JSON 文字列(金額は円の整数)。
@@ -147,6 +154,36 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { month: { type: "string", description: "対象の月 YYYY-MM(任意。省略すると今月)" } }, additionalProperties: false },
   },
   {
+    name: "get_collections",
+    description: "支払期限を過ぎた未入金の請求書と、それぞれの督促の段階(1回目・2回目・電話・要相談・返事待ち)・督促した回数・その顧客のふだんの払い方を返す。「督促が必要なのは?」「回収が遅れている取引先は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_contracts",
+    description: "契約書の台帳(相手・期間・自動更新・解約の申し出期限・月額)を返す。withinDays を指定すると、その日数以内に申し出期限か満了日が来る契約だけにする。「更新が近い契約は?」「毎月の固定の契約費は?」などに使う。",
+    input_schema: { type: "object", properties: { withinDays: { type: "integer", description: "この日数以内に判断が必要なものだけ(任意)" } }, additionalProperties: false },
+  },
+  {
+    name: "get_cash_outlook",
+    description: "この先3か月の月末の現預金の見込み・最も低くなる月・資金が足りなくなる月・ふだんの毎月の支出・手元資金が何か月分か・危険の大きさ(LOW/MEDIUM/HIGH)を返す。「資金は大丈夫?」「お金が足りなくなる?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_book_check",
+    description: "今期の帳簿の点検結果(10万円以上の消耗品・大きい雑費・現金のマイナス・残った仮払金・私用に見える支出・二重計上の疑いなど)と点数を返す。「帳簿に問題はある?」「税理士に渡す前に直すところは?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_close_status",
+    description: "月次決算の進み具合(チェックリストの残り・まとめて実行できる作業・計上漏れかもしれない費用)を返す。「先月の締めは終わった?」「月次決算で残っていることは?」などに使う。",
+    input_schema: { type: "object", properties: { month: { type: "string", description: "YYYY-MM(任意。省略すると先月)" } }, additionalProperties: false },
+  },
+  {
+    name: "get_po_matching",
+    description: "取り込んだ受け取った請求書と発注書の突き合わせ結果(金額が違う・二重計上の疑い・発注書なし)を返す。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
     name: "get_todos",
     description: "いま会社でやるべきこと(レビュー待ち・承認待ち・期限切れの請求書・納付期限など)の一覧を返す。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
@@ -265,6 +302,59 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string 
     case "get_anomalies": {
       const r = await findAnomalies(companyId, str(input.month) || null);
       return { month: r.month, anomalies: r.anomalies.map((a) => ({ title: a.title, detail: a.detail, amount: a.amount, link: a.href })), link: "/anomalies" };
+    }
+    case "get_collections": {
+      const c = await getCollections(companyId);
+      return {
+        overdueTotal: c.total,
+        invoices: c.rows.slice(0, 20).map((r) => ({
+          customer: r.customer?.name ?? null,
+          number: r.invoiceNumber,
+          remaining: r.remaining,
+          daysOverdue: r.daysOverdue,
+          reminders: r.reminders,
+          lastReminded: r.lastReminded,
+          nextStep: `${STAGE_LABELS[r.stage].label}: ${STAGE_LABELS[r.stage].action}`,
+          habit: r.habit,
+        })),
+        link: "/collections",
+      };
+    }
+    case "get_contracts": {
+      const within = Number.isInteger(input.withinDays) ? (input.withinDays as number) : null;
+      const d = await listContracts(companyId);
+      const active = d.contracts.filter((c) => c.status === "ACTIVE");
+      const list = within === null ? active : active.filter((c) => { const n = c.daysToDeadline ?? c.daysToEnd; return n !== null && n >= 0 && n <= within; });
+      return {
+        monthlyTotal: d.monthlyTotal,
+        contracts: list.slice(0, 30).map((c) => ({ title: c.title, counterparty: c.counterparty, kind: CONTRACT_KINDS[c.kind] ?? c.kind, endDate: c.nextEnd, autoRenew: c.autoRenew, noticeDeadline: c.deadline, daysToDeadline: c.daysToDeadline, amount: c.amount, amountPeriod: c.amountPeriod, keyPoints: c.keyPoints })),
+        link: "/contracts",
+      };
+    }
+    case "get_cash_outlook": {
+      const f = await buildCashFacts(companyId);
+      return { risk: riskOf(f), cashNow: f.cashNow, months: f.months, shortageMonth: f.shortageMonth, lowest: f.lowest, avgMonthlyExpense: f.avgMonthlyExpense, monthsOfCash: f.monthsOfCash, overdueReceivables: f.overdueReceivables.total, bigOutflows: f.bigOutflows, link: "/cashflow" };
+    }
+    case "get_book_check": {
+      const r = await runBookCheck(companyId);
+      return { period: r.periodLabel, score: r.score, findings: r.findings.map((f) => ({ level: f.level, title: f.title, detail: f.detail, link: f.href })), link: "/book-check" };
+    }
+    case "get_close_status": {
+      const close = await getMonthlyClose(companyId, /^\d{4}-(0[1-9]|1[0-2])$/.test(str(input.month)) ? str(input.month) : undefined);
+      const [tasks, missing] = await Promise.all([getCloseTasks(companyId, close.month), findMissingEntries(companyId, close.month)]);
+      return {
+        month: close.month,
+        done: close.done,
+        total: close.total,
+        remaining: close.items.filter((i) => !i.done).map((i) => ({ item: i.label, detail: i.detail ?? null })),
+        batchTasks: tasks.filter((t) => t.count > 0).map((t) => ({ task: t.label, count: t.count, amount: t.amount })),
+        possiblyMissing: missing.slice(0, 8).map((m) => ({ account: m.account, usualAmount: m.typical })),
+        link: `/monthly-close?month=${close.month}`,
+      };
+    }
+    case "get_po_matching": {
+      const rows = await getPoMatches(companyId);
+      return { items: rows.slice(0, 20).map((r) => ({ kind: r.kind, vendor: r.vendor, invoice: r.invoice.number, invoiceTotal: r.invoice.total, order: r.order?.number ?? null, orderTotal: r.order?.total ?? null, message: r.message })), link: "/po-matching" };
     }
     case "get_todos": {
       const todos = await getTodos(companyId);
