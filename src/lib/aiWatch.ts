@@ -8,15 +8,16 @@ import { getCollections } from "@/lib/collections";
 import { countAnomalies } from "@/lib/anomalies";
 import { countDuplicates } from "@/lib/duplicates";
 import { runBookCheck } from "@/lib/bookCheck";
+import { getAccountReview } from "@/lib/accountReview";
 
-// AIの見張り: 会社のいろいろな見守り(資金・契約・顧客・仕入先・督促・発注書・異常・二重計上・帳簿)の結果を1か所に集める。
+// AIの見張り: 会社のいろいろな見守り(資金・契約・顧客・仕入先・督促・発注書・異常・二重計上・帳簿・科目)の結果を1か所に集める。
 // 「AIの見張り」画面と、毎朝のブリーフィングで使う。
 
 export type WatchStatus = "ok" | "info" | "warn";
 export type Watch = { key: string; label: string; status: WatchStatus; headline: string; href: string; items: string[] };
 
 export async function getWatches(companyId: string): Promise<Watch[]> {
-  const [cash, contracts, customers, vendors, po, collections, anomalies, duplicates, book] = await Promise.all([
+  const [cash, contracts, customers, vendors, po, collections, anomalies, duplicates, book, accounts] = await Promise.all([
     buildCashFacts(companyId),
     listContracts(companyId),
     findCustomerInsights(companyId),
@@ -26,6 +27,7 @@ export async function getWatches(companyId: string): Promise<Watch[]> {
     countAnomalies(companyId),
     countDuplicates(companyId),
     runBookCheck(companyId),
+    getAccountReview(companyId),
   ]);
   const risk = riskOf(cash);
   const soon = contracts.contracts.filter((c) => c.status === "ACTIVE" && (c.daysToDeadline ?? c.daysToEnd ?? 999) >= 0 && (c.daysToDeadline ?? c.daysToEnd ?? 999) <= 30);
@@ -106,6 +108,14 @@ export async function getWatches(companyId: string): Promise<Watch[]> {
       headline: `帳簿の点数は ${book.score}点${bookWarn.length ? `(要注意 ${bookWarn.length}件)` : ""}`,
       href: "/book-check",
       items: bookWarn.slice(0, 5).map((f) => f.title),
+    },
+    {
+      key: "accounts",
+      label: "科目の見直し",
+      status: accounts.suggestions.length ? "info" : "ok",
+      headline: accounts.suggestions.length ? `勘定科目を見直したい経費の仕訳が ${accounts.suggestions.length}件` : "科目が違いそうな経費の仕訳はありません",
+      href: "/account-review",
+      items: accounts.suggestions.slice(0, 5).map((s) => `${s.date} ${s.description}: ${s.from.name} → ${s.to.name}`),
     },
   ];
 }

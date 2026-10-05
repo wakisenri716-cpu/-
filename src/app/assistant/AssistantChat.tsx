@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 
-type Proposal = { id: string; kind: "INVOICE" | "JOURNAL" | "REMINDER" | "END_CONTRACT" | "LINK_PO" | "CANCEL_INVOICE" | "VENDOR_ACCOUNT" | "EXPENSE"; summary: string; details: string[]; status: string; resultNote: string | null };
+type Proposal = { id: string; kind: "INVOICE" | "JOURNAL" | "REMINDER" | "END_CONTRACT" | "LINK_PO" | "CANCEL_INVOICE" | "VENDOR_ACCOUNT" | "EXPENSE" | "FIX_ACCOUNT"; summary: string; details: string[]; status: string; resultNote: string | null };
 type Turn = { role: "user" | "assistant"; text: string; tools?: string[]; proposals?: Proposal[] };
 
 const KIND_LABEL: Record<Proposal["kind"], string> = {
@@ -15,6 +15,7 @@ const KIND_LABEL: Record<Proposal["kind"], string> = {
   CANCEL_INVOICE: "請求書の取り消し",
   VENDOR_ACCOUNT: "取引先の科目",
   EXPENSE: "経費の入力",
+  FIX_ACCOUNT: "科目の振替",
 };
 const ACTION_LABEL: Record<Proposal["kind"], string> = {
   INVOICE: "この内容で請求書を発行する",
@@ -25,6 +26,7 @@ const ACTION_LABEL: Record<Proposal["kind"], string> = {
   CANCEL_INVOICE: "この請求書を取り消す",
   VENDOR_ACCOUNT: "この科目にする",
   EXPENSE: "経費精算に入れる",
+  FIX_ACCOUNT: "振替の仕訳を作って直す",
 };
 
 // AIの下書き。人がボタンを押したときだけ実行する
@@ -85,6 +87,8 @@ const TOOL_LABEL: Record<string, string> = {
   propose_po_action: "発注書の検収",
   propose_vendor_account: "取引先の科目",
   propose_expense: "経費の入力",
+  propose_fix_account: "科目の振替",
+  get_account_review: "科目の見直し",
 };
 
 // [名前](/パス) の形のリンクだけをアプリ内リンクにする(外のURLはリンクにしない)

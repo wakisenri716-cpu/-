@@ -9,7 +9,7 @@ import { getSalesAnalysis } from "@/lib/accounting/salesAnalysis";
 import { getBudgetProgress } from "@/lib/accounting/budgetProgress";
 import { getCashBalance, getTodos } from "@/lib/dashboard";
 import { getFiscalStartMonth, nextDay, resolvePeriod, toRange } from "@/lib/accounting/period";
-import { proposeEndContract, proposeExpense, proposeInvoice, proposeJournal, proposePoAction, proposeReminder, proposeVendorAccount } from "./proposals";
+import { proposeEndContract, proposeExpense, proposeFixAccount, proposeInvoice, proposeJournal, proposePoAction, proposeReminder, proposeVendorAccount } from "./proposals";
 import { findAnomalies } from "@/lib/anomalies";
 import { getCollections, STAGE_LABELS } from "@/lib/collections";
 import { listContracts, CONTRACT_KINDS } from "@/lib/contracts";
@@ -20,6 +20,7 @@ import { findMissingEntries, getCloseTasks } from "./closeAssistant";
 import { getPoMatches } from "@/lib/poMatching";
 import { findCustomerInsights, INSIGHT_LABELS } from "@/lib/customerInsights";
 import { findVendorInsights, VENDOR_INSIGHT_LABELS } from "@/lib/vendorInsights";
+import { getAccountReview, SOURCE_LABELS as ACCOUNT_SOURCE_LABELS } from "@/lib/accountReview";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
 // 書き換えは利用者が画面で「実行する」を押したときだけ行う。
@@ -241,6 +242,16 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
+    name: "get_account_review",
+    description: "勘定科目が違いそうな経費の仕訳(摘要の言葉・取引先のいつもの科目・AIの見立てから)と、直す先の科目・理由を返す。「科目の間違いはある?」「雑費に入っているものを直したい」などに使う。直すときは lineId を propose_fix_account に渡す。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "propose_fix_account",
+    description: "get_account_review で見つかった仕訳を正しい科目へ振り替える下書きを作る(まだ記帳しない)。account を省略すると見直しの候補の科目にする。",
+    input_schema: { type: "object", properties: { lineId: { type: "string" }, account: { type: "string", description: "直す先の勘定科目の名前かコード(任意)" } }, required: ["lineId"] },
+  },
+  {
     name: "get_todos",
     description: "いま会社でやるべきこと(レビュー待ち・承認待ち・期限切れの請求書・納付期限など)の一覧を返す。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
@@ -278,6 +289,18 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string 
       return proposeVendorAccount(ctx, input);
     case "propose_expense":
       return proposeExpense(ctx, input);
+    case "propose_fix_account":
+      return proposeFixAccount(ctx, input);
+    case "get_account_review": {
+      const r = await getAccountReview(companyId);
+      return {
+        checked: r.checked,
+        count: r.suggestions.length,
+        suggestions: r.suggestions.slice(0, 20).map((x) => ({ lineId: x.lineId, date: x.date, description: x.description, vendor: x.vendorName, amount: x.amount, from: x.from.name, to: x.to.name, reason: x.reason, source: ACCOUNT_SOURCE_LABELS[x.source] })),
+        aiSummary: r.review?.summary ?? null,
+        screen: "/account-review",
+      };
+    }
     case "get_business_summary": {
       const period = await periodOf(companyId, input);
       const [is, cash] = await Promise.all([getIncomeStatement(companyId, toRange(period)), getCashBalance(companyId)]);

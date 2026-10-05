@@ -9,12 +9,13 @@ import { listContracts, updateContract } from "@/lib/contracts";
 import { cancelImportedInvoice, getPoMatches, linkInvoiceToOrder } from "@/lib/poMatching";
 import { addDraftItems, sanitizeItems } from "./expenseText";
 import { EXPENSE_ACCOUNT_CODES } from "@/lib/accounting/chartOfAccounts";
+import { fixAccount, getAccountReview } from "@/lib/accountReview";
 
 // AIアシスタントの下書き(提案)。AIは提案を作るだけで、確定は人が画面のボタンを押したときだけ行う。
 // 提案は24時間で期限切れ。
 
 const TTL_MS = 24 * 3_600_000;
-export type ProposalKind = "INVOICE" | "JOURNAL" | "REMINDER" | "END_CONTRACT" | "LINK_PO" | "CANCEL_INVOICE" | "VENDOR_ACCOUNT" | "EXPENSE";
+export type ProposalKind = "INVOICE" | "JOURNAL" | "REMINDER" | "END_CONTRACT" | "LINK_PO" | "CANCEL_INVOICE" | "VENDOR_ACCOUNT" | "EXPENSE" | "FIX_ACCOUNT";
 export type ProposalView = { id: string; kind: ProposalKind; summary: string; details: string[]; status: string; resultNote: string | null };
 
 type Ctx = { companyId: string; userId: string };
@@ -183,6 +184,22 @@ export async function proposeExpense(ctx: Ctx, input: Input) {
   return save(ctx, "EXPENSE", `経費 ${items.length}件 ${formatYen(total)} を精算に入れる`, { items }, details);
 }
 
+// 科目の見直しで見つかった仕訳を、正しい科目へ振り替える
+export async function proposeFixAccount(ctx: Ctx, input: Input) {
+  const lineId = str(input.lineId);
+  if (!lineId) throw new UserError("get_account_review で返った lineId が必要です");
+  const { suggestions } = await getAccountReview(ctx.companyId);
+  const s = suggestions.find((x) => x.lineId === lineId);
+  if (!s) throw new UserError("その仕訳は見直しの候補にありません(もう直したか、合っているとしたものです)");
+  const a = str(input.account);
+  const accounts = await prisma.account.findMany({ where: { companyId: ctx.companyId, code: { in: EXPENSE_ACCOUNT_CODES } }, select: { code: true, name: true } });
+  const to = a ? (accounts.find((x) => x.code === a) ?? accounts.find((x) => x.name === a) ?? accounts.find((x) => x.name.includes(a))) : accounts.find((x) => x.code === s.to.code);
+  if (!to) throw new UserError(`経費の勘定科目「${a}」が見つかりません`);
+  if (to.code === s.from.code) throw new UserError("いまと同じ科目です");
+  const details = [`${s.date.replaceAll("-", "/")} ${s.description}${s.vendorName ? `(${s.vendorName})` : ""} ${formatYen(s.amount)}`, `科目: ${s.from.name} → ${to.name}`, `理由: ${s.reason}`, "元の仕訳はそのままにして、振り替える仕訳を作ります"];
+  return save(ctx, "FIX_ACCOUNT", `「${s.description.slice(0, 30)}」を${to.name}に直す`, { lineId, code: to.code }, details);
+}
+
 const view = (p: { id: string; kind: string; summary: string; payload: unknown; status: string; resultNote: string | null }): ProposalView => ({
   id: p.id,
   kind: p.kind as ProposalKind,
@@ -258,6 +275,10 @@ export async function executeProposal(companyId: string, user: { id: string; nam
       const r = await addDraftItems({ id: user.id, companyId }, payload.items);
       resultId = r.reportId;
       note = `経費精算に ${formatYen(r.total)} を入れました`;
+    } else if (p.kind === "FIX_ACCOUNT") {
+      const r = await fixAccount({ name: user.name, companyId }, String(payload.lineId), String(payload.code));
+      resultId = r.entryId;
+      note = r.note;
     } else {
       throw new UserError("この下書きは実行できません");
     }
