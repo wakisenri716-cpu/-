@@ -232,6 +232,7 @@ model Company {
   duplicateDismissals DuplicateDismissal[]
   assistantLogs    AssistantLog[]
   assistantProposals AssistantProposal[]
+  monthlyReports   MonthlyReport[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -2001,4 +2002,19 @@ model AssistantProposal {
   decidedAt  DateTime?
 
   @@index([companyId, status])
+}
+
+// AIの月次レポート(月ごと)。集計した数字(facts)と、AIまたは決まった形で書いた文章(body)
+model MonthlyReport {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  month      String
+  facts      Json
+  body       String
+  mode       String
+  createdBy  String
+  createdAt  DateTime @default(now())
+
+  @@unique([companyId, month])
 }
