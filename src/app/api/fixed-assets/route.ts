@@ -36,6 +36,7 @@ export async function POST(request: Request) {
       acquisitionCost,
       usefulLifeYears,
       residualValue,
+      method: body.method,
     });
     await audit("固定資産を登録", `${asset.name} ${yen(asset.acquisitionCost)}`);
     return NextResponse.json(asset, { status: 201 });

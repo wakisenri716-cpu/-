@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { ensureAccount } from "./accounts";
+import { getFiscalStartMonth } from "./period";
+import { fiscalRangeOf, monthlyAmountFor, parseMethod, straightMonthly } from "./depreciation";
 
 // MVP simplification: acquisitions are assumed paid from the bank account
-// (1020 普通預金), and depreciation always uses the straight-line method
-// (定額法) — the most common method for small businesses under Japanese tax
-// rules. Other payment sources and methods (定率法) are a future extension.
+// (1020 普通預金). 償却方法は定額法と200%定率法(depreciation.ts)。
 const ASSET_ACCOUNT_CODE = "1510"; // 固定資産
 const ACCUMULATED_DEPRECIATION_ACCOUNT_CODE = "1519"; // 減価償却累計額
 const DEPRECIATION_EXPENSE_ACCOUNT_CODE = "5100"; // 減価償却費
@@ -18,20 +18,30 @@ async function getAccountByCode(tx: Prisma.TransactionClient, companyId: string,
 }
 
 export function calcMonthlyDepreciation(acquisitionCost: number, residualValue: number, usefulLifeYears: number) {
-  const depreciableBase = acquisitionCost - residualValue;
-  const totalMonths = usefulLifeYears * 12;
-  return Math.floor(depreciableBase / totalMonths);
+  return straightMonthly(acquisitionCost, residualValue, usefulLifeYears);
+}
+
+type AssetForCalc = { method: string; acquisitionCost: number; residualValue: number; usefulLifeYears: number; acquisitionDate: Date };
+const asCalc = (a: AssetForCalc) => ({ ...a, acquisitionMonth: a.acquisitionDate.toISOString().slice(0, 7) });
+
+// その月に計上する額(定率法は年度の額を月数で割り、年度の最後の月で端数を合わせる)
+function amountForPeriod(asset: AssetForCalc, entries: { period: string; amount: number }[], fiscalStartMonth: number, period: string) {
+  const range = fiscalRangeOf(period, fiscalStartMonth);
+  const postedInYear = entries.filter((e) => e.period >= range.from && e.period <= range.to && e.period !== period).reduce((s, e) => s + e.amount, 0);
+  const remaining = asset.acquisitionCost - asset.residualValue - entries.reduce((s, e) => s + e.amount, 0);
+  return monthlyAmountFor(asCalc(asset), fiscalStartMonth, period, postedInYear, remaining);
 }
 
 export async function registerFixedAsset(
   companyId: string,
-  input: { name: string; acquisitionDate: Date; acquisitionCost: number; usefulLifeYears: number; residualValue: number },
+  input: { name: string; acquisitionDate: Date; acquisitionCost: number; usefulLifeYears: number; residualValue: number; method?: unknown },
 ) {
   if (input.acquisitionCost <= 0) throw new Error("取得価額は正の数で入力してください");
   if (input.usefulLifeYears <= 0) throw new Error("耐用年数は1年以上で入力してください");
   if (input.residualValue < 0 || input.residualValue >= input.acquisitionCost) {
     throw new Error("残存価額は0以上、取得価額未満で入力してください");
   }
+  const method = parseMethod(input.method, input.usefulLifeYears);
 
   return prisma.$transaction(async (tx) => {
     const assetAccount = await getAccountByCode(tx, companyId, ASSET_ACCOUNT_CODE);
@@ -62,6 +72,7 @@ export async function registerFixedAsset(
         acquisitionCost: input.acquisitionCost,
         usefulLifeYears: input.usefulLifeYears,
         residualValue: input.residualValue,
+        method,
         journalEntryId: entry.id,
       },
     });
@@ -72,6 +83,8 @@ export async function registerFixedAsset(
 
 export async function postDepreciation(fixedAssetId: string, period: string) {
   if (!/^\d{4}-\d{2}$/.test(period)) throw new Error("period must be in YYYY-MM format");
+  const owner = await prisma.fixedAsset.findUniqueOrThrow({ where: { id: fixedAssetId }, select: { companyId: true } });
+  const fiscalStartMonth = await getFiscalStartMonth(owner.companyId);
 
   return prisma.$transaction(async (tx) => {
     const asset = await tx.fixedAsset.findUniqueOrThrow({
@@ -92,8 +105,8 @@ export async function postDepreciation(fixedAssetId: string, period: string) {
       throw new Error("この資産はすでに減価償却が完了しています");
     }
 
-    const monthly = calcMonthlyDepreciation(asset.acquisitionCost, asset.residualValue, asset.usefulLifeYears);
-    const amount = Math.min(monthly, remaining);
+    const amount = amountForPeriod(asset, asset.depreciationEntries, fiscalStartMonth, period);
+    if (amount <= 0) throw new Error(`${period} 分の償却額はありません(この年度の分は計上済みです)`);
 
     const expenseAccount = await getAccountByCode(tx, asset.companyId, DEPRECIATION_EXPENSE_ACCOUNT_CODE);
     const accumulatedAccount = await getAccountByCode(tx, asset.companyId, ACCUMULATED_DEPRECIATION_ACCOUNT_CODE);
@@ -131,10 +144,15 @@ export async function getFixedAssetsWithSummary(companyId: string) {
     orderBy: { acquisitionDate: "asc" },
   });
 
+  const fiscalStartMonth = await getFiscalStartMonth(companyId);
+  const thisMonth = new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 7);
+
   return assets.map((asset) => {
     const accumulatedDepreciation = asset.depreciationEntries.reduce((sum, e) => sum + e.amount, 0);
     const bookValue = asset.acquisitionCost - accumulatedDepreciation;
-    const monthlyDepreciation = calcMonthlyDepreciation(asset.acquisitionCost, asset.residualValue, asset.usefulLifeYears);
+    // 今月に計上する額(定率法は年度ごとに変わる)
+    const month = asset.acquisitionDate.toISOString().slice(0, 7) > thisMonth ? asset.acquisitionDate.toISOString().slice(0, 7) : thisMonth;
+    const monthlyDepreciation = amountForPeriod(asset, asset.depreciationEntries, fiscalStartMonth, month);
     const fullyDepreciated = accumulatedDepreciation >= asset.acquisitionCost - asset.residualValue;
     return { ...asset, accumulatedDepreciation, bookValue, monthlyDepreciation, fullyDepreciated };
   });
