@@ -233,6 +233,7 @@ model Company {
   assistantLogs    AssistantLog[]
   assistantProposals AssistantProposal[]
   monthlyReports   MonthlyReport[]
+  anomalyChecks    AnomalyCheck[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -2017,4 +2018,17 @@ model MonthlyReport {
   createdAt  DateTime @default(now())
 
   @@unique([companyId, month])
+}
+
+// 異常検知で「確認した(問題なし)」にした項目(種類・月・科目などのキー)
+model AnomalyCheck {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  key       String
+  note      String?
+  byName    String
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, key])
 }

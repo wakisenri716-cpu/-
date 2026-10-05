@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { countBudgetAlerts } from "@/lib/accounting/budgetProgress";
 import { countDuplicates } from "@/lib/duplicates";
+import { countAnomalies } from "@/lib/anomalies";
 import { cashAccountCodes } from "@/lib/bank/accounts";
 import { countOvertimeAlerts } from "@/lib/leave/overtime";
 import { countLeaveObligationAlerts } from "@/lib/leave/service";
@@ -104,7 +105,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -138,6 +139,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     propertyTaxReminder(companyId, now),
     countBudgetAlerts(companyId, now),
     countDuplicates(companyId, now),
+    countAnomalies(companyId, now),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
@@ -187,6 +189,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     { key: "leave", label: "有給の年5日の取得が足りない人", detail: "期限まで90日以内です。有給を取れるよう日程を調整してください", count: leaveAlerts, href: "/leave", tone: "amber" },
     { key: "propertyTax", label: `償却資産申告(令和${propertyTax.year - 2018}年度)`, detail: "1月31日までに、1月1日に持っている事業用の資産を市区町村へ申告してください", count: propertyTax.count, href: `/assets/property-tax?year=${propertyTax.year}`, tone: "amber" },
     { key: "files", label: "期限が近い書類", detail: "契約の更新・満了などの期限が30日以内か、過ぎた書類があります", count: expiringFiles, href: "/files", tone: "amber" },
+    { key: "anomalies", label: "いつもと違うお金の動き", detail: "急に増えた費用・いつもより大きい支払いなどがあります。中身を確かめてください", count: anomalies, href: "/anomalies", tone: "amber" },
     { key: "duplicates", label: "二重計上かもしれない経費・請求書", detail: "同じレシート・同じ請求書番号・同じ日の同じ金額があります。確かめてください", count: duplicates, href: "/duplicates", tone: "amber" },
     { key: "budget", label: "予算を超えた・超えそうな科目", detail: "このままのペースだと年間の予算を超える費用(または届かない売上)があります", count: budgetAlerts, href: "/monthly/progress", tone: "amber" },
     { key: "credit", label: "与信限度額を超えている顧客", detail: "売掛金が上限を超えています。回収を急ぐか、上限を見直してください", count: overLimit, href: "/credit", tone: "rose" },
