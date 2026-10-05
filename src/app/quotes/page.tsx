@@ -30,12 +30,14 @@ export default async function QuotesPage() {
             見積書を作って印刷・PDF保存できます。受注したら「請求書にする」で、同じ内容の請求書を作れます(売上の仕訳も自動)。
           </p>
         </div>
-        <Link
-          href="/quotes/new"
-          className="self-start rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm hover:bg-indigo-700"
-        >
-          + 見積書を作成
-        </Link>
+        <div className="flex flex-wrap gap-2 self-start">
+          <Link href="/quotes/ai" className="rounded-md border border-indigo-300 bg-white px-4 py-2 text-sm font-medium whitespace-nowrap text-indigo-700 shadow-sm hover:bg-indigo-50">
+            AIで見積を作る
+          </Link>
+          <Link href="/quotes/new" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm hover:bg-indigo-700">
+            + 見積書を作成
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

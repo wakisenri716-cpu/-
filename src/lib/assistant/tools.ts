@@ -24,6 +24,7 @@ import { getAccountReview, SOURCE_LABELS as ACCOUNT_SOURCE_LABELS } from "@/lib/
 import { getReceiptForecast, CONFIDENCE_LABELS } from "@/lib/receiptForecast";
 import { getPaymentPlan, GROUP_LABELS } from "@/lib/paymentPlan";
 import { getBillingGaps, GAP_LABELS } from "@/lib/billingGaps";
+import { draftQuote } from "@/lib/quoteAssist";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
 // 書き換えは利用者が画面で「実行する」を押したときだけ行う。
@@ -270,6 +271,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
+    name: "draft_quote",
+    description: "見積書の明細の下書きを作る(見積書はまだ作らない)。過去の請求書・見積書の同じような品目の単価を参考にし、過去と大きく違う単価に目印を付ける。返った link を開くと、その明細が入った見積書の作成画面になる。text には見積の内容を、customerName には見積先を入れる。",
+    input_schema: { type: "object", properties: { customerName: { type: "string" }, text: { type: "string", description: "見積の内容(品目・数量・単価など)" } }, required: ["text"] },
+  },
+  {
     name: "get_todos",
     description: "いま会社でやるべきこと(レビュー待ち・承認待ち・期限切れの請求書・納付期限など)の一覧を返す。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
@@ -333,6 +339,11 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string 
         later: p.later,
         screen: "/payment-plan",
       };
+    }
+    case "draft_quote": {
+      const user = await prisma.user.findUniqueOrThrow({ where: { id: ctx.userId }, select: { id: true, name: true } });
+      const d = await draftQuote({ ...user, companyId }, input);
+      return { lines: d.lines.map((l) => ({ description: l.description, quantity: l.quantity, unit: l.unit, unitPrice: l.unitPrice, taxRate: l.taxRate, pastPrices: l.history ? `${l.history.min}〜${l.history.max}円(${l.history.count}件)` : null, warning: l.priceWarning })), subtotal: d.subtotal, link: `/quotes/new?draft=${d.draftId}`, note: "下書きです。リンクを開いて内容を確かめ、見積書を作ってください。" };
     }
     case "get_billing_gaps": {
       const r = await getBillingGaps(companyId);
