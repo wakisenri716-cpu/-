@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatYen } from "@/lib/format";
 import { PrintButton } from "@/components/PrintButton";
+import { PayrollCheckPanel } from "./PayrollCheckPanel";
 
 type Row = {
   staffId: string;
@@ -140,6 +141,8 @@ export default function PayrollPage() {
       </div>
 
       {message && <div className={`rounded-md px-4 py-2 text-sm ${message.ok ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>{message.text}</div>}
+
+      {sheet && !sheet.posted && sheet.rows.length > 0 && <PayrollCheckPanel month={month} refreshKey={sheet.totals.gross ?? 0} />}
 
       <p className="rounded-md bg-amber-50 px-4 py-2 text-xs text-amber-900 print:hidden">
         計算は目安です。源泉所得税は国税庁の「電子計算機等を使用して源泉徴収税額を計算する方法」の式(令和8年分)で計算しています。税額表と違うときや乙欄の人は、税額の欄で直せます。
