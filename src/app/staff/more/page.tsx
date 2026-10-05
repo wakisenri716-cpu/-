@@ -3,9 +3,10 @@ import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth/session";
 import { LogoutButton } from "@/components/LogoutButton";
 import { PushSettings } from "./PushSettings";
-import { BookIcon, ClockIcon, KeyIcon, MegaphoneIcon, NotebookIcon, ReceiptIcon, StampIcon } from "@/components/icons";
+import { BookIcon, ClockIcon, KeyIcon, MegaphoneIcon, NotebookIcon, ReceiptIcon, SparkleIcon, StampIcon } from "@/components/icons";
 
 const LINKS = [
+  { href: "/staff/ask", label: "AIに聞く", icon: SparkleIcon },
   { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
   { href: "/expenses", label: "経費精算(レシート)", icon: ReceiptIcon },
   { href: "/requests", label: "申請・稟議(有給など)", icon: StampIcon },
