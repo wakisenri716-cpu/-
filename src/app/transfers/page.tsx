@@ -47,6 +47,13 @@ export default function TransfersPage() {
     setData(body);
     setMonth((m) => m || body.payrollMonths[0]?.month || "");
     setBonusId((b) => b || body.bonuses[0]?.id || "");
+    // 支払計画から来たとき(?invoices=id,id)は、その請求書を選んだ状態にする
+    const ids = new URLSearchParams(window.location.search).get("invoices")?.split(",").filter(Boolean) ?? [];
+    const open = ids.filter((id) => body.unpaid.some((u) => u.id === id));
+    if (open.length) {
+      setTab("GENERAL");
+      setSelected(open);
+    }
   }, []);
 
   useEffect(() => {

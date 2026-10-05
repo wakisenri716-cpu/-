@@ -22,6 +22,7 @@ import { findCustomerInsights, INSIGHT_LABELS } from "@/lib/customerInsights";
 import { findVendorInsights, VENDOR_INSIGHT_LABELS } from "@/lib/vendorInsights";
 import { getAccountReview, SOURCE_LABELS as ACCOUNT_SOURCE_LABELS } from "@/lib/accountReview";
 import { getReceiptForecast, CONFIDENCE_LABELS } from "@/lib/receiptForecast";
+import { getPaymentPlan, GROUP_LABELS } from "@/lib/paymentPlan";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
 // 書き換えは利用者が画面で「実行する」を押したときだけ行う。
@@ -258,6 +259,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
+    name: "get_payment_plan",
+    description: "この先2週間に期限が来る支払い(受け取った請求書・期限切れを含む)を、いまの現預金と入金予測で払えるか確かめた支払計画(支払う/支払日をずらす相談・振込先の口座の有無・最も低くなる残高)を返す。「今週は何を払えばいい?」「支払いは大丈夫?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
     name: "get_todos",
     description: "いま会社でやるべきこと(レビュー待ち・承認待ち・期限切れの請求書・納付期限など)の一覧を返す。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
@@ -306,6 +312,20 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string 
         invoices: f.rows.slice(0, 30).map((r) => ({ customer: r.customer, invoice: r.invoiceNumber, remaining: r.remaining, dueDate: r.dueDate, predictedDate: r.predictedDate, shiftDays: r.shiftDays, confidence: CONFIDENCE_LABELS[r.confidence], needsReminder: r.risk, basis: r.basis, aiReason: r.aiReason })),
         aiSummary: f.review?.summary ?? null,
         screen: "/receipt-forecast",
+      };
+    }
+    case "get_payment_plan": {
+      const p = await getPaymentPlan(companyId);
+      return {
+        cashNow: p.cashNow,
+        keepAtLeast: p.buffer,
+        receiptsIn14Days: p.receipts,
+        payTotal: p.payTotal,
+        deferTotal: p.deferTotal,
+        lowest: p.lowest,
+        payments: p.rows.slice(0, 30).map((r) => ({ vendor: r.vendor, invoice: r.invoiceNumber, amount: r.remaining, dueDate: r.dueDate, payDate: r.payDate, group: GROUP_LABELS[r.group], action: r.action === "PAY" ? "支払う" : "ずらす相談", hasPayeeAccount: r.hasAccount, reason: r.reason, aiNote: r.aiNote })),
+        later: p.later,
+        screen: "/payment-plan",
       };
     }
     case "get_account_review": {
