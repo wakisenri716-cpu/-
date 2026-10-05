@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type Settings = { email: string | null; dailyDigest: boolean; mode: "smtp" | "resend" | "test"; from: string | null; cron: boolean };
+type Settings = { email: string | null; dailyDigest: boolean; watchAlerts: boolean; mode: "smtp" | "resend" | "test"; from: string | null; cron: boolean };
 type Log = { id: string; kind: string; to: string; subject: string; body: string; status: string; error: string | null; sentByName: string; createdAt: string };
 
 const MODE = {
@@ -11,7 +11,7 @@ const MODE = {
   test: { label: "テストモード(まだ送信の設定がありません。送らずに履歴へ記録だけします)", className: "bg-amber-50 text-amber-900 ring-amber-200" },
 } as const;
 
-const KIND: Record<string, string> = { INVOICE: "請求書", QUOTE: "見積書", REMINDER: "督促", PASSWORD_RESET: "パスワード再設定", VERIFY: "メールアドレスの確認", SUPPORT: "お問い合わせ", DIGEST: "やることのお知らせ", APPROVAL: "稟議のお知らせ", SECURITY: "ログインのお知らせ", NOTICE: "社内のお知らせ", TEST: "テスト" };
+const KIND: Record<string, string> = { INVOICE: "請求書", QUOTE: "見積書", REMINDER: "督促", PASSWORD_RESET: "パスワード再設定", VERIFY: "メールアドレスの確認", SUPPORT: "お問い合わせ", DIGEST: "やることのお知らせ", APPROVAL: "稟議のお知らせ", SECURITY: "ログインのお知らせ", NOTICE: "社内のお知らせ", WATCH: "AIの見張り", TEST: "テスト" };
 const STATUS: Record<string, { label: string; className: string }> = {
   SENT: { label: "送信済み", className: "bg-emerald-100 text-emerald-800" },
   TEST: { label: "テスト(未送信)", className: "bg-slate-100 text-slate-600" },
@@ -25,6 +25,7 @@ export function EmailSettings({ isAdmin, defaultTo }: { isAdmin: boolean; defaul
   const [logs, setLogs] = useState<Log[] | null>(null);
   const [replyTo, setReplyTo] = useState("");
   const [digest, setDigest] = useState(false);
+  const [watch, setWatch] = useState(true);
   const [testTo, setTestTo] = useState(defaultTo);
   const [open, setOpen] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -37,6 +38,7 @@ export function EmailSettings({ isAdmin, defaultTo }: { isAdmin: boolean; defaul
       setSettings(body);
       setReplyTo(body.email ?? "");
       setDigest(body.dailyDigest);
+      setWatch(body.watchAlerts);
     }
     setLogs(l.ok ? await l.json() : []);
   }, []);
@@ -97,7 +99,7 @@ SMTP_PASS = (2でメモした16文字。空白なし)`}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                call("/api/mail/settings", "PUT", { email: replyTo.trim(), dailyDigest: digest }, () => "メールの設定を保存しました");
+                call("/api/mail/settings", "PUT", { email: replyTo.trim(), dailyDigest: digest, watchAlerts: watch }, () => "メールの設定を保存しました");
               }}
               className="space-y-3"
             >
@@ -112,6 +114,13 @@ SMTP_PASS = (2でメモした16文字。空白なし)`}
                   <span className="block text-xs text-slate-500">
                     レビュー待ち・期限切れの請求書・精算待ちなどがあるときだけ送ります。{!settings.cron && "(Vercel に CRON_SECRET を設定すると動きます)"}
                   </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked={watch} onChange={(e) => setWatch(e.target.checked)} className="mt-1" />
+                <span>
+                  AIの見張りで新しく「要確認」になったものを、管理者にメールとスマホアプリで知らせる
+                  <span className="block text-xs text-slate-500">資金が足りなくなる見込み・解約の期限が近い契約・初めての取引先への大きな支払いなど。同じ要確認が続くあいだは一度だけ知らせます。</span>
                 </span>
               </label>
               <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">

@@ -10,7 +10,7 @@ import { UserError } from "@/lib/errors";
 export class MailError extends UserError {}
 
 export type MailMode = "smtp" | "resend" | "test";
-export type MailKind = "INVOICE" | "QUOTE" | "REMINDER" | "PASSWORD_RESET" | "VERIFY" | "SUPPORT" | "DIGEST" | "APPROVAL" | "SECURITY" | "NOTICE" | "TEST";
+export type MailKind = "INVOICE" | "QUOTE" | "REMINDER" | "PASSWORD_RESET" | "VERIFY" | "SUPPORT" | "DIGEST" | "APPROVAL" | "SECURITY" | "NOTICE" | "WATCH" | "TEST";
 
 const DAILY_LIMIT = 200; // 1社1日あたりの送信上限(誤操作・乗っ取り時の大量送信を防ぐ)
 const EMAIL = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[^\s@<>()[\]\\,;:"]+$/;

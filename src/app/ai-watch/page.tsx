@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireCompanyId } from "@/lib/auth/session";
 import { getWatches, type WatchStatus } from "@/lib/aiWatch";
+import { CheckNowButton } from "./CheckNowButton";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +24,11 @@ export default async function AiWatchPage() {
       <div>
         <h1 className="text-2xl font-semibold">AIの見張り</h1>
         <p className="mt-1 text-sm text-slate-600">
-          資金繰り・契約の期限・督促・顧客と仕入先の変化・発注書と請求書・いつもと違う動き・二重計上・帳簿の点検を、いつもAIが見張っています。要確認のものは毎朝のブリーフィングにも入ります。
+          資金繰り・契約の期限・督促・顧客と仕入先の変化・発注書と請求書・いつもと違う動き・二重計上・帳簿の点検を、いつもAIが見張っています。要確認のものは毎朝のブリーフィングにも入り、新しく要確認になったものは毎朝、管理者にメールとスマホアプリで知らせます(「メール設定」で止められます)。
         </p>
+        <div className="mt-2">
+          <CheckNowButton />
+        </div>
       </div>
       <div className={`rounded-xl border p-4 text-sm shadow-sm ${warn ? "border-rose-200 bg-rose-50 text-rose-800" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}>
         {warn ? `${watches.length}つの見張りのうち、${warn}つで確かめたいことがあります。` : `${watches.length}つの見張りすべてで、急いで確かめることはありません。`}

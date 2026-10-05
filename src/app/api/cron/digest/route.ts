@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getTodos } from "@/lib/dashboard";
 import { appUrl, sendMail } from "@/lib/mail";
 import { generateBriefing } from "@/lib/assistant/briefing";
+import { checkWatchAlerts } from "@/lib/watchAlerts";
 
 // 毎朝、「やること」がある会社の管理者にメールで知らせる(Vercel Cron から呼ばれる。vercel.json 参照)。
 // AIの朝のブリーフィング(今日まずやること)も作って、メールの最初に入れる。
@@ -63,5 +64,15 @@ export async function GET(request: Request) {
       }
     }
   }
-  return NextResponse.json({ companies: companies.length, sent });
+  // AIの見張り: 新しく「要確認」になったものを知らせる(毎朝のお知らせとは別にオン・オフできる)
+  const watching = await prisma.company.findMany({ where: { watchAlerts: true }, select: { id: true } });
+  let watchAlerts = 0;
+  for (const c of watching) {
+    try {
+      if ((await checkWatchAlerts(c.id, baseUrl)).notified) watchAlerts++;
+    } catch (error) {
+      console.error("AIの見張りを確かめられませんでした", error);
+    }
+  }
+  return NextResponse.json({ companies: companies.length, sent, watchAlerts });
 }
