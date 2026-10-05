@@ -23,6 +23,7 @@ import { findVendorInsights, VENDOR_INSIGHT_LABELS } from "@/lib/vendorInsights"
 import { getAccountReview, SOURCE_LABELS as ACCOUNT_SOURCE_LABELS } from "@/lib/accountReview";
 import { getReceiptForecast, CONFIDENCE_LABELS } from "@/lib/receiptForecast";
 import { getPaymentPlan, GROUP_LABELS } from "@/lib/paymentPlan";
+import { getBillingGaps, GAP_LABELS } from "@/lib/billingGaps";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
 // 書き換えは利用者が画面で「実行する」を押したときだけ行う。
@@ -264,6 +265,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
+    name: "get_billing_gaps",
+    description: "出し忘れているかもしれない請求(毎月請求している顧客に今月まだ請求していない・受注した商談なのに請求書がない・請求書にしていない見積)を返す。「請求漏れはない?」「今月請求を忘れている取引先は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
     name: "get_todos",
     description: "いま会社でやるべきこと(レビュー待ち・承認待ち・期限切れの請求書・納付期限など)の一覧を返す。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
@@ -327,6 +333,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string 
         later: p.later,
         screen: "/payment-plan",
       };
+    }
+    case "get_billing_gaps": {
+      const r = await getBillingGaps(companyId);
+      return { count: r.gaps.length, gaps: r.gaps.slice(0, 20).map((g) => ({ kind: GAP_LABELS[g.kind], level: g.level, customer: g.customer, title: g.title, detail: g.detail, amount: g.amount, href: g.href, aiNote: g.aiNote })), aiSummary: r.review?.summary ?? null, screen: "/billing-gaps" };
     }
     case "get_account_review": {
       const r = await getAccountReview(companyId);
