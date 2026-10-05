@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BoxIcon, CalendarIcon, ClockIcon, MegaphoneIcon, NotebookIcon, ReceiptIcon, StampIcon } from "@/components/icons";
+import { BoxIcon, CalendarIcon, ClockIcon, MegaphoneIcon, NotebookIcon, ReceiptIcon, SparkleIcon, StampIcon } from "@/components/icons";
 
 type Shift = { date: string; weekday: string; start: string; end: string; breakMinutes: number; today: boolean };
 type Home = {
@@ -58,6 +58,14 @@ export default function StaffHome() {
           </Link>
         )}
       </section>
+
+      <Link href="/staff/ask" className="flex items-center gap-3 rounded-2xl border border-indigo-200 bg-white p-4 shadow-sm hover:bg-indigo-50">
+        <SparkleIcon className="h-6 w-6 shrink-0 text-indigo-600" />
+        <span>
+          <span className="block font-medium">AIに聞く</span>
+          <span className="block text-xs text-slate-600">有給の残り・次のシフト・経費精算の状況・マニュアルのことを聞けます</span>
+        </span>
+      </Link>
 
       {data.staff && (
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
