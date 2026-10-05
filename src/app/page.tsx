@@ -66,6 +66,13 @@ export default async function DashboardPage() {
 
       <UnreadNotices {...notices} />
 
+      {/* AIアシスタントにすぐ聞ける欄(送ると /assistant で答える) */}
+      <form action="/assistant" className="flex flex-wrap items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 print:hidden">
+        <span className="text-sm font-medium text-indigo-900">AIに聞く</span>
+        <input name="q" maxLength={500} required placeholder="例: 今月の利益は? 入金が遅れている取引先は?" aria-label="AIへの質問" className="min-w-0 flex-1 rounded-full border border-indigo-200 bg-white px-4 py-2 text-sm" />
+        <button className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">聞く</button>
+      </form>
+
       {offerDemo && <TryDemoCard />}
       {setupSteps && <SetupGuide steps={setupSteps} />}
 

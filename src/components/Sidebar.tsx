@@ -39,6 +39,7 @@ import {
   LaptopIcon,
   NotebookIcon,
   PlaneIcon,
+  SparkleIcon,
   SearchIcon,
   MailIcon,
   ShieldIcon,
@@ -59,6 +60,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     items: [
       { href: "/", label: "ダッシュボード", icon: DashboardIcon },
+      { href: "/assistant", label: "AIアシスタント", icon: SparkleIcon },
       { href: "/review", label: "レビューキュー", icon: InboxIcon },
       { href: "/requests", label: "申請・稟議", icon: StampIcon },
       { href: "/notices", label: "社内のお知らせ", icon: MegaphoneIcon },
