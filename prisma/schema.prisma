@@ -230,6 +230,7 @@ model Company {
   wageChanges      WageChange[]
   transportRoutes  TransportRoute[]
   duplicateDismissals DuplicateDismissal[]
+  assistantLogs    AssistantLog[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -1967,4 +1968,18 @@ model DuplicateDismissal {
   createdAt DateTime @default(now())
 
   @@unique([companyId, key])
+}
+
+// AIアシスタントへの質問の記録(1日の回数の上限と、運営・管理者の確認に使う)
+model AssistantLog {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String
+  question  String
+  tools     String[]
+  mode      String
+  createdAt DateTime @default(now())
+
+  @@index([companyId, createdAt])
 }
