@@ -4,6 +4,8 @@ import { formatYen } from "@/lib/format";
 import { PrintButton } from "@/components/PrintButton";
 import { CashAdvicePanel, type CashAdviceView } from "./CashAdvicePanel";
 import { getLatestCashAdvice } from "@/lib/assistant/cashAdvice";
+import { receiptDates } from "@/lib/receiptForecast";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +30,12 @@ function Items({ items, empty }: { items: CashItem[]; empty: string }) {
   );
 }
 
-export default async function CashflowPage() {
+export default async function CashflowPage({ searchParams }: { searchParams: Promise<{ basis?: string }> }) {
   const companyId = await requireCompanyId();
-  const [{ today, months, shortage }, advice] = await Promise.all([getCashflow(companyId), getLatestCashAdvice(companyId)]);
+  const forecast = (await searchParams).basis === "forecast";
+  const options = forecast ? { receiptDates: await receiptDates(companyId) } : {};
+  const [{ today, months, shortage }, advice] = await Promise.all([getCashflow(companyId, undefined, 3, options), getLatestCashAdvice(companyId)]);
+  const tab = (on: boolean) => `rounded-md px-3 py-1.5 ${on ? "bg-white font-medium text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`;
 
   return (
     <div className="space-y-6">
@@ -45,6 +50,21 @@ export default async function CashflowPage() {
       </div>
 
       <CashAdvicePanel initial={advice as unknown as CashAdviceView | null} today={today} />
+
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
+        <div className="inline-flex rounded-lg bg-slate-100 p-1 text-sm">
+          <Link href="/cashflow" className={tab(!forecast)}>
+            請求書の期日どおり
+          </Link>
+          <Link href="/cashflow?basis=forecast" className={tab(forecast)}>
+            入金予測で見る
+          </Link>
+        </div>
+        <Link href="/receipt-forecast" className="text-sm text-indigo-700 hover:underline">
+          入金予測の内訳 →
+        </Link>
+      </div>
+      {forecast && <p className="text-xs text-slate-600">入金予定を、顧客ごとのふだんの払い方から見込んだ「入金予測」の日で数えています(AIが遅めに見直したものも含みます)。</p>}
 
       {shortage ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
