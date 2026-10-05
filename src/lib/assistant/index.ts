@@ -40,6 +40,12 @@ const SCREENS = [
   ["/duplicates", "二重計上のチェック"],
   ["/anomalies", "いつもと違うお金の動き"],
   ["/reports/monthly", "AIの月次レポート"],
+  ["/collections", "督促・回収"],
+  ["/contracts", "契約書の台帳"],
+  ["/book-check", "帳簿の健康診断"],
+  ["/monthly-close", "月次決算チェックリスト"],
+  ["/po-matching", "発注書と請求書の突き合わせ"],
+  ["/briefing", "AIの朝のまとめ"],
 ];
 
 function systemPrompt(companyName: string) {
@@ -125,7 +131,42 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     if (!r.todos.length) return { reply: "いま急いでやることはありません。", tools: ["get_todos"], mode: "simple" };
     return { reply: ["いまやることは次のとおりです。", ...r.todos.map((t) => `・${t.label}(${t.count}件) [開く](${t.link})`)].join("\n"), tools: ["get_todos"], mode: "simple" };
   }
-  if (/未入金|入金待ち|売掛|回収/.test(q)) {
+  if (/督促|回収/.test(q)) {
+    const r = (await run("get_collections")) as { overdueTotal: number; invoices: { customer: string | null; remaining: number; daysOverdue: number; nextStep: string }[] };
+    if (!r.invoices.length) return { reply: "期限を過ぎた未入金はありません。", tools: ["get_collections"], mode: "simple" };
+    return { reply: [`期限を過ぎた未入金は ${formatYen(r.overdueTotal)} です。`, ...r.invoices.slice(0, 5).map((i) => `・${i.customer ?? "-"}: ${formatYen(i.remaining)}(${i.daysOverdue}日過ぎ)→ ${i.nextStep}`), "[督促・回収](/collections)"].join("\n"), tools: ["get_collections"], mode: "simple" };
+  }
+  if (/契約|更新|解約/.test(q)) {
+    const r = (await run("get_contracts", { withinDays: 90 })) as { monthlyTotal: number; contracts: { title: string; counterparty: string | null; noticeDeadline: string | null; endDate: string | null }[] };
+    return {
+      reply: [r.contracts.length ? "90日以内に解約・更新の判断が必要な契約:" : "90日以内に判断が必要な契約はありません。", ...r.contracts.slice(0, 5).map((c) => `・${c.title}(${c.counterparty ?? "-"}): ${c.noticeDeadline ? `申し出期限 ${c.noticeDeadline}` : `満了 ${c.endDate}`}`), `毎月かかる契約の金額は ${formatYen(r.monthlyTotal)} です。`, "[契約書の台帳](/contracts)"].join("\n"),
+      tools: ["get_contracts"],
+      mode: "simple",
+    };
+  }
+  if (/資金|足りな|ショート|資金繰り/.test(q)) {
+    const r = (await run("get_cash_outlook")) as { risk: string; cashNow: number; shortageMonth: string | null; lowest: { month: string; closing: number } | null; monthsOfCash: number | null };
+    const risk = { LOW: "余裕あり", MEDIUM: "注意", HIGH: "危険" }[r.risk] ?? r.risk;
+    return {
+      reply: [`資金繰りは「${risk}」です。いまの現預金は ${formatYen(r.cashNow)}${r.monthsOfCash !== null ? `(ふだんの支出の約${r.monthsOfCash}か月分)` : ""}。`, r.shortageMonth ? `${r.shortageMonth} 末に足りなくなる見込みです。` : r.lowest ? `いちばん低いのは ${r.lowest.month} 末の ${formatYen(r.lowest.closing)} の見込みです。` : "", "[資金繰り予測](/cashflow)"].filter(Boolean).join("\n"),
+      tools: ["get_cash_outlook"],
+      mode: "simple",
+    };
+  }
+  if (/帳簿|点検|健康診断|税理士/.test(q)) {
+    const r = (await run("get_book_check")) as { score: number; findings: { title: string }[] };
+    return { reply: [`帳簿の点数は ${r.score}点 です。`, ...r.findings.slice(0, 5).map((f) => `・${f.title}`), "[帳簿の健康診断](/book-check)"].join("\n"), tools: ["get_book_check"], mode: "simple" };
+  }
+  if (/締め|月次決算/.test(q)) {
+    const r = (await run("get_close_status")) as { month: string; done: number; total: number; remaining: { item: string }[]; link: string };
+    return { reply: [`${r.month} の月次決算は ${r.done}/${r.total} 済んでいます。`, ...r.remaining.slice(0, 5).map((i) => `・残り: ${i.item}`), `[月次決算チェックリスト](${r.link})`].join("\n"), tools: ["get_close_status"], mode: "simple" };
+  }
+  if (/発注書/.test(q)) {
+    const r = (await run("get_po_matching")) as { items: { kind: string; vendor: string; message: string }[] };
+    const issues = r.items.filter((i) => i.kind !== "MATCH");
+    return { reply: [issues.length ? "発注書と確かめたい請求書:" : "発注書と合わない請求書はありません。", ...issues.slice(0, 5).map((i) => `・${i.vendor}: ${i.message}`), "[発注書と請求書の突き合わせ](/po-matching)"].join("\n"), tools: ["get_po_matching"], mode: "simple" };
+  }
+  if (/未入金|入金待ち|売掛/.test(q)) {
     const r = (await run("list_receivables")) as { total: number; overdueTotal: number; byParty: { name: string; remaining: number }[] };
     return {
       reply: [`入金待ちは合計 ${formatYen(r.total)} です(うち期日を過ぎたもの ${formatYen(r.overdueTotal)})。`, ...r.byParty.slice(0, 5).map((p) => `・${p.name}: ${formatYen(p.remaining)}`), "[売掛金・買掛金](/receivables)"].join("\n"),
@@ -167,7 +208,7 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     };
   }
   return {
-    reply: "いまは簡易モード(AIのAPIキーが未設定)のため、次のような質問に答えられます: 「今月の利益は?」「未入金は?」「支払待ちは?」「今月の費用の内訳は?」「顧客別の売上は?」「やることは?」",
+    reply: "いまは簡易モード(AIのAPIキーが未設定)のため、次のような質問に答えられます: 「今月の利益は?」「未入金は?」「督促が必要なのは?」「更新が近い契約は?」「資金は大丈夫?」「帳簿に問題はある?」「先月の締めは?」「やることは?」",
     tools: [],
     mode: "simple",
   };
