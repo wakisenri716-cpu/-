@@ -52,6 +52,8 @@ const SCREENS = [
   ["/quick-expense", "ひとことで経費入力"],
   ["/account-review", "科目の見直し"],
   ["/receipt-forecast", "入金予測"],
+  ["/payment-plan", "支払計画"],
+  ["/transfers", "振込データ"],
   ["/vendors", "取引先"],
 ];
 
@@ -172,6 +174,15 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("get_customer_insights")) as { insights: { customer: string; kind: string; detail: string }[] };
     if (!r.insights.length) return { reply: "目立った変化のある顧客はいません。", tools: ["get_customer_insights"], mode: "simple" };
     return { reply: ["顧客の変化:", ...r.insights.slice(0, 5).map((i) => `・${i.customer}(${i.kind}): ${i.detail}`), "[顧客の見守り](/customer-insights)"].join("\n"), tools: ["get_customer_insights"], mode: "simple" };
+  }
+  if (/何を払|支払(計画|い.*(大丈夫|払える|どれ))|払えそう/.test(q)) {
+    const r = (await run("get_payment_plan")) as { payTotal: number; deferTotal: number; payments: { vendor: string; amount: number; payDate: string; action: string }[] };
+    if (!r.payments.length) return { reply: "この2週間に支払期限の来る請求書はありません。", tools: ["get_payment_plan"], mode: "simple" };
+    return {
+      reply: [`この2週間の支払いのうち ${formatYen(r.payTotal)} は払えます${r.deferTotal ? `。${formatYen(r.deferTotal)} は支払日をずらす相談が必要です` : ""}。`, ...r.payments.slice(0, 6).map((p) => `・${p.payDate.slice(5)} ${p.vendor} ${formatYen(p.amount)}(${p.action})`), "[支払計画](/payment-plan)"].join("\n"),
+      tools: ["get_payment_plan"],
+      mode: "simple",
+    };
   }
   if (/入金.*(予測|され(そう|る)|入りそう|いつ)|いつ入金/.test(q)) {
     const r = (await run("get_receipt_forecast")) as { total: number; laterThanDue: number; months: { month: string; due: number; predicted: number }[] };

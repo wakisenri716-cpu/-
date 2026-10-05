@@ -117,6 +117,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/loans", label: "借入金", icon: BankIcon },
       { href: "/cashflow", label: "資金繰り予測", icon: CashflowIcon },
       { href: "/receipt-forecast", label: "入金予測", icon: SparkleIcon },
+      { href: "/payment-plan", label: "支払計画", icon: SparkleIcon },
       { href: "/calendar", label: "入金・支払カレンダー", icon: CalendarIcon },
       { href: "/assets", label: "固定資産", icon: ArchiveIcon },
       { href: "/equipment", label: "備品管理", icon: LaptopIcon },
