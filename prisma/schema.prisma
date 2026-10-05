@@ -237,6 +237,7 @@ model Company {
   inboxItems       InboxItem[]
   dailyBriefings   DailyBriefing[]
   approvalChecks   ApprovalCheck[]
+  closeReviews     MonthlyCloseReview[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -2093,4 +2094,21 @@ model ApprovalCheck {
 
   @@unique([targetType, targetId])
   @@index([companyId])
+}
+
+// AIの月次決算アシストの見立て(会社・月ごとに最新の1つ)
+model MonthlyCloseReview {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  month     String
+  summary   String
+  // [{ level: "warn" | "info" | "ok", text, href }]
+  points    Json
+  ready     Boolean
+  mode      String
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, month])
 }

@@ -1,9 +1,12 @@
+import type { ComponentProps } from "react";
 import Link from "next/link";
 import { requireCompanyId } from "@/lib/auth/session";
 import { getMonthlyClose, getRecentProgress } from "@/lib/monthlyClose";
 import { prisma } from "@/lib/prisma";
 import { UserError } from "@/lib/errors";
 import { MonthlyCloseList } from "./MonthlyCloseList";
+import { CloseAssistant } from "./CloseAssistant";
+import { findMissingEntries, getCloseReview, getCloseTasks } from "@/lib/assistant/closeAssistant";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +22,13 @@ export default async function MonthlyClosePage({ searchParams }: { searchParams:
     if (!(error instanceof UserError)) throw error;
     data = await getMonthlyClose(companyId, undefined);
   }
-  const [recent, company] = await Promise.all([getRecentProgress(companyId), prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { closeChecklist: true } })]);
+  const [recent, company, tasks, missing, review] = await Promise.all([
+    getRecentProgress(companyId),
+    prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { closeChecklist: true } }),
+    getCloseTasks(companyId, data.month),
+    findMissingEntries(companyId, data.month),
+    getCloseReview(companyId, data.month),
+  ]);
   const customItems = Array.isArray(company.closeChecklist) ? company.closeChecklist.filter((v): v is string => typeof v === "string") : [];
 
   return (
@@ -50,7 +59,9 @@ export default async function MonthlyClosePage({ searchParams }: { searchParams:
         })}
       </nav>
 
-      <MonthlyCloseList initial={data} monthLabel={label(data.month)} customItems={customItems} />
+      <CloseAssistant key={data.month} month={data.month} monthLabel={label(data.month)} tasks={tasks} missing={missing} review={review as unknown as ComponentProps<typeof CloseAssistant>["review"]} />
+
+      <MonthlyCloseList key={`${data.month}-${data.done}`} initial={data} monthLabel={label(data.month)} customItems={customItems} />
     </div>
   );
 }
