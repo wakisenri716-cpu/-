@@ -25,6 +25,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   FOREIGN: "外貨建取引",
   CASH_COUNT: "現金の実査",
   CORPORATE_TAX: "法人税等",
+  CONSUMPTION_TAX: "消費税の決算整理",
   IMPORT: "CSV取込",
 };
 
@@ -34,7 +35,8 @@ export async function getConsumptionTax(companyId: string, range: DateRange = {}
   const lines = await prisma.journalLine.findMany({
     where: {
       account: { companyId, code: { in: [OUTPUT_TAX, INPUT_TAX] } },
-      journalEntry: { companyId, status: { in: [...POSTED_STATUSES] }, ...(range.gte || range.lt ? { date: range } : {}) },
+      // 決算整理(仮受・仮払の相殺)の仕訳は集計に入れない
+      journalEntry: { companyId, status: { in: [...POSTED_STATUSES] }, sourceType: { not: "CONSUMPTION_TAX" }, ...(range.gte || range.lt ? { date: range } : {}) },
     },
     select: { debit: true, credit: true, account: { select: { code: true } }, journalEntry: { select: { sourceType: true } } },
   });

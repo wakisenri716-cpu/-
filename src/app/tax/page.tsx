@@ -42,7 +42,12 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
           </p>
           <p className="mt-1 text-sm font-medium text-slate-800">{period.label}</p>
         </div>
-        <CsvDownloadLink href={`/api/tax/export?${periodQuery(period)}`} print />
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/tax/close" className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+            決算整理・中間申告
+          </Link>
+          <CsvDownloadLink href={`/api/tax/export?${periodQuery(period)}`} print />
+        </div>
       </div>
 
       <PeriodPicker path="/tax" period={period} />
