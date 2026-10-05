@@ -46,6 +46,7 @@ const SCREENS = [
   ["/monthly-close", "月次決算チェックリスト"],
   ["/po-matching", "発注書と請求書の突き合わせ"],
   ["/briefing", "AIの朝のまとめ"],
+  ["/customer-insights", "顧客の見守り"],
 ];
 
 function systemPrompt(companyName: string) {
@@ -160,6 +161,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   if (/締め|月次決算/.test(q)) {
     const r = (await run("get_close_status")) as { month: string; done: number; total: number; remaining: { item: string }[]; link: string };
     return { reply: [`${r.month} の月次決算は ${r.done}/${r.total} 済んでいます。`, ...r.remaining.slice(0, 5).map((i) => `・残り: ${i.item}`), `[月次決算チェックリスト](${r.link})`].join("\n"), tools: ["get_close_status"], mode: "simple" };
+  }
+  if (/顧客.*(減|元気|離れ|途絶|変化)|減っている(顧客|取引先)/.test(q)) {
+    const r = (await run("get_customer_insights")) as { insights: { customer: string; kind: string; detail: string }[] };
+    if (!r.insights.length) return { reply: "目立った変化のある顧客はいません。", tools: ["get_customer_insights"], mode: "simple" };
+    return { reply: ["顧客の変化:", ...r.insights.slice(0, 5).map((i) => `・${i.customer}(${i.kind}): ${i.detail}`), "[顧客の見守り](/customer-insights)"].join("\n"), tools: ["get_customer_insights"], mode: "simple" };
   }
   if (/発注書/.test(q)) {
     const r = (await run("get_po_matching")) as { items: { kind: string; vendor: string; message: string }[] };
