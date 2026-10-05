@@ -41,6 +41,7 @@ const SOURCE_LABELS: Record<string, string> = {
   FOREIGN: "外貨建取引",
   CASH_COUNT: "現金の実査",
   CORPORATE_TAX: "法人税等",
+  CONSUMPTION_TAX: "消費税の決算整理",
   IMPORT: "CSV取込",
 };
 

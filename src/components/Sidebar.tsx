@@ -133,6 +133,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/cash-flow-statement", label: "キャッシュ・フロー計算書", icon: TrendIcon },
       { href: "/financial-statements", label: "決算報告書", icon: FileIcon },
       { href: "/tax", label: "消費税集計", icon: PercentIcon },
+      { href: "/tax/close", label: "消費税の決算整理", icon: PercentIcon },
       { href: "/corporate-tax", label: "法人税等の計算", icon: PercentIcon },
       { href: "/analysis", label: "経営分析", icon: GaugeIcon },
       { href: "/documents", label: "証憑の検索", icon: SearchIcon },

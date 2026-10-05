@@ -66,6 +66,7 @@ enum SourceType {
   FOREIGN
   CASH_COUNT
   CORPORATE_TAX
+  CONSUMPTION_TAX
 }
 
 enum QuoteStatus {
@@ -225,6 +226,7 @@ model Company {
   travelTrips      TravelTrip[]
   corporateTaxRuns CorporateTaxRun[]
   standardReviews  StandardReview[]
+  consumptionTaxCloses ConsumptionTaxClose[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -1896,4 +1898,18 @@ model StandardReview {
   createdAt     DateTime @default(now())
 
   @@unique([companyId, year])
+}
+
+// 消費税の決算整理(年度ごと)。期末に仮受・仮払消費税を相殺して未払消費税等を計上した仕訳と、計算結果を持つ
+model ConsumptionTaxClose {
+  id             String   @id @default(cuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fiscalYear     Int
+  result         Json
+  journalEntryId String
+  postedByName   String
+  createdAt      DateTime @default(now())
+
+  @@unique([companyId, fiscalYear])
 }
