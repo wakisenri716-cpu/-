@@ -227,6 +227,7 @@ model Company {
   corporateTaxRuns CorporateTaxRun[]
   standardReviews  StandardReview[]
   consumptionTaxCloses ConsumptionTaxClose[]
+  wageChanges      WageChange[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -1914,4 +1915,25 @@ model ConsumptionTaxClose {
   createdAt      DateTime @default(now())
 
   @@unique([companyId, fiscalYear])
+}
+
+// 固定的賃金の変動(時給・通勤手当の変更)。社会保険の月額変更(随時改定)の判定に使う。
+// month は変更後の賃金で計算する最初の月(給与の対象月)。反映したら、反映前の標準報酬月額を取消用に持つ
+model WageChange {
+  id               String    @id @default(cuid())
+  companyId        String
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  staffId          String
+  staffName        String
+  month            String
+  kind             String
+  before           Int
+  after            Int
+  previousStandard Int?
+  appliedStandard  Int?
+  appliedAt        DateTime?
+  appliedByName    String?
+  createdAt        DateTime  @default(now())
+
+  @@index([companyId, month])
 }

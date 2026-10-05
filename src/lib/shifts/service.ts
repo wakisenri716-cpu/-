@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { recordWageChange } from "@/lib/payroll/monthlyChange";
 import type { Shift, Staff } from "@prisma/client";
 import { hashPassword } from "@/lib/auth/password";
 import { recordTimes } from "@/lib/attendance/times";
@@ -71,7 +72,10 @@ export async function updateStaff(companyId: string, id: string, input: { hourly
   const { pin, ...rest } = input;
   if (pin != null && !PIN.test(pin)) throw new ShiftError("暗証番号は4桁の数字で入力してください");
   const pinData = pin === undefined ? {} : { pinHash: pin === null ? null : await hashPassword(pin), pinFailures: 0, pinLockedUntil: null };
-  return publicStaff(await prisma.staff.update({ where: { id }, data: { ...rest, ...pinData } }));
+  const updated = await prisma.staff.update({ where: { id }, data: { ...rest, ...pinData } });
+  // 時給の変更は、社会保険の月額変更(随時改定)の判定のために記録する
+  if (input.hourlyWage !== undefined) await recordWageChange(staff, "WAGE", staff.hourlyWage, input.hourlyWage);
+  return publicStaff(updated);
 }
 
 // ---- シフト ----

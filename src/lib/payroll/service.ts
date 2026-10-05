@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { recordWageChange } from "@/lib/payroll/monthlyChange";
 import { UserError } from "@/lib/errors";
 import { ensureAccount } from "@/lib/accounting/accounts";
 import { getMonthlyPayroll } from "@/lib/shifts/service";
@@ -114,7 +115,10 @@ export async function updateStaffPayroll(companyId: string, staffId: string, inp
   if (input.commuteAllowance !== undefined) data.commuteAllowance = intIn(input.commuteAllowance || 0, "通勤手当", 1_000_000);
   if (input.residentTax !== undefined) data.residentTax = intIn(input.residentTax || 0, "住民税", 1_000_000);
   if (data.careInsurance && !(data.socialInsurance ?? staff.socialInsurance)) throw new PayrollError("介護保険は、健康保険に加入している人だけ選べます");
-  return prisma.staff.update({ where: { id: staffId }, data, select: STAFF_FIELDS });
+  const updated = await prisma.staff.update({ where: { id: staffId }, data, select: STAFF_FIELDS });
+  // 通勤手当の変更は、社会保険の月額変更(随時改定)の判定のために記録する
+  if (data.commuteAllowance !== undefined) await recordWageChange(staff, "COMMUTE", staff.commuteAllowance, data.commuteAllowance);
+  return updated;
 }
 
 // その月の給与計算表。計上済みなら計上したときの結果を返す。
