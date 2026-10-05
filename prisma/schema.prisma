@@ -144,6 +144,8 @@ model Company {
   email                  String?
   // 毎朝、管理者に「やること」をメールで知らせる
   dailyDigest            Boolean @default(false)
+  // AIの見張りで新しく「要確認」になったものを、管理者にメールとスマホで知らせる
+  watchAlerts            Boolean @default(true)
   // 給与計算の保険料率(単位: 0.001%。9910 = 9.910%)。都道府県・年度で変わるので画面から直せる
   payrollPrefecture      String  @default("東京都")
   payrollHealthRate      Int     @default(9910)

@@ -8,7 +8,7 @@ import { UserError } from "@/lib/errors";
 
 export async function GET() {
   const companyId = await requireCompanyId();
-  const company = await prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { email: true, dailyDigest: true } });
+  const company = await prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { email: true, dailyDigest: true, watchAlerts: true } });
   return NextResponse.json({
     ...company,
     mode: mailMode(),
@@ -26,10 +26,10 @@ export async function PUT(request: Request) {
     const email = body.email === "" || body.email === null ? null : normalizeEmail(body.email);
     const saved = await prisma.company.update({
       where: { id: admin.companyId },
-      data: { email, ...(typeof body.dailyDigest === "boolean" ? { dailyDigest: body.dailyDigest } : {}) },
-      select: { email: true, dailyDigest: true },
+      data: { email, ...(typeof body.dailyDigest === "boolean" ? { dailyDigest: body.dailyDigest } : {}), ...(typeof body.watchAlerts === "boolean" ? { watchAlerts: body.watchAlerts } : {}) },
+      select: { email: true, dailyDigest: true, watchAlerts: true },
     });
-    await audit("メールの設定を変更", `返信先 ${saved.email ?? "なし"}・毎朝のお知らせ ${saved.dailyDigest ? "オン" : "オフ"}`);
+    await audit("メールの設定を変更", `返信先 ${saved.email ?? "なし"}・毎朝のお知らせ ${saved.dailyDigest ? "オン" : "オフ"}・見張りの知らせ ${saved.watchAlerts ? "オン" : "オフ"}`);
     return NextResponse.json(saved);
   } catch (error) {
     if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 400 });
