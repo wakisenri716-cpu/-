@@ -4,6 +4,7 @@ import { getPrintableInvoice } from "@/lib/accounting/issueInvoice";
 import { getQuote } from "@/lib/accounting/quotes";
 import { formatYen } from "@/lib/format";
 import { MailError, sendMail, type MailKind } from "@/lib/mail";
+import { getCollectionRow, type CollectionRow, type Stage } from "@/lib/collections";
 
 // 請求書・見積書・督促をメールで送る。書類そのものは添付せず、ログインなしで見られる共有リンクを本文に入れる
 // (受け取った人はリンク先で印刷・PDF保存できる)。
@@ -28,6 +29,97 @@ async function loadInvoice(companyId: string, id: string) {
   if (!data) throw new MailError("請求書が見つかりません(作成した請求書だけ送れます)");
   if (data.invoice.status === "CANCELLED") throw new MailError("取り消した請求書は送れません");
   return data;
+}
+
+export type ReminderTone = Exclude<Stage, "WAIT">;
+export type ReminderContext = {
+  to: string;
+  customer: string;
+  companyName: string;
+  invoiceNumber: string;
+  issueDate: string;
+  dueDate: string;
+  remaining: number;
+  bank: string[];
+  link: string;
+  signature: string;
+  stage: ReminderTone;
+  reminders: number;
+  daysOverdue: number;
+};
+
+// 督促の段階(返事待ちのときは、次に送るなら何回目か)
+function toneStage(row: CollectionRow | null): ReminderTone {
+  if (!row) return "FIRST";
+  if (row.stage !== "WAIT") return row.stage;
+  return row.reminders >= 2 ? "CALL" : "SECOND";
+}
+
+const inDays = (n: number) => {
+  const d = new Date(Date.now() + 9 * 3_600_000 + n * 86_400_000);
+  return `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日`;
+};
+
+// 督促メールの決まった文面。段階が進むほど、はっきりした書き方にする(失礼にならない範囲で)
+export function reminderMail(c: ReminderContext) {
+  const head = [`${c.customer} 御中`, "", `いつもお世話になっております。${c.companyName}です。`];
+  const facts = ["", `未入金額: ${formatYen(c.remaining)}`, ...c.bank, "", "▼請求書を見る", c.link, ""];
+  const tail = ["本メールと行き違いでお支払いいただいている場合は、ご容赦ください。", c.signature];
+  const subjects: Record<ReminderTone, string> = {
+    FIRST: `【ご入金のお願い】請求書 ${c.invoiceNumber} ${c.companyName}`,
+    SECOND: `【再送・ご入金のお願い】請求書 ${c.invoiceNumber} ${c.companyName}`,
+    CALL: `【重要・ご入金のお願い】請求書 ${c.invoiceNumber} ${c.companyName}`,
+    LEGAL: `【至急・ご入金について】請求書 ${c.invoiceNumber} ${c.companyName}`,
+  };
+  const bodies: Record<ReminderTone, string[]> = {
+    FIRST: [
+      `${c.issueDate}付でお送りした請求書(${c.invoiceNumber})につきまして、`,
+      `お支払期限(${c.dueDate})を過ぎておりますが、本日時点でご入金の確認ができておりません。`,
+      "お手数ですが、ご確認のうえお手続きをお願いいたします。",
+    ],
+    SECOND: [
+      `先日もご連絡いたしました請求書(${c.invoiceNumber})につきまして、お支払期限(${c.dueDate})から${c.daysOverdue}日が過ぎておりますが、まだご入金の確認ができておりません。`,
+      `恐れ入りますが、${inDays(7)}までにお支払いいただけますよう、お願いいたします。`,
+      "ご事情によりお支払いが難しい場合は、お支払いの予定をご連絡いただけますと幸いです。",
+    ],
+    CALL: [
+      `請求書(${c.invoiceNumber})につきまして、これまで${c.reminders}回ご連絡いたしましたが、お支払期限(${c.dueDate})から${c.daysOverdue}日が過ぎた現在も、ご入金とご返信の確認ができておりません。`,
+      `至急ご確認のうえ、${inDays(7)}までにお支払いいただくか、お支払いの予定をご連絡ください。`,
+      "近日中に、ご担当者様へお電話でもご確認させていただきます。",
+    ],
+    LEGAL: [
+      `請求書(${c.invoiceNumber})につきまして、お支払期限(${c.dueDate})から${c.daysOverdue}日が過ぎた現在も、ご入金の確認ができておりません。`,
+      `${inDays(7)}までにお支払いまたはご連絡をいただけない場合は、誠に不本意ながら、しかるべき手続きを検討せざるを得ません。`,
+      "円満な解決を望んでおりますので、至急ご連絡くださいますようお願いいたします。",
+    ],
+  };
+  return { to: c.to, subject: subjects[c.stage], body: [...head, ...bodies[c.stage], ...facts, ...tail].join("\n") };
+}
+
+// 督促メールに使う情報(共有リンクはここで作る)
+export async function getReminderContext(companyId: string, id: string, baseUrl: string): Promise<ReminderContext> {
+  const { invoice, calc } = await loadInvoice(companyId, id);
+  const token = invoice.shareToken ?? newToken();
+  if (!invoice.shareToken) await prisma.invoice.update({ where: { id }, data: { shareToken: token } });
+  const paid = invoice.payments.reduce((s, p) => s + p.amount, 0);
+  const remaining = calc.total - paid;
+  if (!OPEN.includes(invoice.status) || remaining <= 0) throw new MailError("この請求書は未入金の残高がありません");
+  const row = await getCollectionRow(companyId, id);
+  return {
+    to: invoice.customer?.email ?? "",
+    customer: invoice.customer?.name ?? "",
+    companyName: invoice.company.name,
+    invoiceNumber: invoice.invoiceNumber ?? "",
+    issueDate: jp(invoice.issueDate),
+    dueDate: jp(invoice.dueDate),
+    remaining,
+    bank: invoice.company.bankAccount ? ["", "【お振込先】", invoice.company.bankAccount] : [],
+    link: `${baseUrl}/share/invoice/${token}`,
+    signature: signature(invoice.company),
+    stage: toneStage(row),
+    reminders: row?.reminders ?? 0,
+    daysOverdue: row?.daysOverdue ?? 0,
+  };
 }
 
 // 送信画面に最初に入れておく宛先・件名・本文(共有リンクはここで作る)
@@ -60,39 +152,14 @@ export async function buildDraft(companyId: string, kind: DocumentMailKind, id: 
     };
   }
 
+  if (kind === "reminder") return reminderMail(await getReminderContext(companyId, id, baseUrl));
+
   const { invoice, calc } = await loadInvoice(companyId, id);
   const token = invoice.shareToken ?? newToken();
   if (!invoice.shareToken) await prisma.invoice.update({ where: { id }, data: { shareToken: token } });
   const link = `${baseUrl}/share/invoice/${token}`;
-  const paid = invoice.payments.reduce((s, p) => s + p.amount, 0);
   const customer = invoice.customer?.name ?? "";
   const bank = invoice.company.bankAccount ? ["", "【お振込先】", invoice.company.bankAccount] : [];
-
-  if (kind === "reminder") {
-    const remaining = calc.total - paid;
-    if (!OPEN.includes(invoice.status) || remaining <= 0) throw new MailError("この請求書は未入金の残高がありません");
-    return {
-      to: invoice.customer?.email ?? "",
-      subject: `【ご入金のお願い】請求書 ${invoice.invoiceNumber ?? ""} ${invoice.company.name}`,
-      body: [
-        `${customer} 御中`,
-        "",
-        `いつもお世話になっております。${invoice.company.name}です。`,
-        `${jp(invoice.issueDate)}付でお送りした請求書(${invoice.invoiceNumber ?? ""})につきまして、`,
-        `お支払期限(${jp(invoice.dueDate)})を過ぎておりますが、本日時点でご入金の確認ができておりません。`,
-        "お手数ですが、ご確認のうえお手続きをお願いいたします。",
-        "",
-        `未入金額: ${formatYen(remaining)}`,
-        ...bank,
-        "",
-        "▼請求書を見る",
-        link,
-        "",
-        "本メールと行き違いでお支払いいただいている場合は、ご容赦ください。",
-        signature(invoice.company),
-      ].join("\n"),
-    };
-  }
 
   return {
     to: invoice.customer?.email ?? "",
