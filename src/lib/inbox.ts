@@ -58,11 +58,11 @@ export async function processInboxFile(user: User, file: File) {
   try {
     c = await getAiProvider().classifyDocument({ base64, mediaType, fileName: file.name });
     if (c.kind === "RECEIVED_INVOICE") {
-      const { invoice } = await createInvoiceFromUpload(companyId, "RECEIVED", base64, mediaType);
+      const { invoice, matchedOrder } = await createInvoiceFromUpload(companyId, "RECEIVED", base64, mediaType);
       resultType = "INVOICE";
       resultId = invoice.id;
       href = "/invoices?direction=RECEIVED";
-      note = `受け取った請求書として登録しました(${invoice.vendor?.name ?? "取引先不明"}・${formatYen(invoice.totalAmount)})`;
+      note = `受け取った請求書として登録しました(${invoice.vendor?.name ?? "取引先不明"}・${formatYen(invoice.totalAmount)})${matchedOrder ? `。発注書 ${matchedOrder.orderNumber} と金額が合ったので検収済みにしました` : ""}`;
     } else if (c.kind === "RECEIPT") {
       const { item } = await addReceiptToReport(await ownReport(user), base64, mediaType);
       resultType = "EXPENSE";

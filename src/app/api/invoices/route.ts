@@ -35,8 +35,8 @@ export async function POST(request: Request) {
 
   const { base64, mediaType } = await fileToBase64(file);
   try {
-    const { invoice, decision } = await createInvoiceFromUpload(companyId, direction, base64, mediaType);
-    return NextResponse.json({ invoice, decision }, { status: 201 });
+    const { invoice, decision, matchedOrder } = await createInvoiceFromUpload(companyId, direction, base64, mediaType);
+    return NextResponse.json({ invoice, decision, matchedOrder }, { status: 201 });
   } catch (error) {
     if (error instanceof UserError) return NextResponse.json({ error: error.message }, { status: 422 });
     throw error;

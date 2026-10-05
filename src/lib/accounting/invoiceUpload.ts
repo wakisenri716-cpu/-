@@ -5,6 +5,7 @@ import { getAiProvider } from "@/lib/ai";
 import { toDataUri } from "@/lib/fileToDataUri";
 import { findOrCreateCustomer, findOrCreateVendor } from "./parties";
 import { postInvoiceJournal } from "./automation";
+import { autoMatchImportedInvoice } from "@/lib/poMatching";
 
 // 請求書の画像・PDFをAIで読み取り、請求書(下書き)と仕訳を作る。請求書の画面と AI受付箱 で使う。
 export async function createInvoiceFromUpload(companyId: string, direction: InvoiceDirection, base64: string, mediaType: string) {
@@ -51,9 +52,11 @@ export async function createInvoiceFromUpload(companyId: string, direction: Invo
   });
 
   const { decision } = await postInvoiceJournal(invoice.id);
+  // 受け取った請求書: 同じ取引先の発注書と金額がぴったりなら、その発注書を自動で検収済みにする
+  const matchedOrder = direction === "RECEIVED" ? await autoMatchImportedInvoice(companyId, invoice.id) : null;
   const updated = await prisma.invoice.findUnique({
     where: { id: invoice.id },
     include: { vendor: true, customer: true, aiExtraction: true, journalEntry: { include: { lines: { include: { account: true } } } } },
   });
-  return { invoice: updated!, decision };
+  return { invoice: updated!, decision, matchedOrder };
 }
