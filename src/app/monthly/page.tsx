@@ -63,6 +63,9 @@ export default async function MonthlyPage({ searchParams }: { searchParams: Prom
           </p>
         </div>
         <div className="flex gap-2 self-start">
+          <Link href={`/monthly/progress?fy=${t.year}`} className="print:hidden rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-slate-700 hover:bg-slate-50">
+            予算の進み具合
+          </Link>
           <Link href={`/monthly/budget?fy=${t.year}`} className="print:hidden rounded-md border border-indigo-600 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-indigo-700 hover:bg-indigo-50">
             予算を設定
           </Link>
