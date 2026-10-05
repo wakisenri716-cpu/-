@@ -4,6 +4,7 @@ import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
 import { ASSISTANT_TOOLS, runAssistantTool } from "./tools";
+import { getProposals, type ProposalView } from "./proposals";
 
 // AIアシスタント: 会社の帳簿・請求書・やることについての質問に、道具(tools.ts)で実際のデータを調べて日本語で答える。
 // ANTHROPIC_API_KEY があれば Claude、なければ言葉の手がかりで道具を1つ選んで答える簡易版。
@@ -15,7 +16,7 @@ const MAX_CHARS = 2000;
 const MAX_STEPS = 8;
 
 export type ChatTurn = { role: "user" | "assistant"; text: string };
-export type AssistantReply = { reply: string; tools: string[]; mode: "claude" | "simple" };
+export type AssistantReply = { reply: string; tools: string[]; mode: "claude" | "simple"; proposals?: ProposalView[] };
 
 // 画面の一覧(答えに入れるリンクの候補)
 const SCREENS = [
@@ -44,7 +45,8 @@ function systemPrompt(companyName: string) {
     `あなたは「${companyName}」の経理・事務を手伝うAIアシスタントです。使う人は経理の専門家ではないことが多いので、やさしい日本語で、結論から短く答えてください。`,
     "数字は必ず道具で会社のデータを調べてから答え、推測で数字を作らないでください。データにないことは「データがありません」と言ってください。",
     "金額は「1,234,567円」のように円で書いてください。税務の判断が必要なことは「目安」と添え、税理士への確認をすすめてください。",
-    "あなたはデータを読むことだけができ、仕訳や請求書を作ったり変えたりはできません。頼まれたら、どの画面でできるかを案内してください。",
+    "請求書の発行・仕訳の記帳・督促メールを頼まれたら、propose_ の道具で下書きを作ってください。下書きは利用者が画面で確かめて「実行する」を押したときだけ確定します。あなたが確定したとは言わず、「下書きを作りました。内容を確かめて実行してください」と伝えてください。必要な情報(金額・相手など)が足りないときは、推測せずに聞き返してください。",
+    "それ以外の変更(取消・削除・設定の変更など)はできないので、どの画面でできるかを案内してください。",
     "関係する画面があれば、答えの最後に [画面の名前](/パス) の形でリンクを1〜3個つけてください。使えるパスは次のとおりです(道具の結果に link があればそれも使えます):",
     SCREENS.map(([href, label]) => `${label}: ${href}`).join(" / "),
   ].join("\n");
@@ -54,13 +56,15 @@ function client() {
   return new Anthropic();
 }
 
-async function askClaude(companyId: string, companyName: string, history: ChatTurn[]): Promise<AssistantReply> {
+async function askClaude(ctx: { companyId: string; userId: string }, companyName: string, history: ChatTurn[]): Promise<AssistantReply> {
   const today = jstDateKey(new Date());
   const messages: Anthropic.Beta.BetaMessageParam[] = history.map((t) => ({ role: t.role, content: t.text }));
   // 今日の日付は、キャッシュを効かせるため system ではなく最後の質問に添える
   const last = messages[messages.length - 1];
   messages[messages.length - 1] = { role: "user", content: `${last.content as string}\n\n(今日は ${today} です)` };
   const used: string[] = [];
+  const proposalIds: string[] = [];
+  const done = async (reply: string): Promise<AssistantReply> => ({ reply, tools: used, mode: "claude", proposals: await getProposals(ctx.companyId, proposalIds) });
 
   for (let step = 0; step < MAX_STEPS; step++) {
     const response = await client().beta.messages.create({
@@ -73,7 +77,7 @@ async function askClaude(companyId: string, companyName: string, history: ChatTu
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
     });
-    if (response.stop_reason === "refusal") return { reply: "すみません、この質問にはお答えできません。聞き方を変えてお試しください。", tools: used, mode: "claude" };
+    if (response.stop_reason === "refusal") return done("すみません、この質問にはお答えできません。聞き方を変えてお試しください。");
     messages.push({ role: "assistant", content: response.content });
     if (response.stop_reason === "pause_turn") continue;
     const calls = response.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
@@ -83,14 +87,16 @@ async function askClaude(companyId: string, companyName: string, history: ChatTu
         .map((b) => b.text)
         .join("\n")
         .trim();
-      return { reply: text || "うまく答えられませんでした。もう一度聞いてください。", tools: used, mode: "claude" };
+      return done(text || "うまく答えられませんでした。もう一度聞いてください。");
     }
     // 道具はまとめて実行し、結果を1つのメッセージで返す
     const results = await Promise.all(
       calls.map(async (call): Promise<Anthropic.Beta.BetaToolResultBlockParam> => {
         used.push(call.name);
         try {
-          const out = await runAssistantTool(companyId, call.name, (call.input ?? {}) as Record<string, unknown>);
+          const out = await runAssistantTool(ctx, call.name, (call.input ?? {}) as Record<string, unknown>);
+          const pid = (out as { proposalId?: string } | null)?.proposalId;
+          if (pid) proposalIds.push(pid);
           return { type: "tool_result", tool_use_id: call.id, content: JSON.stringify(out) };
         } catch (error) {
           return { type: "tool_result", tool_use_id: call.id, content: error instanceof Error ? error.message : "調べられませんでした", is_error: true };
@@ -99,7 +105,7 @@ async function askClaude(companyId: string, companyName: string, history: ChatTu
     );
     messages.push({ role: "user", content: results });
   }
-  return { reply: "調べることが多すぎて、答えをまとめられませんでした。質問を分けてお試しください。", tools: used, mode: "claude" };
+  return done("調べることが多すぎて、答えをまとめられませんでした。質問を分けてお試しください。");
 }
 
 // APIキーがないときの簡易版: 言葉の手がかりで道具を1つ選び、結果を文章にする
@@ -107,8 +113,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   const q = question.normalize("NFKC");
   const preset = /先月/.test(q) ? "last-month" : /前期|去年|昨年/.test(q) ? "last-fy" : /今期|今年|年度/.test(q) ? "this-fy" : "this-month";
   const label = { "last-month": "先月", "last-fy": "前期", "this-fy": "今期", "this-month": "今月" }[preset];
-  const run = (name: string, input: Record<string, unknown> = {}) => runAssistantTool(companyId, name, input) as Promise<Record<string, unknown>>;
+  const run = (name: string, input: Record<string, unknown> = {}) => runAssistantTool({ companyId, userId: "" }, name, input) as Promise<Record<string, unknown>>;
 
+  if (/(請求書|仕訳|督促).*(作|発行|記帳|送)/.test(q)) {
+    return { reply: "請求書・仕訳・督促メールの下書きを作るには、AIのAPIキー(ANTHROPIC_API_KEY)の設定が必要です。いまは各画面から作ってください。\n[請求書](/invoices) [仕訳帳](/journal)", tools: [], mode: "simple" };
+  }
   if (/やること|タスク|何をすれば|todo/i.test(q)) {
     const r = (await run("get_todos")) as { todos: { label: string; count: number; link: string }[] };
     if (!r.todos.length) return { reply: "いま急いでやることはありません。", tools: ["get_todos"], mode: "simple" };
@@ -176,7 +185,7 @@ export async function askAssistant(user: { id: string; companyId: string }, inpu
   let result: AssistantReply;
   if (process.env.ANTHROPIC_API_KEY) {
     try {
-      result = await askClaude(user.companyId, company.name, history);
+      result = await askClaude({ companyId: user.companyId, userId: user.id }, company.name, history);
     } catch (error) {
       if (error instanceof Anthropic.RateLimitError) throw new UserError("AIが混み合っています。少し待ってからお試しください");
       if (error instanceof Anthropic.APIError) throw new UserError("AIに問い合わせできませんでした。時間をおいてお試しください");

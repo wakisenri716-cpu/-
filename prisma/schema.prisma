@@ -231,6 +231,7 @@ model Company {
   transportRoutes  TransportRoute[]
   duplicateDismissals DuplicateDismissal[]
   assistantLogs    AssistantLog[]
+  assistantProposals AssistantProposal[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -1982,4 +1983,22 @@ model AssistantLog {
   createdAt DateTime @default(now())
 
   @@index([companyId, createdAt])
+}
+
+// AIアシスタントが作った下書き(請求書・仕訳・督促メール)。人が画面で確かめて「実行」したときだけ確定する
+model AssistantProposal {
+  id         String    @id @default(cuid())
+  companyId  String
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId     String
+  kind       String
+  summary    String
+  payload    Json
+  status     String    @default("PENDING")
+  resultId   String?
+  resultNote String?
+  createdAt  DateTime  @default(now())
+  decidedAt  DateTime?
+
+  @@index([companyId, status])
 }
