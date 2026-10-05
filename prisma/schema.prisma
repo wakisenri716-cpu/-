@@ -236,6 +236,7 @@ model Company {
   anomalyChecks    AnomalyCheck[]
   inboxItems       InboxItem[]
   dailyBriefings   DailyBriefing[]
+  approvalChecks   ApprovalCheck[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -2071,4 +2072,25 @@ model DailyBriefing {
   createdAt DateTime @default(now())
 
   @@unique([companyId, date])
+}
+
+// 申請・承認のAIチェック(稟議・経費精算を承認する前にAIが確認した結果。対象ごとに最新の1つ)
+model ApprovalCheck {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  // REQUEST(稟議・申請) / EXPENSE(経費精算)
+  targetType String
+  targetId   String
+  // OK(問題なし) / CHECK(確認したい点あり) / CAUTION(注意)
+  verdict    String
+  summary    String
+  // [{ level: "warn" | "info" | "ok", text, source: "rule" | "ai" }]
+  points     Json
+  questions  Json
+  mode       String
+  createdAt  DateTime @default(now())
+
+  @@unique([targetType, targetId])
+  @@index([companyId])
 }

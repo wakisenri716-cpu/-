@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { formatDate, formatYen } from "@/lib/format";
 import { PrintButton } from "@/components/PrintButton";
+import { AiCheckPanel } from "@/components/AiCheckPanel";
 
 type Row = {
   id: string;
@@ -38,6 +39,7 @@ export default function ReimbursementsPage() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [date, setDate] = useState(todayKey);
   const [payFrom, setPayFrom] = useState("1020");
+  const [checking, setChecking] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -99,6 +101,7 @@ export default function ReimbursementsPage() {
     byEmployee.set(r.employee.id, e);
   }
   const waiting = [...byEmployee.values()];
+  const checkingRow = rows?.find((r) => r.id === checking) ?? null;
 
   return (
     <div className="space-y-6">
@@ -185,6 +188,15 @@ export default function ReimbursementsPage() {
                           <button onClick={() => review(r, "return")} disabled={busy === r.id} className="text-xs text-rose-600 hover:underline disabled:opacity-50">
                             差戻し
                           </button>
+                          <button
+                            onClick={() => {
+                              setChecking(checking === r.id ? null : r.id);
+                              setTimeout(() => document.getElementById("ai-check")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                            }}
+                            className="text-xs text-indigo-700 hover:underline"
+                          >
+                            {checking === r.id ? "AIチェックを閉じる" : "AIチェック"}
+                          </button>
                         </span>
                       )}
                       {r.approvalStatus === "APPROVED" && r.state === "READY" && (
@@ -208,6 +220,7 @@ export default function ReimbursementsPage() {
                       )}
                     </td>
                   </tr>
+
                 ))}
                 {rows.length === 0 && (
                   <tr>
@@ -219,6 +232,15 @@ export default function ReimbursementsPage() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+      {/* 表は横に動くので、AIチェックは表の下に出す */}
+      {checkingRow && (
+        <div id="ai-check" className="space-y-2">
+          <p className="text-sm text-slate-600">
+            {checkingRow.employee.name}さんの経費精算({formatDate(checkingRow.createdAt)}作成・明細{checkingRow.itemCount}件)
+          </p>
+          <AiCheckPanel key={checkingRow.id} type="EXPENSE" id={checkingRow.id} initial={null} auto />
         </div>
       )}
       <p className="text-xs text-slate-500">

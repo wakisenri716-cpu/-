@@ -5,6 +5,8 @@ import { ACTION_LABELS, getRequest, KIND_LABELS, STATUS_LABELS, type RequestKind
 import { formatYen } from "@/lib/format";
 import { PrintButton } from "@/components/PrintButton";
 import { RequestActions } from "./RequestActions";
+import { AiCheckPanel, type AiCheckView } from "@/components/AiCheckPanel";
+import { getCheck } from "@/lib/assistant/approvalCheck";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,9 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
   const user = await requireMember();
   const req = await getRequest(user, id);
   if (!req) notFound();
+  // 承認する人(と管理者・経理担当)には、承認前のAIチェックを出す。承認待ちで自分の番なら開いたときに自動で作る
+  const showCheck = req.canDecide || user.role !== "EMPLOYEE";
+  const check = showCheck ? await getCheck("REQUEST", req.id, user.companyId) : null;
 
   const rows: [string, string][] = [
     ["申請番号", req.number],
@@ -101,6 +106,8 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
         </section>
         {req.kind === "LEAVE" && req.status === "APPROVED" && <p className="mt-4 text-xs text-emerald-700">承認されたため、有給休暇として登録しました。</p>}
       </article>
+
+      {showCheck && (req.status === "PENDING" || check) && <AiCheckPanel type="REQUEST" id={req.id} initial={check as unknown as AiCheckView | null} auto={req.canDecide} />}
 
       <RequestActions id={req.id} canDecide={req.canDecide} canWithdraw={req.canWithdraw} />
     </div>
