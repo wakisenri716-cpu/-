@@ -241,6 +241,7 @@ model Company {
   cashAdvices      CashAdvice[]
   aiCorrections    AiCorrection[]
   bookChecks       BookCheck[]
+  contracts        Contract[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -2174,4 +2175,39 @@ model BookCheck {
   createdAt DateTime @default(now())
 
   @@unique([companyId, period])
+}
+
+// 契約書の台帳(AIが契約書から読み取った内容。人が直せる)
+model Contract {
+  id           String    @id @default(cuid())
+  companyId    String
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  // 書類フォルダの契約書ファイル
+  fileId       String?
+  title        String
+  counterparty String?
+  // OUTSOURCING(業務委託) / LEASE(賃貸借・リース) / SERVICE(保守・サービス・利用) / SALES(売買・取引基本) / NDA(秘密保持) / EMPLOYMENT(雇用) / OTHER
+  kind         String    @default("OTHER")
+  startDate    DateTime?
+  endDate      DateTime?
+  autoRenew    Boolean   @default(false)
+  // 自動更新するときの更新期間(か月)
+  renewalMonths Int?
+  // 解約・更新しない旨を申し出る期限(満了日の何日前まで)
+  noticeDays   Int?
+  amount       Int?
+  // MONTHLY / YEARLY / ONCE
+  amountPeriod String?
+  paymentTerms String?
+  // 気をつける条項(違約金・損害賠償・中途解約など)
+  keyPoints    Json      @default("[]")
+  summary      String?
+  // ACTIVE / ENDED
+  status       String    @default("ACTIVE")
+  mode         String    @default("manual")
+  createdBy    String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([companyId, status])
 }

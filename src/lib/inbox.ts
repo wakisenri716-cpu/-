@@ -5,6 +5,7 @@ import { getAiProvider } from "@/lib/ai";
 import type { DocumentClassification } from "@/lib/ai/types";
 import { createInvoiceFromUpload } from "@/lib/accounting/invoiceUpload";
 import { addReceiptToReport } from "@/lib/accounting/receiptUpload";
+import { createContractFromFile } from "@/lib/contracts";
 import { createFolder, MAX_FILE_BYTES, saveFile, sniffType } from "@/lib/files";
 
 // AI受付箱: 書類(画像・PDF)を入れるだけで、AIがどんな書類かを見分けて振り分ける。
@@ -74,6 +75,16 @@ export async function processInboxFile(user: User, file: File) {
       resultId = kept.id;
       href = kept.href;
       note = c.kind === "CONTRACT" ? `書類フォルダ「契約書」に保存しました${c.endDate ? `(期限 ${c.endDate.replaceAll("-", "/")} をお知らせします)` : ""}` : "書類フォルダ「AI受付箱」に保存しました";
+      if (c.kind === "CONTRACT") {
+        // 契約書は台帳にも登録する(自動更新・解約の申し出期限などをAIが読み取る)。うまくいかなくてもファイルは残っている
+        try {
+          await createContractFromFile(user, kept.id);
+          href = "/contracts";
+          note += "。契約書の台帳にも登録しました";
+        } catch (error) {
+          console.error("契約書の台帳に登録できませんでした", error);
+        }
+      }
     }
   } catch (error) {
     // 読み取れなかったものもファイルは残し、人が確かめられるようにする
