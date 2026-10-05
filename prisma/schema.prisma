@@ -235,6 +235,7 @@ model Company {
   monthlyReports   MonthlyReport[]
   anomalyChecks    AnomalyCheck[]
   inboxItems       InboxItem[]
+  dailyBriefings   DailyBriefing[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -2054,4 +2055,20 @@ model InboxItem {
   createdAt  DateTime @default(now())
 
   @@index([companyId, createdAt])
+}
+
+// AIの朝のブリーフィング(会社・日ごとに1つ。毎朝のメールとダッシュボードで使う)
+model DailyBriefing {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  date      String
+  facts     Json
+  headline  String
+  items     Json
+  notes     Json
+  mode      String
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, date])
 }

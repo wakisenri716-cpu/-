@@ -3,8 +3,10 @@ import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getTodos } from "@/lib/dashboard";
 import { appUrl, sendMail } from "@/lib/mail";
+import { generateBriefing } from "@/lib/assistant/briefing";
 
 // 毎朝、「やること」がある会社の管理者にメールで知らせる(Vercel Cron から呼ばれる。vercel.json 参照)。
+// AIの朝のブリーフィング(今日まずやること)も作って、メールの最初に入れる。
 // CRON_SECRET を知っている呼び出し元だけが実行できる。
 function authorized(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -23,10 +25,29 @@ export async function GET(request: Request) {
   for (const company of companies) {
     const todos = await getTodos(company.id);
     if (!todos.length) continue;
+    let briefing: Awaited<ReturnType<typeof generateBriefing>> | null = null;
+    try {
+      briefing = await generateBriefing(company.id);
+    } catch (error) {
+      // ブリーフィングが作れなくても、やることのメールは送る
+      console.error("朝のブリーフィングを作れませんでした", error);
+    }
+    const items = (briefing?.items ?? []) as { title: string; reason: string; href: string }[];
     const admins = await prisma.user.findMany({ where: { active: true, memberships: { some: { companyId: company.id, role: "ADMIN", active: true } } }, select: { email: true, name: true } });
     const text = [
       `${company.name} の今日のやること(${todos.length}件)です。`,
       "",
+      ...(briefing
+        ? [
+            "■ 今朝のAIブリーフィング",
+            briefing.headline,
+            ...items.map((item, i) => `${i + 1}. ${item.title}\n   ${item.reason}\n   ${baseUrl}${item.href}`),
+            ...(briefing.notes as string[]).map((n) => `・${n}`),
+            `くわしく: ${baseUrl}/briefing`,
+            "",
+            "■ やることの一覧",
+          ]
+        : []),
       ...todos.map((t) => `・${t.label}: ${t.count}件\n  ${t.detail}\n  ${baseUrl}${t.href}`),
       "",
       `ダッシュボード: ${baseUrl}/`,

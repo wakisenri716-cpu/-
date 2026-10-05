@@ -108,7 +108,7 @@ SMTP_PASS = (2でメモした16文字。空白なし)`}
               <label className="flex items-start gap-2 text-sm text-slate-700">
                 <input type="checkbox" checked={digest} onChange={(e) => setDigest(e.target.checked)} className="mt-1" />
                 <span>
-                  毎朝8時ごろ、管理者に「やること」をメールで知らせる
+                  毎朝8時ごろ、管理者に「やること」とAIの朝のブリーフィングをメールで知らせる
                   <span className="block text-xs text-slate-500">
                     レビュー待ち・期限切れの請求書・精算待ちなどがあるときだけ送ります。{!settings.cron && "(Vercel に CRON_SECRET を設定すると動きます)"}
                   </span>

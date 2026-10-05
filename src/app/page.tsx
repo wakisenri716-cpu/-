@@ -10,6 +10,9 @@ import { UnreadNotices } from "@/components/UnreadNotices";
 import { TrendChart } from "@/components/TrendChart";
 import { formatDate, formatPercent, formatYen } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
+import { BriefingCard, type BriefingView } from "@/components/BriefingCard";
+import { getBriefing } from "@/lib/assistant/briefing";
+import { jstDateKey } from "@/lib/jst";
 import { ChartIcon, DashboardIcon, InboxIcon, ReceiptIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +28,7 @@ export default async function DashboardPage() {
   const user = await requireUser();
   // 管理者・経理担当で、お試し用の会社をまだ作っていなければ案内する
   const offerDemo = user.role !== "EMPLOYEE" && !user.isDemoCompany && !(await findDemoCompany(user.id));
-  const [summary, trend, cash, todos, rankings, setupSteps, notices] = await Promise.all([
+  const [summary, trend, cash, todos, rankings, setupSteps, notices, briefing] = await Promise.all([
     getDashboardSummary(),
     getMonthlyTrend(companyId),
     getCashBalance(companyId),
@@ -33,6 +36,7 @@ export default async function DashboardPage() {
     getRankings(companyId),
     user.role === "ADMIN" ? getSetupSteps(companyId, user) : Promise.resolve(null),
     unreadAnnouncements(user),
+    getBriefing(companyId, jstDateKey(new Date())),
   ]);
   const thisMonth = trend[trend.length - 1];
   const lastMonth = trend[trend.length - 2];
@@ -72,6 +76,8 @@ export default async function DashboardPage() {
         <input name="q" maxLength={500} required placeholder="例: 今月の利益は? 入金が遅れている取引先は?" aria-label="AIへの質問" className="min-w-0 flex-1 rounded-full border border-indigo-200 bg-white px-4 py-2 text-sm" />
         <button className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">聞く</button>
       </form>
+
+      <BriefingCard initial={briefing as unknown as BriefingView | null} />
 
       {offerDemo && <TryDemoCard />}
       {setupSteps && <SetupGuide steps={setupSteps} />}
