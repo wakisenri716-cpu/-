@@ -164,3 +164,9 @@ export function calcDeductions(wages: number, s: StaffPayrollSettings, rates: Ra
     employerSocial: Math.max(0, employerSocial),
   };
 }
+
+// 健康保険の等級(1〜50)。標準報酬月額から引く(表にない金額は null)
+export function healthGrade(standard: number) {
+  const i = HEALTH_GRADES.findIndex(([s]) => s === standard);
+  return i < 0 ? null : i + 1;
+}
