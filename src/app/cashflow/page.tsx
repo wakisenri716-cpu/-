@@ -2,6 +2,8 @@ import { requireCompanyId } from "@/lib/auth/session";
 import { getCashflow, type CashItem, type CashMonth } from "@/lib/accounting/cashflow";
 import { formatYen } from "@/lib/format";
 import { PrintButton } from "@/components/PrintButton";
+import { CashAdvicePanel, type CashAdviceView } from "./CashAdvicePanel";
+import { getLatestCashAdvice } from "@/lib/assistant/cashAdvice";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +30,7 @@ function Items({ items, empty }: { items: CashItem[]; empty: string }) {
 
 export default async function CashflowPage() {
   const companyId = await requireCompanyId();
-  const { months, shortage } = await getCashflow(companyId);
+  const [{ today, months, shortage }, advice] = await Promise.all([getCashflow(companyId), getLatestCashAdvice(companyId)]);
 
   return (
     <div className="space-y-6">
@@ -41,6 +43,8 @@ export default async function CashflowPage() {
           今日の現預金(現金+普通預金)に、請求書の入金予定・支払予定、定期取引、立替経費の精算、借入金の返済を足し引きして、この先3か月の残高を見込みます。
         </p>
       </div>
+
+      <CashAdvicePanel initial={advice as unknown as CashAdviceView | null} today={today} />
 
       {shortage ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
