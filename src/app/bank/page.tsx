@@ -498,6 +498,11 @@ export default function BankPage() {
                         >
                           対象外
                         </button>
+                        {!isCard && (
+                          <Link href={`/bank/match/${row.id}`} className="self-center text-xs text-indigo-700 hover:underline">
+                            請求書と消込
+                          </Link>
+                        )}
                         <Link
                           href={`/bank/rules?${new URLSearchParams({
                             keyword: row.description.slice(0, 40),
