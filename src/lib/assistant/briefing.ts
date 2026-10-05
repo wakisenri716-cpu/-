@@ -75,7 +75,7 @@ export type BriefingFacts = Awaited<ReturnType<typeof buildBriefingFacts>>;
 
 // AIが選んでよいリンク先(作り話のURLにしないため、事実に出てくる画面だけにする)
 export function allowedHrefs(f: BriefingFacts) {
-  return new Set(["/", "/invoices", "/receivables", "/cashflow", "/bank", "/inbox", "/assistant", ...f.todos.map((t) => t.href)]);
+  return new Set(["/", "/invoices", "/receivables", "/collections", "/cashflow", "/bank", "/inbox", "/assistant", ...f.todos.map((t) => t.href)]);
 }
 
 // APIキーがないときの決まったルールでの並べ方: 赤(期限切れ・法令)→今週の支払→未入金→そのほか件数の多い順
@@ -84,7 +84,7 @@ export function templateBriefing(f: BriefingFacts): { headline: string; items: B
   for (const t of f.todos.filter((t) => t.urgent)) {
     // 期日を過ぎた請求書は、未入金の金額と相手がわかるように書く
     const reason = t.key === "overdue" && f.overdueReceivables.total > 0 ? `${f.overdueReceivables.parties.join("・")} などから ${formatYen(f.overdueReceivables.total)} がまだ入金されていません。入金を確かめ、必要なら督促してください。` : t.detail;
-    items.push({ title: `${t.label}(${t.count}件)`, reason, href: t.href });
+    items.push({ title: `${t.label}(${t.count}件)`, reason, href: t.key === "overdue" && f.overdueReceivables.total > 0 ? "/collections" : t.href });
   }
   if (f.thisWeek.outgoing.length) {
     const first = f.thisWeek.outgoing[0];
@@ -95,7 +95,7 @@ export function templateBriefing(f: BriefingFacts): { headline: string; items: B
     });
   }
   if (f.overdueReceivables.total > 0 && !f.todos.some((t) => t.key === "overdue")) {
-    items.push({ title: "期日を過ぎた未入金の確認", reason: `${f.overdueReceivables.parties.join("・")} などから ${formatYen(f.overdueReceivables.total)} がまだ入金されていません。`, href: "/receivables" });
+    items.push({ title: "期日を過ぎた未入金の確認", reason: `${f.overdueReceivables.parties.join("・")} などから ${formatYen(f.overdueReceivables.total)} がまだ入金されていません。`, href: "/collections" });
   }
   if (f.inboxAttention > 0) items.push({ title: `AI受付箱の確認(${f.inboxAttention}件)`, reason: "AIが振り分けられなかった書類があります。中身を見て登録してください。", href: "/inbox" });
   for (const t of [...f.todos.filter((t) => !t.urgent)].sort((a, b) => b.count - a.count)) items.push({ title: `${t.label}(${t.count}件)`, reason: t.detail, href: t.href });
@@ -147,7 +147,7 @@ async function claudeBriefing(companyName: string, f: BriefingFacts) {
           `あなたは「${companyName}」の経理・事務の担当者を毎朝サポートする秘書です。渡された今朝の状況(JSON)だけを根拠に、今日まずやることを優先順に選んでください。`,
           "優先の考え方: 期限を過ぎたもの・法令の期限(納付・申告・36協定など)→今日〜数日のうちに期限が来る支払・入金→お金の流れに関わる確認→そのほかの事務。件数が多いだけのものより、期限とお金への影響を重く見てください。",
           "reason には数字(件数・金額・日付)を入れて、なぜ今日なのかを短く書いてください。金額は「1,234,567円」の形で書いてください。",
-          "href は JSON の todos[].href、または /receivables・/invoices・/bank・/inbox・/cashflow のどれかだけを使ってください。",
+          "href は JSON の todos[].href、または /receivables・/collections(期限を過ぎた未入金の督促)・/invoices・/bank・/inbox・/cashflow のどれかだけを使ってください。",
           "数字にないことを推測で書かないでください。やることが何もなければ items は空にして、headline でそう伝えてください。",
         ].join("\n"),
         cache_control: { type: "ephemeral" },

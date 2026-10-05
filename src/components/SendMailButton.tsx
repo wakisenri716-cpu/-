@@ -12,12 +12,28 @@ export function SendMailButton({ kind, id, tone = "default" }: { kind: Kind; id:
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<{ to: string; subject: string; body: string; mode: string } | null>(null);
+  const [aiNote, setAiNote] = useState<string | null>(null);
+  const [writing, setWriting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // 督促: AIが相手のふだんの払い方と督促の段階に合わせて書き直す(宛先はそのまま)
+  async function aiWrite() {
+    if (!draft) return;
+    setWriting(true);
+    setMessage(null);
+    const res = await fetch(`/api/mail/draft?kind=reminder&ai=1&id=${encodeURIComponent(id)}`);
+    const body = await res.json().catch(() => ({}));
+    setWriting(false);
+    if (!res.ok) return setMessage({ ok: false, text: body.error || "AIが書けませんでした" });
+    setDraft({ ...draft, subject: body.subject, body: body.body });
+    setAiNote(body.reason ? `${body.writer === "claude" ? "AI" : "決まった文面"}: ${body.reason}` : null);
+  }
 
   async function start() {
     setOpen(true);
     setMessage(null);
+    setAiNote(null);
     const res = await fetch(`/api/mail/draft?kind=${kind}&id=${encodeURIComponent(id)}`);
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -88,6 +104,14 @@ export function SendMailButton({ kind, id, tone = "default" }: { kind: Kind; id:
                   件名
                   <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} className="mt-1 w-full rounded-md border px-3 py-2 text-sm text-slate-900" />
                 </label>
+                {kind === "reminder" && (
+                  <div className="flex flex-wrap items-center gap-2 rounded-md bg-indigo-50 px-3 py-2 text-xs text-indigo-900">
+                    <button type="button" onClick={aiWrite} disabled={writing} className="rounded-md bg-indigo-600 px-3 py-1.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                      {writing ? "AIが書いています…" : "AIが相手に合わせて書き直す"}
+                    </button>
+                    <span className="min-w-0 flex-1">{aiNote ?? "督促の回数・遅れている日数・相手のふだんの払い方を見て、AIが文面を整えます。送る前に必ず読んで確かめてください。"}</span>
+                  </div>
+                )}
                 <label className="block text-xs text-slate-500">
                   本文(書類を見るためのリンクが入っています。リンクは消さないでください)
                   <textarea
