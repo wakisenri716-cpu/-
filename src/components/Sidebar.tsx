@@ -87,6 +87,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/receivables", label: "売掛金・買掛金", icon: CoinsIcon },
       { href: "/collections", label: "督促・回収", icon: MailIcon },
       { href: "/customer-insights", label: "顧客の見守り", icon: SparkleIcon },
+      { href: "/vendor-insights", label: "仕入先の見守り", icon: SparkleIcon },
       { href: "/foreign", label: "外貨建ての取引", icon: CoinsIcon },
       { href: "/credit", label: "与信管理", icon: ShieldIcon },
       { href: "/vendors", label: "取引先・顧客", icon: UsersIcon },

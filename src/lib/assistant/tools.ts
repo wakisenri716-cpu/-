@@ -19,6 +19,7 @@ import { getMonthlyClose } from "@/lib/monthlyClose";
 import { findMissingEntries, getCloseTasks } from "./closeAssistant";
 import { getPoMatches } from "@/lib/poMatching";
 import { findCustomerInsights, INSIGHT_LABELS } from "@/lib/customerInsights";
+import { findVendorInsights, VENDOR_INSIGHT_LABELS } from "@/lib/vendorInsights";
 
 // AIアシスタントが使う道具。どれも会社のデータを読むだけで、書き換えはしない。
 // 結果はAIが読む JSON 文字列(金額は円の整数)。
@@ -187,6 +188,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_customer_insights",
     description: "顧客ごとの変化(売上の減少・注文の途絶え・支払いが遅くなった・売上の偏り・大きな伸び)と次の一手を返す。「最近元気のない顧客は?」「売上が減っている取引先は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_vendor_insights",
+    description: "仕入先・支払先ごとの変化(値上がり・支払いの急増・インボイス登録なしで控除できない消費税・登録の未確認・支払いの偏り・初めての大きな支払い)と次の一手を返す。「値上がりした仕入先は?」「インボイス登録のない取引先は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -365,6 +371,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string 
     case "get_customer_insights": {
       const r = await findCustomerInsights(companyId);
       return { customers: r.customers, insights: r.insights.map((i) => ({ customer: i.name, kind: INSIGHT_LABELS[i.kind], detail: i.detail, nextStep: i.action, link: `/vendors/customer/${i.customerId}` })), link: "/customer-insights" };
+    }
+    case "get_vendor_insights": {
+      const r = await findVendorInsights(companyId);
+      return { vendors: r.vendors, insights: r.insights.map((i) => ({ vendor: i.name, kind: VENDOR_INSIGHT_LABELS[i.kind], detail: i.detail, nextStep: i.action, link: `/vendors/vendor/${i.vendorId}` })), link: "/vendor-insights" };
     }
     case "get_todos": {
       const todos = await getTodos(companyId);
