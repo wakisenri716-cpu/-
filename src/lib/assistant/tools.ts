@@ -9,6 +9,7 @@ import { getSalesAnalysis } from "@/lib/accounting/salesAnalysis";
 import { getBudgetProgress } from "@/lib/accounting/budgetProgress";
 import { getCashBalance, getTodos } from "@/lib/dashboard";
 import { getFiscalStartMonth, nextDay, resolvePeriod, toRange } from "@/lib/accounting/period";
+import { proposeInvoice, proposeJournal, proposeReminder } from "./proposals";
 
 // AIアシスタントが使う道具。どれも会社のデータを読むだけで、書き換えはしない。
 // 結果はAIが読む JSON 文字列(金額は円の整数)。
@@ -82,6 +83,64 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
+    name: "propose_invoice",
+    description:
+      "売上の請求書の下書きを作る(まだ確定しない)。利用者が画面で内容を確かめて「実行する」を押したときだけ発行される。単価は税抜の円。請求日を省略すると今日、支払期限を省略すると翌月末。",
+    input_schema: {
+      type: "object",
+      properties: {
+        customerName: { type: "string", description: "請求先(顧客)の名前" },
+        issueDate: { type: "string", description: "請求日 YYYY-MM-DD(任意)" },
+        dueDate: { type: "string", description: "支払期限 YYYY-MM-DD(任意)" },
+        lines: {
+          type: "array",
+          description: "明細",
+          items: {
+            type: "object",
+            properties: {
+              description: { type: "string", description: "品目" },
+              quantity: { type: "number", description: "数量(省略すると1)" },
+              unit: { type: "string", description: "単位(任意)" },
+              unitPrice: { type: "integer", description: "単価(税抜・円)" },
+              taxRate: { type: "integer", enum: [10, 8], description: "税率(省略すると10)" },
+            },
+            required: ["description", "unitPrice"],
+          },
+        },
+        notes: { type: "string", description: "備考(任意)" },
+      },
+      required: ["customerName", "lines"],
+    },
+  },
+  {
+    name: "propose_journal",
+    description:
+      "仕訳の下書きを作る(まだ記帳しない)。利用者が画面で内容を確かめて「実行する」を押したときだけ記帳される。借方と貸方の合計は同じにすること。勘定科目は名前かコードで指定する。",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "日付 YYYY-MM-DD(任意。省略すると今日)" },
+        description: { type: "string", description: "摘要" },
+        lines: {
+          type: "array",
+          description: "仕訳の行。1行は借方か貸方のどちらか一方だけに金額を入れる",
+          items: {
+            type: "object",
+            properties: { account: { type: "string", description: "勘定科目の名前かコード" }, debit: { type: "integer" }, credit: { type: "integer" } },
+            required: ["account"],
+          },
+        },
+      },
+      required: ["description", "lines"],
+    },
+  },
+  {
+    name: "propose_reminder",
+    description:
+      "支払期限を過ぎた請求書の督促メールの下書きを作る(まだ送らない)。利用者が「実行する」を押したときだけ、いつもの督促の文面で顧客に送られる。請求書番号か顧客名で指定する。",
+    input_schema: { type: "object", properties: { invoice: { type: "string", description: "請求書番号か顧客名" } }, required: ["invoice"] },
+  },
+  {
     name: "get_todos",
     description: "いま会社でやるべきこと(レビュー待ち・承認待ち・期限切れの請求書・納付期限など)の一覧を返す。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
@@ -102,8 +161,15 @@ async function findAccount(companyId: string, q: string) {
   return accounts.find((a) => a.code === q) ?? accounts.find((a) => a.name === q) ?? accounts.find((a) => a.name.includes(q)) ?? null;
 }
 
-export async function runAssistantTool(companyId: string, name: string, input: Input): Promise<unknown> {
+export async function runAssistantTool(ctx: { companyId: string; userId: string }, name: string, input: Input): Promise<unknown> {
+  const { companyId } = ctx;
   switch (name) {
+    case "propose_invoice":
+      return proposeInvoice(ctx, input);
+    case "propose_journal":
+      return proposeJournal(ctx, input);
+    case "propose_reminder":
+      return proposeReminder(ctx, input);
     case "get_business_summary": {
       const period = await periodOf(companyId, input);
       const [is, cash] = await Promise.all([getIncomeStatement(companyId, toRange(period)), getCashBalance(companyId)]);

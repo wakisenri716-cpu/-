@@ -3,9 +3,52 @@
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 
-type Turn = { role: "user" | "assistant"; text: string; tools?: string[] };
+type Proposal = { id: string; kind: "INVOICE" | "JOURNAL" | "REMINDER"; summary: string; details: string[]; status: string; resultNote: string | null };
+type Turn = { role: "user" | "assistant"; text: string; tools?: string[]; proposals?: Proposal[] };
 
-const SUGGESTIONS = ["今月の利益はいくら?", "入金が遅れている取引先は?", "今月は何にお金を使った?", "今期の顧客別の売上は?", "予算を超えそうな科目は?", "いまやることは?"];
+const KIND_LABEL: Record<Proposal["kind"], string> = { INVOICE: "請求書の下書き", JOURNAL: "仕訳の下書き", REMINDER: "督促メールの下書き" };
+const ACTION_LABEL: Record<Proposal["kind"], string> = { INVOICE: "この内容で請求書を発行する", JOURNAL: "この内容で記帳する", REMINDER: "この内容でメールを送る" };
+
+// AIの下書き。人がボタンを押したときだけ実行する
+function ProposalCard({ proposal, onChange }: { proposal: Proposal; onChange: (p: Proposal) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function act(action: "execute" | "cancel") {
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/assistant/proposals/${proposal.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
+    const json = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) return setError(json.error || "できませんでした");
+    onChange({ ...proposal, status: json.status, resultNote: json.resultNote ?? null });
+  }
+  return (
+    <div className={`mt-3 rounded-xl border p-3 ${proposal.status === "DONE" ? "border-emerald-200 bg-emerald-50" : proposal.status === "CANCELLED" ? "border-slate-200 bg-slate-50 opacity-70" : "border-indigo-200 bg-indigo-50/50"}`}>
+      <p className="text-xs font-medium text-indigo-700">{KIND_LABEL[proposal.kind]}</p>
+      <p className="font-medium">{proposal.summary}</p>
+      <ul className="mt-1 space-y-0.5 text-xs text-slate-700">
+        {proposal.details.map((d, i) => (
+          <li key={i}>{d}</li>
+        ))}
+      </ul>
+      {error && <p className="mt-2 text-xs text-rose-700">{error}</p>}
+      {proposal.status === "PENDING" ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button disabled={busy} onClick={() => act("execute")} className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+            {ACTION_LABEL[proposal.kind]}
+          </button>
+          <button disabled={busy} onClick={() => act("cancel")} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+            やめる
+          </button>
+        </div>
+      ) : (
+        <p className="mt-2 text-xs font-medium text-slate-700">{proposal.status === "DONE" ? `✓ ${proposal.resultNote ?? "実行しました"}` : "やめました"}</p>
+      )}
+    </div>
+  );
+}
+
+const SUGGESTIONS = ["今月の利益はいくら?", "入金が遅れている取引先は?", "今月は何にお金を使った?", "予算を超えそうな科目は?", "いまやることは?", "A社に保守費用5万円の請求書を作って", "期限切れの請求書に督促して"];
 const TOOL_LABEL: Record<string, string> = {
   get_business_summary: "損益・現預金",
   list_receivables: "売掛金",
@@ -16,6 +59,9 @@ const TOOL_LABEL: Record<string, string> = {
   get_sales_by_customer: "売上分析",
   get_budget_progress: "予算",
   get_todos: "やること",
+  propose_invoice: "請求書の下書き",
+  propose_journal: "仕訳の下書き",
+  propose_reminder: "督促メールの下書き",
 };
 
 // [名前](/パス) の形のリンクだけをアプリ内リンクにする(外のURLはリンクにしない)
@@ -67,7 +113,7 @@ export function AssistantChat({ initialQuestion, aiEnabled }: { initialQuestion:
       setError(json.error || "答えられませんでした");
       return;
     }
-    setTurns([...next, { role: "assistant", text: json.reply, tools: json.tools }]);
+    setTurns([...next, { role: "assistant", text: json.reply, tools: json.tools, proposals: json.proposals ?? [] }]);
   }
 
   useEffect(() => {
@@ -87,7 +133,7 @@ export function AssistantChat({ initialQuestion, aiEnabled }: { initialQuestion:
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <div>
         <h1 className="text-2xl font-semibold">AIアシスタント</h1>
-        <p className="mt-1 text-sm text-slate-600">会社の帳簿・請求書・予算・やることについて、ふつうの言葉で聞いてください。AIが実際のデータを調べて答えます(データを書き換えることはしません)。</p>
+        <p className="mt-1 text-sm text-slate-600">会社の帳簿・請求書・予算・やることについて、ふつうの言葉で聞いてください。AIが実際のデータを調べて答えます。請求書・仕訳・督促メールは、AIが下書きを作り、あなたが内容を確かめてボタンを押したときだけ確定します。</p>
         {!aiEnabled && <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">AIのAPIキー(ANTHROPIC_API_KEY)が未設定のため、決まった質問にだけ答える簡易モードです。</p>}
       </div>
 
@@ -113,7 +159,14 @@ export function AssistantChat({ initialQuestion, aiEnabled }: { initialQuestion:
             <div key={i} className="flex justify-start">
               <div className="max-w-[90%] rounded-2xl rounded-bl-sm border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed shadow-sm">
                 <Rich text={t.text} />
-                {t.tools && t.tools.length > 0 && <p className="mt-2 text-xs text-slate-400">調べたデータ: {[...new Set(t.tools)].map((n) => TOOL_LABEL[n] ?? n).join("・")}</p>}
+                {t.proposals?.map((p) => (
+                  <ProposalCard
+                    key={p.id}
+                    proposal={p}
+                    onChange={(np) => setTurns((all) => all.map((x, j) => (j === i ? { ...x, proposals: x.proposals?.map((q) => (q.id === np.id ? np : q)) } : x)))}
+                  />
+                ))}
+                {t.tools && t.tools.length > 0 && <p className="mt-2 text-xs text-slate-400">AIが使った機能: {[...new Set(t.tools)].map((n) => TOOL_LABEL[n] ?? n).join("・")}</p>}
               </div>
             </div>
           ),
