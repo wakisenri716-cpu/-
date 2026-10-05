@@ -8,6 +8,7 @@ import { getAccountBalances } from "@/lib/accounting/ledger";
 import { getAging } from "@/lib/accounting/receivables";
 import { cashAccountCodes } from "@/lib/bank/accounts";
 import { nextDay } from "@/lib/accounting/period";
+import { findAnomalies } from "@/lib/anomalies";
 
 // AIの月次レポート: その月の数字をまとめ(facts)、経営者向けのコメントを書く。
 // ANTHROPIC_API_KEY があれば Claude が文章を書き、なければ決まった形の文章にする。
@@ -40,7 +41,7 @@ export async function buildFacts(companyId: string, month: string) {
     getIncomeStatement(companyId, rangeOf(lastYear)),
     cashAccountCodes(companyId),
   ]);
-  const [endBal, startBal, aging, bigLines] = await Promise.all([
+  const [endBal, startBal, aging, bigLines, anomalies] = await Promise.all([
     getAccountBalances(companyId, { lt: nextDay(lastDay(month)) }),
     getAccountBalances(companyId, { lt: new Date(`${month}-01T00:00:00Z`) }),
     getAging(companyId, "ISSUED"),
@@ -50,6 +51,7 @@ export async function buildFacts(companyId: string, month: string) {
       take: 3,
       select: { debit: true, account: { select: { name: true } }, journalEntry: { select: { description: true, date: true } } },
     }),
+    findAnomalies(companyId, month),
   ]);
   const cash = (list: typeof endBal) => list.filter((b) => codes.includes(b.account.code)).reduce((s, b) => s + b.balance, 0);
 
@@ -78,6 +80,7 @@ export async function buildFacts(companyId: string, month: string) {
     topExpenses: [...cur.expenseRows].sort((p, q) => q.balance - p.balance).slice(0, 5).map((r) => ({ account: r.account.name, amount: r.balance })),
     biggestChanges: changes,
     largestPayments: bigLines.map((l) => ({ date: jstDateKey(l.journalEntry.date), description: l.journalEntry.description, account: l.account.name, amount: l.debit })),
+    anomalies: anomalies.anomalies.slice(0, 5).map((a) => ({ title: a.title, detail: a.detail })),
     receivables: {
       total: aging.total,
       overdueTotal: overdue.reduce((s, r) => s + r.remaining, 0),
@@ -102,6 +105,7 @@ export function templateReport(f: Facts) {
   if (f.profit.now < 0) watch.push(`${m}月は ${formatYen(-f.profit.now)} の赤字です。`);
   for (const c of f.biggestChanges.filter((c) => c.kind === "費用" && c.change > 0).slice(0, 2)) watch.push(`${c.account}が前月より ${formatYen(c.change)} 増えました(${formatYen(c.now)})。`);
   for (const c of f.biggestChanges.filter((c) => c.kind === "費用" && c.change < 0).slice(0, 1)) good.push(`${c.account}が前月より ${formatYen(-c.change)} 減りました。`);
+  for (const a of (f.anomalies ?? []).slice(0, 2)) watch.push(`${a.title}: ${a.detail}`);
   if (f.receivables.overdueTotal > 0) watch.push(`期日を過ぎた未入金が ${formatYen(f.receivables.overdueTotal)} あります(${f.receivables.overdueParties.join("・")})。`);
   if (f.cash.end < f.cash.start) watch.push(`現預金が月初より ${formatYen(f.cash.start - f.cash.end)} 減りました。`);
   else if (f.cash.end > f.cash.start) good.push(`現預金が月初より ${formatYen(f.cash.end - f.cash.start)} 増えました。`);

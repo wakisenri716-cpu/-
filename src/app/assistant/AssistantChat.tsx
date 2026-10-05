@@ -48,7 +48,7 @@ function ProposalCard({ proposal, onChange }: { proposal: Proposal; onChange: (p
   );
 }
 
-const SUGGESTIONS = ["今月の利益はいくら?", "入金が遅れている取引先は?", "今月は何にお金を使った?", "予算を超えそうな科目は?", "いまやることは?", "A社に保守費用5万円の請求書を作って", "期限切れの請求書に督促して"];
+const SUGGESTIONS = ["今月の利益はいくら?", "入金が遅れている取引先は?", "今月は何にお金を使った?", "予算を超えそうな科目は?", "何かおかしいところはある?", "いまやることは?", "A社に保守費用5万円の請求書を作って", "期限切れの請求書に督促して"];
 const TOOL_LABEL: Record<string, string> = {
   get_business_summary: "損益・現預金",
   list_receivables: "売掛金",
@@ -59,6 +59,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_sales_by_customer: "売上分析",
   get_budget_progress: "予算",
   get_todos: "やること",
+  get_anomalies: "いつもと違う動き",
   propose_invoice: "請求書の下書き",
   propose_journal: "仕訳の下書き",
   propose_reminder: "督促メールの下書き",

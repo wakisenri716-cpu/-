@@ -38,6 +38,8 @@ const SCREENS = [
   ["/review", "レビュー待ち"],
   ["/requests", "申請・稟議"],
   ["/duplicates", "二重計上のチェック"],
+  ["/anomalies", "いつもと違うお金の動き"],
+  ["/reports/monthly", "AIの月次レポート"],
 ];
 
 function systemPrompt(companyName: string) {
@@ -142,6 +144,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   if (/費用|経費|何に使|内訳/.test(q)) {
     const r = (await run("get_expense_breakdown", { preset })) as { total: number; accounts: { account: string; amount: number }[] };
     return { reply: [`${label}の費用は合計 ${formatYen(r.total)} です。多い順に:`, ...r.accounts.slice(0, 5).map((a) => `・${a.account}: ${formatYen(a.amount)}`), "[損益計算書](/income-statement)"].join("\n"), tools: ["get_expense_breakdown"], mode: "simple" };
+  }
+  if (/おかしい|異常|いつもと違|不正|変な/.test(q)) {
+    const r = (await run("get_anomalies")) as { anomalies: { title: string; detail: string }[] };
+    if (!r.anomalies.length) return { reply: "今月は、いつもと違うお金の動きは見つかりませんでした。", tools: ["get_anomalies"], mode: "simple" };
+    return { reply: ["いつもと違う動きが見つかりました:", ...r.anomalies.slice(0, 5).map((a) => `・${a.title}: ${a.detail}`), "[いつもと違うお金の動き](/anomalies)"].join("\n"), tools: ["get_anomalies"], mode: "simple" };
   }
   if (/予算/.test(q)) {
     const r = (await run("get_budget_progress")) as { alerts: number };

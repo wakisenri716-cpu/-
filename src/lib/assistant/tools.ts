@@ -10,6 +10,7 @@ import { getBudgetProgress } from "@/lib/accounting/budgetProgress";
 import { getCashBalance, getTodos } from "@/lib/dashboard";
 import { getFiscalStartMonth, nextDay, resolvePeriod, toRange } from "@/lib/accounting/period";
 import { proposeInvoice, proposeJournal, proposeReminder } from "./proposals";
+import { findAnomalies } from "@/lib/anomalies";
 
 // AIアシスタントが使う道具。どれも会社のデータを読むだけで、書き換えはしない。
 // 結果はAIが読む JSON 文字列(金額は円の整数)。
@@ -141,6 +142,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { invoice: { type: "string", description: "請求書番号か顧客名" } }, required: ["invoice"] },
   },
   {
+    name: "get_anomalies",
+    description: "いつもと違うお金の動き(過去6か月と比べた費用の急増・売上の急減・いつもより大きい支払い・初めての取引先への大きな支払い)を返す。「何かおかしいところはある?」などに使う。",
+    input_schema: { type: "object", properties: { month: { type: "string", description: "対象の月 YYYY-MM(任意。省略すると今月)" } }, additionalProperties: false },
+  },
+  {
     name: "get_todos",
     description: "いま会社でやるべきこと(レビュー待ち・承認待ち・期限切れの請求書・納付期限など)の一覧を返す。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
@@ -255,6 +261,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string 
       const p = await getBudgetProgress(companyId);
       const pick = (r: (typeof p.expense)[number]) => ({ account: r.name, budget: r.budget, actual: r.actual, forecast: r.forecast, status: r.status });
       return { year: p.year, elapsedMonths: p.elapsed, revenue: p.revenue.map(pick), expense: p.expense.map(pick), alerts: p.alerts, link: "/monthly/progress" };
+    }
+    case "get_anomalies": {
+      const r = await findAnomalies(companyId, str(input.month) || null);
+      return { month: r.month, anomalies: r.anomalies.map((a) => ({ title: a.title, detail: a.detail, amount: a.amount, link: a.href })), link: "/anomalies" };
     }
     case "get_todos": {
       const todos = await getTodos(companyId);
