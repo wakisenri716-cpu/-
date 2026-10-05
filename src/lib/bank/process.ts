@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { bankKeyword, recordCorrection } from "@/lib/aiLearning";
 import type { BankTransaction } from "@prisma/client";
 import { getAiProvider } from "@/lib/ai";
 import { ensureAccount, ensureChartOfAccounts } from "@/lib/accounting/accounts";
@@ -348,7 +349,18 @@ export async function confirmBankTransaction(companyId: string, id: string, acco
   if (!account) throw new BankError("勘定科目を選択してください");
   const own = await ownAccountOf(row);
   if (account.code === own.code) throw new BankError(`「${account.name}」以外の相手科目を選択してください`);
-  return postBankJournal(row, account.code, own, { auto: false });
+  const posted = await postBankJournal(row, account.code, own, { auto: false });
+  // AIの候補と違う科目にしたら、摘要ごとに覚える(続けて同じ科目なら明細のルールを作る)
+  const learning = await recordCorrection(companyId, {
+    kind: "BANK",
+    key: bankKeyword(row.description),
+    label: row.description,
+    fromCode: row.suggestedAccountCode,
+    toCode: account.code,
+    amount: row.withdrawal || row.deposit,
+    direction: row.withdrawal > 0 ? "OUT" : "IN",
+  });
+  return Object.assign(posted, { learned: learning?.learned ? `AIが覚えました: 次から摘要に「${bankKeyword(row.description)}」を含む明細は ${account.code} ${account.name} を候補にします` : null });
 }
 
 export async function ignoreBankTransaction(companyId: string, id: string) {

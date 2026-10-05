@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyId } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
+import { recordCorrection } from "@/lib/aiLearning";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: journalEntryId } = await params;
@@ -82,5 +83,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   });
 
   await audit(correctedAccountId ? "AI仕訳を修正して承認" : "AI仕訳を承認", entry.description);
-  return NextResponse.json({ status: "approved" });
+
+  // 直した科目をAIが覚える(同じ取引先で続けて同じ科目に直されたら、取引先の既定科目にする)
+  let learned: string | null = null;
+  const vendorId = entry.expenseItem?.vendorId ?? entry.invoice?.vendorId ?? null;
+  if (correctedAccountId && expenseLine && vendorId) {
+    const [to, vendor] = await Promise.all([
+      prisma.account.findUnique({ where: { id: correctedAccountId }, select: { code: true, name: true } }),
+      prisma.vendor.findUnique({ where: { id: vendorId }, select: { name: true } }),
+    ]);
+    if (to && vendor) {
+      const r = await recordCorrection(companyId, { kind: entry.expenseItem ? "EXPENSE" : "INVOICE", key: vendorId, label: vendor.name, fromCode: expenseLine.account.code, toCode: to.code, amount: expenseLine.debit });
+      if (r?.learned) {
+        learned = `AIが覚えました: 次から「${vendor.name}」は ${to.code} ${to.name} にします`;
+        await audit("AIが修正から学習", `${vendor.name} → ${to.code} ${to.name}`);
+      }
+    }
+  }
+  return NextResponse.json({ status: "approved", learned });
 }
