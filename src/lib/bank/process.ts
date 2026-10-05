@@ -11,7 +11,7 @@ import { createHash } from "crypto";
 import { cardsWithKeyword, ensureBankAccounts, getBankAccount, matchesKeyword } from "./accounts";
 import { activeRules, countHits, matchRule, normalizeText } from "./rules";
 import type { BankRule } from "@prisma/client";
-const SETTLEABLE_INVOICE_STATUSES = ["CONFIRMED", "SENT", "PARTIALLY_PAID", "OVERDUE"] as const;
+import { SETTLEABLE_INVOICE_STATUSES, autoSettleByPayer } from "./matching";
 
 export class BankError extends UserError {}
 
@@ -219,6 +219,11 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
           suggestionReason: `請求書 ${invoice.invoiceNumber ?? ""} の残高と金額が一致`,
         },
       });
+      summary.matched++;
+      continue;
+    }
+    // 覚えた振込名義の顧客の請求書(何件かの合計)と入金が合えば、まとめて消込む
+    if (!isCard && (await autoSettleByPayer(row, own.code, own.name))) {
       summary.matched++;
       continue;
     }

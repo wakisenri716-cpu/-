@@ -370,6 +370,8 @@ model Customer {
   companyId  String
   company    Company  @relation(fields: [companyId], references: [id])
   name       String
+  // 振込名義(銀行明細の摘要に出る名前)。入金を請求書と消込んだときに覚え、次からの消込の候補に使う
+  payerName  String?
   // 請求書・見積書をメールで送るときの宛先(前回入力したものを覚えておく)
   email      String?
   address    String?
