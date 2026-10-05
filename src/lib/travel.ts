@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
-import { ensureChartOfAccounts } from "@/lib/accounting/accounts";
-import { postExpenseItemJournal } from "@/lib/accounting/automation";
+import { addItemsToExpenses } from "@/lib/expenseQuickAdd";
 
 // 出張旅費規程と出張: 規程の定額で日当・宿泊費を計算し、経費精算(旅費交通費)に入れる。
 
@@ -70,28 +69,13 @@ export async function previewTrip(companyId: string, input: TripInput) {
 export async function addTripToExpenses(user: Actor, input: TripInput) {
   const p = await previewTrip(user.companyId, input);
   if (p.allowance + p.lodging <= 0) throw new UserError("規程の金額が0円のため、経費精算に入れるものがありません");
-  await ensureChartOfAccounts(user.companyId);
-  const account = await prisma.account.findUniqueOrThrow({ where: { companyId_code: { companyId: user.companyId, code: TRAVEL_ACCOUNT } } });
-  const report =
-    (await prisma.expenseReport.findFirst({ where: { companyId: user.companyId, employeeId: user.id, approvalStatus: { in: ["DRAFT", "RETURNED"] }, reimbursedAt: null }, orderBy: { createdAt: "desc" } })) ??
-    (await prisma.expenseReport.create({ data: { companyId: user.companyId, employeeId: user.id, status: "DRAFT" } }));
   const label = `${p.destination}への出張(${p.start.replaceAll("-", "/")}${p.end !== p.start ? `〜${p.end.slice(5).replace("-", "/")}` : ""}・${p.purpose})`;
   const items = [
-    p.allowance > 0 && { description: `日当 ${p.days}日分 ${label}`, amount: p.allowance },
-    p.lodging > 0 && { description: `宿泊費 ${p.nights}泊分 ${label}`, amount: p.lodging },
-  ].filter((x): x is { description: string; amount: number } => !!x);
-
-  for (const it of items) {
-    // 規程の定額なので AI の読み取りはなし(信頼度 1 として扱う)
-    const extraction = await prisma.aiExtraction.create({
-      data: { companyId: user.companyId, sourceType: "EXPENSE_ITEM", rawResponse: { source: "TRAVEL_POLICY", ...it }, confidence: 1, suggestedAccountCode: TRAVEL_ACCOUNT, status: "NEEDS_REVIEW" },
-    });
-    const item = await prisma.expenseItem.create({
-      data: { expenseReportId: report.id, description: it.description.slice(0, 300), amount: it.amount, expenseDate: new Date(`${p.end}T00:00:00Z`), accountId: account.id, aiExtractionId: extraction.id },
-    });
-    await postExpenseItemJournal(item.id);
-  }
-  await prisma.expenseReport.update({ where: { id: report.id }, data: { totalAmount: { increment: p.allowance + p.lodging }, submittedAt: report.submittedAt ?? new Date() } });
+    p.allowance > 0 && { description: `日当 ${p.days}日分 ${label}`, amount: p.allowance, date: p.end },
+    p.lodging > 0 && { description: `宿泊費 ${p.nights}泊分 ${label}`, amount: p.lodging, date: p.end },
+  ].filter((x): x is { description: string; amount: number; date: string } => !!x);
+  // 規程の定額なので AI の読み取りはなし
+  const { reportId } = await addItemsToExpenses(user, items, "TRAVEL_POLICY", TRAVEL_ACCOUNT);
   const trip = await prisma.travelTrip.create({
     data: {
       companyId: user.companyId,
@@ -105,10 +89,10 @@ export async function addTripToExpenses(user: Actor, input: TripInput) {
       overseas: p.overseas,
       allowance: p.allowance,
       lodging: p.lodging,
-      expenseReportId: report.id,
+      expenseReportId: reportId,
     },
   });
-  return { trip, reportId: report.id, total: p.allowance + p.lodging };
+  return { trip, reportId, total: p.allowance + p.lodging };
 }
 
 export async function listTrips(user: Actor) {

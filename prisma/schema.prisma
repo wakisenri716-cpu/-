@@ -228,6 +228,7 @@ model Company {
   standardReviews  StandardReview[]
   consumptionTaxCloses ConsumptionTaxClose[]
   wageChanges      WageChange[]
+  transportRoutes  TransportRoute[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -1936,4 +1937,21 @@ model WageChange {
   createdAt        DateTime  @default(now())
 
   @@index([companyId, month])
+}
+
+// よく使う交通費の経路(従業員ごと)。乗った日を選ぶだけで経費精算に旅費交通費として入れる
+model TransportRoute {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String
+  name      String
+  fromPlace String
+  toPlace   String
+  via       String?
+  fare      Int
+  roundTrip Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([companyId, userId])
 }
