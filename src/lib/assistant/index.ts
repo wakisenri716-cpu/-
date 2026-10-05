@@ -55,6 +55,7 @@ const SCREENS = [
   ["/payment-plan", "支払計画"],
   ["/billing-gaps", "請求漏れのチェック"],
   ["/quotes/ai", "AI見積アシスト"],
+  ["/party-duplicates", "取引先の重複"],
   ["/transfers", "振込データ"],
   ["/vendors", "取引先"],
 ];
@@ -176,6 +177,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("get_customer_insights")) as { insights: { customer: string; kind: string; detail: string }[] };
     if (!r.insights.length) return { reply: "目立った変化のある顧客はいません。", tools: ["get_customer_insights"], mode: "simple" };
     return { reply: ["顧客の変化:", ...r.insights.slice(0, 5).map((i) => `・${i.customer}(${i.kind}): ${i.detail}`), "[顧客の見守り](/customer-insights)"].join("\n"), tools: ["get_customer_insights"], mode: "simple" };
+  }
+  if (/(取引先|顧客|仕入先).*(重複|ダブ|二重登録|同じ.*登録)/.test(q)) {
+    const r = (await run("get_duplicate_parties")) as { count: number; groups: { strength: string; names: string[] }[] };
+    if (!r.count) return { reply: "重複している取引先は見つかりませんでした。", tools: ["get_duplicate_parties"], mode: "simple" };
+    return { reply: [`重複しているかもしれない取引先が ${r.count}組 あります:`, ...r.groups.slice(0, 5).map((g) => `・${g.names.join(" / ")}(${g.strength})`), "[取引先の重複](/party-duplicates)"].join("\n"), tools: ["get_duplicate_parties"], mode: "simple" };
   }
   if (/請求(漏れ|もれ|し忘れ|忘れ)|出し忘れ/.test(q)) {
     const r = (await run("get_billing_gaps")) as { count: number; gaps: { title: string; amount: number | null }[] };

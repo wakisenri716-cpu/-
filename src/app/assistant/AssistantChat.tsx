@@ -93,6 +93,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_payment_plan: "支払計画",
   get_billing_gaps: "請求漏れ",
   draft_quote: "見積の下書き",
+  get_duplicate_parties: "取引先の重複",
 };
 
 // [名前](/パス) の形のリンクだけをアプリ内リンクにする(外のURLはリンクにしない)

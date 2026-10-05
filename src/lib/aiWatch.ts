@@ -10,15 +10,16 @@ import { countDuplicates } from "@/lib/duplicates";
 import { runBookCheck } from "@/lib/bookCheck";
 import { getAccountReview } from "@/lib/accountReview";
 import { findBillingGaps } from "@/lib/billingGaps";
+import { findDuplicateParties } from "@/lib/partyMerge";
 
-// AIの見張り: 会社のいろいろな見守り(資金・契約・顧客・仕入先・督促・発注書・異常・二重計上・帳簿・科目・請求漏れ)の結果を1か所に集める。
+// AIの見張り: 会社のいろいろな見守り(資金・契約・顧客・仕入先・督促・発注書・異常・二重計上・帳簿・科目・請求漏れ・取引先の重複)の結果を1か所に集める。
 // 「AIの見張り」画面と、毎朝のブリーフィングで使う。
 
 export type WatchStatus = "ok" | "info" | "warn";
 export type Watch = { key: string; label: string; status: WatchStatus; headline: string; href: string; items: string[] };
 
 export async function getWatches(companyId: string): Promise<Watch[]> {
-  const [cash, contracts, customers, vendors, po, collections, anomalies, duplicates, book, accounts, billing] = await Promise.all([
+  const [cash, contracts, customers, vendors, po, collections, anomalies, duplicates, book, accounts, billing, parties] = await Promise.all([
     buildCashFacts(companyId),
     listContracts(companyId),
     findCustomerInsights(companyId),
@@ -30,6 +31,7 @@ export async function getWatches(companyId: string): Promise<Watch[]> {
     runBookCheck(companyId),
     getAccountReview(companyId),
     findBillingGaps(companyId),
+    findDuplicateParties(companyId),
   ]);
   const risk = riskOf(cash);
   const soon = contracts.contracts.filter((c) => c.status === "ACTIVE" && (c.daysToDeadline ?? c.daysToEnd ?? 999) >= 0 && (c.daysToDeadline ?? c.daysToEnd ?? 999) <= 30);
@@ -118,6 +120,14 @@ export async function getWatches(companyId: string): Promise<Watch[]> {
       headline: billing.gaps.length ? `出し忘れかもしれない請求が ${billing.gaps.length}件` : "請求漏れは見つかりません",
       href: "/billing-gaps",
       items: billing.gaps.slice(0, 5).map((g) => g.title),
+    },
+    {
+      key: "parties",
+      label: "取引先の重複",
+      status: parties.some((g) => g.strength === "same") ? "info" : "ok",
+      headline: parties.some((g) => g.strength === "same") ? `同じ相手が2つ以上登録されている取引先が ${parties.filter((g) => g.strength === "same").length}組` : "同じ名前で重複している取引先はありません",
+      href: "/party-duplicates",
+      items: parties.filter((g) => g.strength === "same").slice(0, 5).map((g) => g.parties.map((p) => p.name).join(" / ")),
     },
     {
       key: "accounts",
