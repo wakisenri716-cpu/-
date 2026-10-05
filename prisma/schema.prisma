@@ -238,6 +238,7 @@ model Company {
   dailyBriefings   DailyBriefing[]
   approvalChecks   ApprovalCheck[]
   closeReviews     MonthlyCloseReview[]
+  cashAdvices      CashAdvice[]
   projects         Project[]
   cashAdvances     CashAdvance[]
   announcements    Announcement[]
@@ -2111,4 +2112,23 @@ model MonthlyCloseReview {
   createdAt DateTime @default(now())
 
   @@unique([companyId, month])
+}
+
+// AIの資金繰りアドバイス(会社・日ごとに1つ)
+model CashAdvice {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  date      String
+  // LOW / MEDIUM / HIGH
+  risk      String
+  headline  String
+  // [{ title, detail, impact: number | null, href }]
+  actions   Json
+  facts     Json
+  mode      String
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, date])
 }
