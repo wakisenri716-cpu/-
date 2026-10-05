@@ -82,6 +82,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/deals", label: "商談管理", icon: TrendIcon },
       { href: "/quotes", label: "見積書", icon: QuoteIcon },
+      { href: "/quotes/ai", label: "AI見積アシスト", icon: SparkleIcon },
       { href: "/invoices", label: "請求書", icon: DocumentIcon },
       { href: "/billing-gaps", label: "請求漏れのチェック", icon: SparkleIcon },
       { href: "/purchase-orders", label: "発注書", icon: CartIcon },
