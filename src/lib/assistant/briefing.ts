@@ -6,6 +6,7 @@ import { formatYen } from "@/lib/format";
 import { getCashBalance, getTodos } from "@/lib/dashboard";
 import { getAging } from "@/lib/accounting/receivables";
 import { nextDay } from "@/lib/accounting/period";
+import { getWatches } from "@/lib/aiWatch";
 
 // AIの朝のブリーフィング: 今日の「やること」、昨日のお金の動き、今週の入金・支払の予定をまとめ、
 // AIが「今日まずやること」を優先順に選んで理由をつける。会社・日ごとに1つ保存する。
@@ -30,7 +31,7 @@ export async function buildBriefingFacts(companyId: string, now = new Date()) {
   const yesterday = addDays(today, -1);
   const weekEnd = addDays(today, 7);
   const yRange = { gte: new Date(`${yesterday}T00:00:00Z`), lt: nextDay(yesterday) };
-  const [todos, cash, receivables, payables, bankIn, bankOut, issued, received, inboxAttention] = await Promise.all([
+  const [todos, cash, receivables, payables, bankIn, bankOut, issued, received, inboxAttention, watches] = await Promise.all([
     getTodos(companyId, now),
     getCashBalance(companyId),
     getAging(companyId, "ISSUED", today),
@@ -40,6 +41,7 @@ export async function buildBriefingFacts(companyId: string, now = new Date()) {
     prisma.invoice.aggregate({ where: { companyId, direction: "ISSUED", status: { not: "DRAFT" }, issueDate: yRange }, _sum: { totalAmount: true }, _count: true }),
     prisma.invoice.aggregate({ where: { companyId, direction: "RECEIVED", createdAt: { gte: new Date(`${yesterday}T00:00:00+09:00`), lt: new Date(`${today}T00:00:00+09:00`) } }, _sum: { totalAmount: true }, _count: true }),
     prisma.inboxItem.count({ where: { companyId, status: "ATTENTION", createdAt: { gte: new Date(now.getTime() - 7 * 86_400_000) } } }),
+    getWatches(companyId),
   ]);
   const dueSoon = (rows: typeof receivables.rows) =>
     rows
@@ -68,6 +70,8 @@ export async function buildBriefingFacts(companyId: string, now = new Date()) {
     overdueReceivables: { total: overdue.reduce((s, r) => s + r.remaining, 0), parties: [...new Set(overdue.map((r) => r.partyName))].slice(0, 5) },
     overduePayables: { total: overduePayables.reduce((s, r) => s + r.remaining, 0), count: overduePayables.length },
     inboxAttention,
+    // AIの見張り(資金・契約・顧客・仕入先・発注書・帳簿など)で気になるもの
+    watch: watches.filter((w) => w.status !== "ok").map((w) => ({ key: w.key, label: w.label, status: w.status, headline: w.headline, items: w.items.slice(0, 3), href: w.href })),
   };
 }
 
@@ -75,7 +79,7 @@ export type BriefingFacts = Awaited<ReturnType<typeof buildBriefingFacts>>;
 
 // AIが選んでよいリンク先(作り話のURLにしないため、事実に出てくる画面だけにする)
 export function allowedHrefs(f: BriefingFacts) {
-  return new Set(["/", "/invoices", "/receivables", "/collections", "/cashflow", "/bank", "/inbox", "/assistant", ...f.todos.map((t) => t.href)]);
+  return new Set(["/", "/invoices", "/receivables", "/collections", "/cashflow", "/bank", "/inbox", "/assistant", "/ai-watch", ...f.todos.map((t) => t.href), ...(f.watch ?? []).map((w) => w.href)]);
 }
 
 // APIキーがないときの決まったルールでの並べ方: 赤(期限切れ・法令)→今週の支払→未入金→そのほか件数の多い順
@@ -96,6 +100,11 @@ export function templateBriefing(f: BriefingFacts): { headline: string; items: B
   }
   if (f.overdueReceivables.total > 0 && !f.todos.some((t) => t.key === "overdue")) {
     items.push({ title: "期日を過ぎた未入金の確認", reason: `${f.overdueReceivables.parties.join("・")} などから ${formatYen(f.overdueReceivables.total)} がまだ入金されていません。`, href: "/collections" });
+  }
+  // 見張りで「要注意」のもの(やることの一覧にない種類だけ)
+  const covered = new Set(items.map((i) => i.href));
+  for (const w of (f.watch ?? []).filter((w) => w.status === "warn" && !covered.has(w.href) && w.key !== "duplicates")) {
+    items.push({ title: w.label, reason: `${w.headline}。${w.items[0] ? `例: ${w.items[0]}` : ""}`, href: w.href });
   }
   if (f.inboxAttention > 0) items.push({ title: `AI受付箱の確認(${f.inboxAttention}件)`, reason: "AIが振り分けられなかった書類があります。中身を見て登録してください。", href: "/inbox" });
   for (const t of [...f.todos.filter((t) => !t.urgent)].sort((a, b) => b.count - a.count)) items.push({ title: `${t.label}(${t.count}件)`, reason: t.detail, href: t.href });
@@ -147,7 +156,8 @@ async function claudeBriefing(companyName: string, f: BriefingFacts) {
           `あなたは「${companyName}」の経理・事務の担当者を毎朝サポートする秘書です。渡された今朝の状況(JSON)だけを根拠に、今日まずやることを優先順に選んでください。`,
           "優先の考え方: 期限を過ぎたもの・法令の期限(納付・申告・36協定など)→今日〜数日のうちに期限が来る支払・入金→お金の流れに関わる確認→そのほかの事務。件数が多いだけのものより、期限とお金への影響を重く見てください。",
           "reason には数字(件数・金額・日付)を入れて、なぜ今日なのかを短く書いてください。金額は「1,234,567円」の形で書いてください。",
-          "href は JSON の todos[].href、または /receivables・/collections(期限を過ぎた未入金の督促)・/invoices・/bank・/inbox・/cashflow のどれかだけを使ってください。",
+          "watch はAIの見張り(資金繰り・契約の期限・顧客や仕入先の変化・発注書と請求書の食い違い・帳簿の点検など)の結果です。status が warn のものは、期限やお金への影響を考えて優先に入れてください。",
+          "href は JSON の todos[].href・watch[].href、または /receivables・/collections(期限を過ぎた未入金の督促)・/invoices・/bank・/inbox・/cashflow のどれかだけを使ってください。",
           "数字にないことを推測で書かないでください。やることが何もなければ items は空にして、headline でそう伝えてください。",
         ].join("\n"),
         cache_control: { type: "ephemeral" },

@@ -61,6 +61,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/", label: "ダッシュボード", icon: DashboardIcon },
       { href: "/briefing", label: "AIの朝のまとめ", icon: SparkleIcon },
+      { href: "/ai-watch", label: "AIの見張り", icon: SparkleIcon },
       { href: "/assistant", label: "AIアシスタント", icon: SparkleIcon },
       { href: "/inbox", label: "AI受付箱", icon: SparkleIcon },
       { href: "/reports/monthly", label: "AIの月次レポート", icon: SparkleIcon },

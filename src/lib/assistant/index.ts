@@ -46,6 +46,7 @@ const SCREENS = [
   ["/monthly-close", "月次決算チェックリスト"],
   ["/po-matching", "発注書と請求書の突き合わせ"],
   ["/briefing", "AIの朝のまとめ"],
+  ["/ai-watch", "AIの見張り"],
   ["/customer-insights", "顧客の見守り"],
   ["/vendor-insights", "仕入先の見守り"],
 ];
