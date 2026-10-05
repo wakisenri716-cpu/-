@@ -53,6 +53,7 @@ const SCREENS = [
   ["/account-review", "科目の見直し"],
   ["/receipt-forecast", "入金予測"],
   ["/payment-plan", "支払計画"],
+  ["/billing-gaps", "請求漏れのチェック"],
   ["/transfers", "振込データ"],
   ["/vendors", "取引先"],
 ];
@@ -174,6 +175,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("get_customer_insights")) as { insights: { customer: string; kind: string; detail: string }[] };
     if (!r.insights.length) return { reply: "目立った変化のある顧客はいません。", tools: ["get_customer_insights"], mode: "simple" };
     return { reply: ["顧客の変化:", ...r.insights.slice(0, 5).map((i) => `・${i.customer}(${i.kind}): ${i.detail}`), "[顧客の見守り](/customer-insights)"].join("\n"), tools: ["get_customer_insights"], mode: "simple" };
+  }
+  if (/請求(漏れ|もれ|し忘れ|忘れ)|出し忘れ/.test(q)) {
+    const r = (await run("get_billing_gaps")) as { count: number; gaps: { title: string; amount: number | null }[] };
+    if (!r.count) return { reply: "請求漏れは見つかりませんでした。", tools: ["get_billing_gaps"], mode: "simple" };
+    return { reply: [`出し忘れかもしれない請求が ${r.count}件 あります:`, ...r.gaps.slice(0, 5).map((g) => `・${g.title}${g.amount !== null ? `(${formatYen(g.amount)})` : ""}`), "[請求漏れのチェック](/billing-gaps)"].join("\n"), tools: ["get_billing_gaps"], mode: "simple" };
   }
   if (/何を払|支払(計画|い.*(大丈夫|払える|どれ))|払えそう/.test(q)) {
     const r = (await run("get_payment_plan")) as { payTotal: number; deferTotal: number; payments: { vendor: string; amount: number; payDate: string; action: string }[] };

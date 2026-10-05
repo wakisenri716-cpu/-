@@ -91,6 +91,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_account_review: "科目の見直し",
   get_receipt_forecast: "入金予測",
   get_payment_plan: "支払計画",
+  get_billing_gaps: "請求漏れ",
 };
 
 // [名前](/パス) の形のリンクだけをアプリ内リンクにする(外のURLはリンクにしない)
