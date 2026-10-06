@@ -5,7 +5,7 @@ import { AI_MODE_INFO, plans, TRIAL_DAYS } from "@/lib/billing/plans";
 import { formatYen } from "@/lib/format";
 import { LegalLinks } from "@/components/LegalLinks";
 
-export const metadata: Metadata = { title: "料金プラン | AI経理オートメーション" };
+export const metadata: Metadata = { title: "料金プラン | Clerkly" };
 
 const FAQ = [
   { q: "無料期間のあとは自動で課金されますか?", a: `いいえ。登録から${TRIAL_DAYS}日間は無料で、カードの登録も要りません。続けて使うときに、管理者が「契約・お支払い」から申し込みます。申し込まなければ料金はかかりません。` },
@@ -80,7 +80,7 @@ export default async function PricingPage() {
       </section>
 
       <div className="text-center">
-        <Link href="/login" className="inline-block rounded-md bg-indigo-600 px-6 py-3 font-medium text-white shadow-sm hover:bg-indigo-700">
+        <Link href="/login" className="inline-block rounded-md bg-vermilion-600 px-6 py-3 font-medium text-white shadow-sm hover:bg-vermilion-700">
           {TRIAL_DAYS}日間無料ではじめる
         </Link>
         <p className="mt-2 text-xs text-slate-500">ログイン画面の「はじめての方」から会社を登録できます。</p>

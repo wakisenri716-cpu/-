@@ -106,7 +106,7 @@ export function SendMailButton({ kind, id, tone = "default" }: { kind: Kind; id:
                 </label>
                 {kind === "reminder" && (
                   <div className="flex flex-wrap items-center gap-2 rounded-md bg-indigo-50 px-3 py-2 text-xs text-indigo-900">
-                    <button type="button" onClick={aiWrite} disabled={writing} className="rounded-md bg-indigo-600 px-3 py-1.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                    <button type="button" onClick={aiWrite} disabled={writing} className="rounded-md bg-vermilion-600 px-3 py-1.5 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                       {writing ? "AIが書いています…" : "AIが相手に合わせて書き直す"}
                     </button>
                     <span className="min-w-0 flex-1">{aiNote ?? "督促の回数・遅れている日数・相手のふだんの払い方を見て、AIが文面を整えます。送る前に必ず読んで確かめてください。"}</span>
@@ -129,7 +129,7 @@ export function SendMailButton({ kind, id, tone = "default" }: { kind: Kind; id:
                 やめる
               </button>
               {draft && (
-                <button type="button" onClick={send} disabled={busy || !draft.to.trim()} className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                <button type="button" onClick={send} disabled={busy || !draft.to.trim()} className="rounded-md bg-vermilion-600 px-5 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                   {busy ? "送信中..." : "送信する"}
                 </button>
               )}

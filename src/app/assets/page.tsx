@@ -221,7 +221,7 @@ export default function AssetsPage() {
         <button
           type="submit"
           disabled={creating}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
         >
           {creating ? "登録中..." : "資産を登録"}
         </button>
@@ -280,7 +280,7 @@ export default function AssetsPage() {
                           <button
                             onClick={() => handleDepreciate(asset.id)}
                             disabled={depreciatingId === asset.id}
-                            className="rounded-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                            className="rounded-md bg-vermilion-600 px-2 py-1 text-xs font-medium text-white hover:bg-vermilion-700 disabled:opacity-50"
                           >
                             {period} 分を計上
                           </button>

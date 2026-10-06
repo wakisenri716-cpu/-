@@ -77,7 +77,7 @@ export function EmailSettings({ isAdmin, defaultTo }: { isAdmin: boolean; defaul
               <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-xs leading-relaxed">
                 <li>送信に使う Google アカウントで「2段階認証プロセス」をオンにします(Google アカウント → セキュリティ)。</li>
                 <li>
-                  Google アカウントの「アプリ パスワード」の画面(myaccount.google.com/apppasswords)で、名前に「経理AI」と入れて作成し、表示された16文字をメモします。
+                  Google アカウントの「アプリ パスワード」の画面(myaccount.google.com/apppasswords)で、名前に「Clerkly」と入れて作成し、表示された16文字をメモします。
                 </li>
                 <li>
                   Vercel のプロジェクト(-saas-erp)→ Settings → Environment Variables に、次の4つを追加します。
@@ -123,7 +123,7 @@ SMTP_PASS = (2でメモした16文字。空白なし)`}
                   <span className="block text-xs text-slate-500">資金が足りなくなる見込み・解約の期限が近い契約・初めての取引先への大きな支払いなど。同じ要確認が続くあいだは一度だけ知らせます。</span>
                 </span>
               </label>
-              <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button type="submit" disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 保存
               </button>
             </form>

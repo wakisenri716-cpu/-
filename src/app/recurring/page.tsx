@@ -150,7 +150,7 @@ export default function RecurringPage() {
         {!draft && (
           <button
             onClick={() => setDraft(emptyDraft())}
-            className="self-start rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm hover:bg-indigo-700"
+            className="self-start rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm hover:bg-vermilion-700"
           >
             + 定期取引を登録
           </button>
@@ -283,7 +283,7 @@ export default function RecurringPage() {
             <button type="button" onClick={() => setDraft(null)} className="rounded-md border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
               キャンセル
             </button>
-            <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+            <button type="submit" disabled={busy} className="rounded-md bg-vermilion-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
               保存する
             </button>
           </div>

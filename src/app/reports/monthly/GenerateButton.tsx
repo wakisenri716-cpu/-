@@ -19,7 +19,7 @@ export function GenerateButton({ month, exists }: { month: string; exists: boole
   }
   return (
     <span className="inline-flex flex-col items-start gap-1">
-      <button disabled={busy} onClick={run} className={`rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 ${exists ? "border border-indigo-600 text-indigo-700 hover:bg-indigo-50" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>
+      <button disabled={busy} onClick={run} className={`rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 ${exists ? "border border-indigo-600 text-indigo-700 hover:bg-indigo-50" : "bg-vermilion-600 text-white hover:bg-vermilion-700"}`}>
         {busy ? "AIが書いています…" : exists ? "いまの数字で作り直す" : "レポートを作る"}
       </button>
       {error && <span className="text-xs text-rose-700">{error}</span>}

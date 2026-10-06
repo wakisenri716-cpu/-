@@ -54,7 +54,7 @@ export function QuickExpenseView({ accounts }: { accounts: { code: string; name:
         </label>
         <textarea id="qe-text" value={text} onChange={(e) => setText(e.target.value)} rows={5} maxLength={2000} placeholder={EXAMPLE} className="mt-2 w-full rounded-md border px-3 py-2 text-sm" />
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <button onClick={parse} disabled={busy || !text.trim()} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button onClick={parse} disabled={busy || !text.trim()} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             {busy && !items ? "AIが読み取っています…" : "AIで読み取る"}
           </button>
           <button type="button" onClick={() => setText(EXAMPLE)} className="text-sm text-slate-500 hover:underline">
@@ -123,7 +123,7 @@ export function QuickExpenseView({ accounts }: { accounts: { code: string; name:
             <button onClick={() => setItems(null)} className="rounded-md border px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
               やめる
             </button>
-            <button onClick={add} disabled={busy} className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+            <button onClick={add} disabled={busy} className="rounded-md bg-vermilion-600 px-5 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
               {busy ? "入れています…" : "経費精算に入れる"}
             </button>
           </div>

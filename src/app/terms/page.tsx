@@ -3,14 +3,14 @@ import Link from "next/link";
 import { TERMS_EFFECTIVE, operator } from "@/lib/legal";
 import { LegalDocument, Article } from "@/components/LegalDocument";
 
-export const metadata: Metadata = { title: "利用規約 | AI経理オートメーション" };
+export const metadata: Metadata = { title: "利用規約 | Clerkly" };
 
 export default function TermsPage() {
   const op = operator();
   return (
     <LegalDocument title="利用規約" effective={TERMS_EFFECTIVE}>
       <p>
-        この利用規約(以下「本規約」)は、{op.name}(以下「運営者」)が提供する会計・経理・人事労務の業務支援サービス「AI経理オートメーション」(以下「本サービス」)の利用条件を定めるものです。本サービスを利用するすべての方(以下「利用者」)は、本規約に同意したうえで本サービスを利用するものとします。
+        この利用規約(以下「本規約」)は、{op.name}(以下「運営者」)が提供する会計・経理・人事労務の業務支援サービス「Clerkly(クラークリー)」(以下「本サービス」)の利用条件を定めるものです。本サービスを利用するすべての方(以下「利用者」)は、本規約に同意したうえで本サービスを利用するものとします。
       </p>
 
       <Article n={1} title="適用">

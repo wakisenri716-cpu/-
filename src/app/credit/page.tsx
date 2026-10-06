@@ -201,7 +201,7 @@ export default function CreditPage() {
               if (c) setEditing({ id: c.id, name: c.name, row: null });
             }}
             disabled={!adding}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
           >
             上限を設定
           </button>
@@ -230,7 +230,7 @@ export default function CreditPage() {
               <button type="button" onClick={() => setEditing(null)} className="rounded-md border px-4 py-2 text-sm">
                 やめる
               </button>
-              <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+              <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
                 保存
               </button>
             </div>

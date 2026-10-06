@@ -14,8 +14,8 @@ export async function POST(request: Request) {
       companyId: admin.companyId,
       kind: "TEST",
       to: String(body.to ?? admin.email),
-      subject: "【テスト】経理AIからのメール送信の確認",
-      text: ["このメールは、経理AIのメール送信の設定を確認するためのテストです。", "", `送信方法: ${MODE_LABELS[mailMode()]}`, "", "届いていれば、設定は完了しています。"].join("\n"),
+      subject: "【テスト】Clerkly からのメール送信の確認",
+      text: ["このメールは、Clerkly のメール送信の設定を確認するためのテストです。", "", `送信方法: ${MODE_LABELS[mailMode()]}`, "", "届いていれば、設定は完了しています。"].join("\n"),
       sentByName: admin.name,
     });
     await audit("テストメールを送信", `${log.to}(${log.status})`);

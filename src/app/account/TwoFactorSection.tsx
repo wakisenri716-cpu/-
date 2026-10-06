@@ -98,7 +98,7 @@ export function TwoFactorSection() {
             if (data) setSetup(data);
           }}
           disabled={busy}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
         >
           設定を始める
         </button>
@@ -118,7 +118,7 @@ export function TwoFactorSection() {
             <input name="code" required inputMode="numeric" autoComplete="one-time-code" className={`${inputClass} tracking-widest`} placeholder="123456" />
           </label>
           <div className="flex gap-2">
-            <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+            <button type="submit" disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
               有効にする
             </button>
             <button type="button" onClick={() => setSetup(null)} className="rounded-md border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">

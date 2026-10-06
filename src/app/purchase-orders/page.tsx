@@ -30,7 +30,7 @@ export default async function PurchaseOrdersPage() {
         </div>
         <Link
           href="/purchase-orders/new"
-          className="self-start rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm hover:bg-indigo-700"
+          className="self-start rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm hover:bg-vermilion-700"
         >
           + 発注書を作成
         </Link>

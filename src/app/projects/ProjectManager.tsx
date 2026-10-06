@@ -92,7 +92,7 @@ export function ProjectManager({ projects }: { projects: Project[] }) {
       {message && <div className={`rounded-md px-3 py-2 text-sm ${message.ok ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>{message.text}</div>}
       <form key={formKey} onSubmit={add} className="space-y-3">
         <Fields />
-        <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           登録
         </button>
       </form>
@@ -132,7 +132,7 @@ export function ProjectManager({ projects }: { projects: Project[] }) {
               <button type="button" onClick={() => setEditing(null)} className="rounded-md border px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">
                 やめる
               </button>
-              <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 保存
               </button>
             </div>

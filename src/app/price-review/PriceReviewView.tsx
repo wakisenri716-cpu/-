@@ -248,7 +248,7 @@ export default function PriceReviewView({ review, ai, defaultEffective }: { revi
             伝えたいこと(任意)
             <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="例: 品質は変えません。長年のお付き合いへの感謝も" className="mt-1 rounded border px-2 py-1 text-sm text-slate-900" />
           </label>
-          <button onClick={draft} disabled={busy || !valid} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+          <button onClick={draft} disabled={busy || !valid} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
             {busy ? "作っています…" : ai ? "AIでお知らせ文を作る" : "お知らせ文を作る"}
           </button>
         </div>

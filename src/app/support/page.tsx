@@ -5,7 +5,7 @@ import { LegalLinks } from "@/components/LegalLinks";
 import { getCurrentUser } from "@/lib/auth/session";
 import { SupportForm } from "./SupportForm";
 
-export const metadata: Metadata = { title: "サポート・お問い合わせ | AI経理オートメーション" };
+export const metadata: Metadata = { title: "サポート・お問い合わせ | Clerkly" };
 
 const FAQ = [
   {
@@ -38,7 +38,7 @@ export default async function SupportPage() {
     <div className="mx-auto max-w-2xl space-y-6 py-4">
       <div>
         <h1 className="text-2xl font-semibold">サポート・お問い合わせ</h1>
-        <p className="mt-1 text-sm text-slate-600">AI経理オートメーション(パソコン・スマホのスタッフアプリ)のサポート窓口です。</p>
+        <p className="mt-1 text-sm text-slate-600">Clerkly(パソコン・スマホのスタッフアプリ)のサポート窓口です。</p>
       </div>
 
       <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

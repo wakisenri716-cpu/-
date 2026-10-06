@@ -180,7 +180,7 @@ function AllocationForm({ data, row, busy, onSubmit, onCancel }: { data: Data; r
         <button type="button" onClick={onCancel} className="rounded-md border px-4 py-2 text-sm">
           やめる
         </button>
-        <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+        <button type="submit" disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
           {busy ? "保存中..." : row ? "保存" : "登録"}
         </button>
       </div>
@@ -257,7 +257,7 @@ export default function AllocationsPage() {
               今月までの分をまとめて計上({s.due})
             </button>
           )}
-          <button onClick={() => setEditing("new")} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+          <button onClick={() => setEditing("new")} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700">
             + 按分を登録
           </button>
         </div>

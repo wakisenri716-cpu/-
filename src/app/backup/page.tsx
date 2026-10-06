@@ -32,7 +32,7 @@ export default async function BackupPage() {
         </ul>
         <p className="text-xs text-slate-500">領収書・請求書の画像は含まれません(「証憑の検索」から1件ずつ表示・保存できます)。</p>
         {user.role === "ADMIN" ? (
-          <a href="/api/backup" className="inline-flex rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+          <a href="/api/backup" className="inline-flex rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700">
             ZIPでダウンロード
           </a>
         ) : (

@@ -254,7 +254,7 @@ export default function WithholdingPage() {
                         <button
                           onClick={() => post({ action: "record", invoiceId: f.id, ...form }, `${f.vendorName}の源泉徴収を記録しました`)}
                           disabled={busy}
-                          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                          className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50"
                         >
                           源泉徴収を記録
                         </button>

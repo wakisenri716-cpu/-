@@ -62,7 +62,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <form action="/search" className="flex flex-col gap-2 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 sm:flex-row sm:items-center">
         <input name="q" defaultValue={q} maxLength={200} autoFocus placeholder="例: 先月のA社の請求書" aria-label="探す言葉" className="min-w-0 flex-1 rounded-full border border-indigo-200 bg-white px-4 py-2 text-sm" />
         <div className="flex gap-2">
-          <button className="flex-1 rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 sm:flex-none">探す</button>
+          <button className="flex-1 rounded-full bg-vermilion-600 px-5 py-2 text-sm font-medium text-white hover:bg-vermilion-700 sm:flex-none">探す</button>
           {canAi && (
             <button name="ai" value="1" className="flex-1 rounded-full border border-indigo-300 bg-white px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 sm:flex-none">
               AIに探してもらう

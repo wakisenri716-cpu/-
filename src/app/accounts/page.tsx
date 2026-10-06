@@ -81,7 +81,7 @@ export default function AccountsPage() {
           <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="例: 車両費" className="mt-1 block w-48 rounded-md border px-2 py-1.5 text-sm text-slate-900" />
         </label>
         <span className="pb-2 text-xs text-slate-500">区分: {categoryFor(code) || "コードの先頭で決まります"}</span>
-        <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+        <button type="submit" disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
           追加
         </button>
         <p className="w-full text-xs text-slate-500">コードの先頭が 1 なら資産、2 負債、3 純資産、4 収益、5〜9 費用になります。</p>

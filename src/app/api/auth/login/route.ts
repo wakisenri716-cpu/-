@@ -109,7 +109,7 @@ export async function POST(request: Request) {
       companyId: allowed.companyId,
       kind: "SECURITY",
       to: user.email,
-      subject: "【経理AI】新しい端末からログインがありました",
+      subject: "【Clerkly】新しい端末からログインがありました",
       text: [
         `${user.name}さん`,
         "",

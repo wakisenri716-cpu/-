@@ -82,7 +82,7 @@ export function PaymentPlanView({ initial }: { initial: Plan }) {
             <SparkleIcon className="h-4 w-4" />
             AIの見立て
           </h2>
-          <button onClick={review} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button onClick={review} disabled={busy} className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             {busy ? "AIが読んでいます…" : plan.review?.current ? "もう一度AIに見てもらう" : "AIに見てもらう"}
           </button>
         </div>
@@ -188,7 +188,7 @@ export function PaymentPlanView({ initial }: { initial: Plan }) {
             選んだ支払い {selected.length}件・<b className="tabular-nums">{formatYen(selectedTotal)}</b>
           </span>
           {selected.length > 0 ? (
-            <Link href={`/transfers?invoices=${selected.join(",")}`} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700">
+            <Link href={`/transfers?invoices=${selected.join(",")}`} className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700">
               選んだ支払いの振込データを作る →
             </Link>
           ) : (

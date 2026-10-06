@@ -120,7 +120,7 @@ export function CompanyForm() {
             <span className="mt-1 block text-xs text-slate-500">この金額を超えるレシートは、経費精算・立替経費の精算の画面に「上限超え」と表示します(精算は止めません。承認のときの確認に使います)。</span>
           </label>
           <div className="flex justify-end">
-            <button type="submit" disabled={saving} className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+            <button type="submit" disabled={saving} className="rounded-md bg-vermilion-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
               {saving ? "保存中..." : "保存する"}
             </button>
           </div>

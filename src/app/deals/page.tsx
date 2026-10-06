@@ -181,7 +181,7 @@ function DealForm({
       <div className="flex gap-2">
         <button
           disabled={busy}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50"
         >
           保存
         </button>
@@ -294,7 +294,7 @@ export default function DealsPage() {
         </div>
         <button
           onClick={() => setEditing("new")}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+          className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700"
         >
           + 商談を登録
         </button>

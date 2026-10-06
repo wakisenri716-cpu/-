@@ -139,7 +139,7 @@ export function MonthlyChangeView() {
                     {r.status === "CANDIDATE" && (
                       <>
                         <span className="mt-1 block text-xs text-slate-500">{ym(r.effectiveMonth)}分から</span>
-                        <button disabled={busy} onClick={() => call("POST", { action: "apply", id: r.id }, `${r.staffName}さんの標準報酬月額を ${thousand(r.next)} にしました。`)} className="mt-1 rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                        <button disabled={busy} onClick={() => call("POST", { action: "apply", id: r.id }, `${r.staffName}さんの標準報酬月額を ${thousand(r.next)} にしました。`)} className="mt-1 rounded-md bg-vermilion-600 px-3 py-1 text-xs font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                           反映する
                         </button>
                       </>

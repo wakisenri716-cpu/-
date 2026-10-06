@@ -25,7 +25,7 @@ export function BillingButton({ action, plan, aiMode, label, primary = true }: {
       <button
         onClick={go}
         disabled={busy}
-        className={`w-full rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 ${primary ? "bg-indigo-600 text-white hover:bg-indigo-700" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`}
+        className={`w-full rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 ${primary ? "bg-vermilion-600 text-white hover:bg-vermilion-700" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`}
       >
         {busy ? "開いています..." : label}
       </button>

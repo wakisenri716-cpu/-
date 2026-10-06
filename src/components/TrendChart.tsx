@@ -7,9 +7,9 @@ type Point = { month: string; revenue: number; expense: number; profit: number }
 
 // 検証済みカテゴリ配色の先頭3色(固定順)。文字には使わず、印(棒・線・凡例の色見本)だけに使う。
 const SERIES = {
-  revenue: { label: "売上", color: "#2a78d6" },
-  expense: { label: "費用", color: "#eb6834" },
-  profit: { label: "利益", color: "#1baf7a" },
+  revenue: { label: "売上", color: "#3b5a94" },
+  expense: { label: "費用", color: "#c27a3a" },
+  profit: { label: "利益", color: "#16927a" },
 } as const;
 
 const W = 640;
@@ -93,7 +93,7 @@ export function TrendChart({ data }: { data: Point[] }) {
         <svg viewBox={`0 0 ${W} ${H}`} className="block w-full min-w-[560px]" role="img" aria-label="直近12か月の売上・費用・利益の推移">
           {ticks.map((t) => (
             <g key={t}>
-              <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? "#cbd5e1" : "#eef2f6"} strokeWidth="1" />
+              <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? "#c3cad5" : "#e4e7ec"} strokeWidth="1" />
               <text x={PAD.left - 8} y={y(t)} textAnchor="end" dominantBaseline="middle" className="fill-slate-500 text-[11px]">
                 {axisLabel(t)}
               </text>
@@ -104,7 +104,7 @@ export function TrendChart({ data }: { data: Point[] }) {
             const x0 = cx(i) - BAR - GAP / 2;
             return (
               <g key={d.month}>
-                {hover === i && <rect x={PAD.left + band * i} y={PAD.top} width={band} height={plotH} fill="#f1f5f9" />}
+                {hover === i && <rect x={PAD.left + band * i} y={PAD.top} width={band} height={plotH} fill="#e4e7ec" />}
                 <path d={barPath(x0, zero, y(d.revenue), BAR)} fill={SERIES.revenue.color} />
                 <path d={barPath(x0 + BAR + GAP, zero, y(d.expense), BAR)} fill={SERIES.expense.color} />
                 <text x={cx(i)} y={H - 8} textAnchor="middle" className="fill-slate-500 text-[11px]">

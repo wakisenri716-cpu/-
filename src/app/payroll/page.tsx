@@ -300,7 +300,7 @@ export default function PayrollPage() {
                   type="button"
                   disabled={busy}
                   onClick={() => call("/api/payroll", "POST", { month }, `${y}年${m}月分の給料を計上しました(給料手当・預り金・未払金の仕訳)`)}
-                  className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                  className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50"
                 >
                   この内容で給料を計上する
                 </button>
@@ -472,7 +472,7 @@ export default function PayrollPage() {
               </label>
             ))}
             {rates && (
-              <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button type="submit" disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 保存
               </button>
             )}

@@ -44,7 +44,7 @@ function GroupCard({ g, busy, onMerge, onDifferent }: { g: Group; busy: boolean;
           onClick={() => {
             if (confirm(`「${g.parties.find((p) => p.id === keepId)?.name}」に1つにまとめます。まとめた方は消えます。よろしいですか?`)) onMerge(g, keepId);
           }}
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50"
         >
           選んだ方にまとめる
         </button>
@@ -80,7 +80,7 @@ export function PartyDuplicatesView({ initial }: { initial: Data }) {
             <SparkleIcon className="h-4 w-4" />
             AIの見立て
           </h2>
-          <button onClick={() => post({ action: "review" })} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button onClick={() => post({ action: "review" })} disabled={busy} className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             {busy ? "処理しています…" : data.review ? "もう一度AIに見てもらう" : "同じ相手かAIに見てもらう"}
           </button>
         </div>

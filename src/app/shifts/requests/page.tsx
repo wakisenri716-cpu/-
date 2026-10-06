@@ -87,7 +87,7 @@ export default function ShiftRequestsPage() {
           <button
             onClick={() => confirm(`${m}月の希望(時間のあるもの)から、シフトを作りますか?`) && post({ action: "apply", month: data.month }, (j) => `${j.created}件のシフトを作りました${j.skipped ? `(すでにシフトがある${j.skipped}件は作りませんでした)` : ""}`)}
             disabled={busy}
-            className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
           >
             希望からシフトを作る
           </button>

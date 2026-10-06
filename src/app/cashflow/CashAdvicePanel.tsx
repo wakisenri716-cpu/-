@@ -47,7 +47,7 @@ export function CashAdvicePanel({ initial, today }: { initial: CashAdviceView | 
           AIの資金繰りアドバイス
           {r && <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.className}`}>{r.label}</span>}
         </h2>
-        <button onClick={run} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button onClick={run} disabled={busy} className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           {busy ? "AIが考えています…" : advice?.date === today ? "いまの数字で作り直す" : "アドバイスをもらう"}
         </button>
       </div>

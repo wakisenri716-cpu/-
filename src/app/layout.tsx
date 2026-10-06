@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Noto_Sans_JP } from "next/font/google";
+import { Outfit, Zen_Kaku_Gothic_New } from "next/font/google";
 import "./globals.css";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -15,21 +15,22 @@ import { VerifyEmailBanner } from "@/components/VerifyEmailBanner";
 import { ServiceNotices } from "@/components/ServiceNotices";
 import { DemoBanner } from "@/components/DemoControls";
 import { activeNotices } from "@/lib/support";
+import { ClerklyLogo } from "@/components/Logo";
 
-// 欧文・数字は Inter、和文は Noto Sans JP(和文は文字数が多いので先読みしない)
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
-const notoJp = Noto_Sans_JP({ subsets: ["latin"], variable: "--font-noto-jp", display: "swap", preload: false });
+// 欧文・数字は Outfit、和文は Zen Kaku Gothic New(和文は文字数が多いので先読みしない)
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", display: "swap" });
+const zenKaku = Zen_Kaku_Gothic_New({ weight: ["400", "500", "700"], subsets: ["latin"], variable: "--font-zen-kaku", display: "swap", preload: false });
 
 export const metadata: Metadata = {
-  title: "AI経理オートメーション",
-  description: "経費精算・請求書処理をAIが半自動化する統合SaaS基盤",
+  title: "Clerkly(クラークリー)",
+  description: "経費精算・請求書・給与・決算まで、小さな会社の事務をひとつにまとめるサービス",
   // iPhone・iPad の「ホーム画面に追加」用(Android などは manifest.ts を使う)
-  appleWebApp: { capable: true, title: "経理AI", statusBarStyle: "default" },
-  icons: { apple: "/pwa-icon/180" },
+  appleWebApp: { capable: true, title: "Clerkly", statusBarStyle: "default" },
+  icons: { apple: "/pwa-icon/180?bleed=1" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#5b4ae6",
+  themeColor: "#1B2A4A",
   // スマホアプリ(mobile/)・ホーム画面に追加したときに画面いっぱいに表示し、余白は safe-area で取る
   viewportFit: "cover",
 };
@@ -56,20 +57,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const staffApp = pathname === "/staff" || pathname.startsWith("/staff/");
 
   return (
-    <html lang="ja" className={`h-full antialiased ${inter.variable} ${notoJp.variable}`}>
+    <html lang="ja" className={`h-full antialiased ${outfit.variable} ${zenKaku.variable}`}>
       <body className="min-h-full bg-slate-50 text-slate-900 print:bg-white">
         {user ? (
           <div className="flex min-h-screen">
             <Sidebar userName={user.name} role={user.role} companies={companies} companyId={user.companyId} operator={isOperator(user.email)} />
             <div className="flex min-w-0 flex-1 flex-col">
-              <header className={`sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 px-4 py-2.5 backdrop-blur md:hidden print:hidden ${staffApp ? "hidden" : ""}`}>
+              <header className={`sticky top-0 z-30 border-b border-slate-200 bg-slate-50 px-4 py-2.5 md:hidden print:hidden ${staffApp ? "hidden" : ""}`}>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-sm font-bold whitespace-nowrap text-slate-900">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-[9px] bg-linear-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white shadow-sm shadow-indigo-500/30">
-                      AI
-                    </span>
-                    経理オートメーション
-                  </span>
+                  <ClerklyLogo size={22} />
                   <MobileNav role={user.role} />
                 </div>
                 {companies.length > 1 && (

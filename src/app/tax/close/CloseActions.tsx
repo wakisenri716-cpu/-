@@ -32,7 +32,7 @@ export function CloseActions({ fy, canPost, posted, endMonth, empty }: { fy: num
   return (
     <div className="mt-3 space-y-2">
       {message && <div className={`rounded-md px-3 py-2 ${message.ok ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>{message.text}</div>}
-      <button disabled={busy || !canPost || empty} onClick={() => run("POST")} className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+      <button disabled={busy || !canPost || empty} onClick={() => run("POST")} className="w-full rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
         {posted ? "今の数字で作り直す" : "期末の日付で決算整理の仕訳を作る"}
       </button>
       {!canPost && <p className="text-xs text-slate-500">期末の月({endMonth}月)になったら作れます。</p>}

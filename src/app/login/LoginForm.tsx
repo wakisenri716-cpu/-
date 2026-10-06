@@ -1,5 +1,6 @@
 "use client";
 
+import { ClerklyLogo } from "@/components/Logo";
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LegalLinks } from "@/components/LegalLinks";
@@ -53,9 +54,8 @@ function LoginFormInner({ signupOpen }: { signupOpen: boolean }) {
 
   return (
     <div className="w-full max-w-sm py-12 lg:py-0">
-      <div className="mb-8 flex items-center gap-2.5">
-        <span className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-linear-to-br from-indigo-500 to-violet-600 text-sm font-bold text-white shadow-sm shadow-indigo-500/30">AI</span>
-        <span className="font-bold tracking-wide">経理オートメーション</span>
+      <div className="mb-8">
+        <ClerklyLogo size={30} />
       </div>
       <h1 className="text-2xl font-bold">ログイン</h1>
       <p className="mt-1 text-sm text-slate-600">メールアドレスとパスワードを入力してください。</p>
@@ -69,7 +69,7 @@ function LoginFormInner({ signupOpen }: { signupOpen: boolean }) {
             <input name="code" required autoFocus autoComplete="one-time-code" inputMode="numeric" className={`${inputClass} tracking-widest`} placeholder="123456" />
             <p className="mt-1 text-xs text-slate-500">スマホをなくしたときは、回復コード(例: abcd-efgh)も使えます。</p>
           </div>
-          <button type="submit" disabled={submitting} className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={submitting} className="w-full rounded-lg bg-vermilion-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
             {submitting ? "確認中..." : "ログイン"}
           </button>
           <button
@@ -97,7 +97,7 @@ function LoginFormInner({ signupOpen }: { signupOpen: boolean }) {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 disabled:opacity-50"
+          className="w-full rounded-lg bg-vermilion-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
         >
           {submitting ? "処理中..." : "ログイン"}
         </button>

@@ -190,7 +190,7 @@ export function TransportView() {
                 </span>
                 <span className="text-lg font-semibold tabular-nums">{formatYen(dates.size * perDay)}</span>
               </div>
-              <button disabled={busy || !route || dates.size === 0} onClick={submit} className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button disabled={busy || !route || dates.size === 0} onClick={submit} className="w-full rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 経費精算に入れる
               </button>
               <p className="text-xs text-slate-500">通勤定期の区間は会社から通勤手当が出ているので入れないでください。</p>
@@ -252,7 +252,7 @@ export function TransportView() {
                 いつもは往復
               </label>
               <div className="flex gap-2">
-                <button disabled={busy} className="flex-1 rounded-md bg-indigo-600 px-3 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                <button disabled={busy} className="flex-1 rounded-md bg-vermilion-600 px-3 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                   登録する
                 </button>
                 {data.routes.length > 0 && (

@@ -152,7 +152,7 @@ export function YearEndList({ year }: { year: number }) {
               <p className="text-slate-600">
                 過不足は、ふつう12月(翌月払いなら1月)に払う給料で精算します。還付は給料に上乗せし、徴収は給料から差し引きます。源泉徴収票は本人に渡し、1月31日までに市区町村へ給与支払報告書を出します。
               </p>
-              <Link href={`/year-end/slips?year=${data.year}`} className="rounded-md bg-indigo-600 px-4 py-2 font-medium whitespace-nowrap text-white shadow-sm hover:bg-indigo-700">
+              <Link href={`/year-end/slips?year=${data.year}`} className="rounded-md bg-vermilion-600 px-4 py-2 font-medium whitespace-nowrap text-white shadow-sm hover:bg-vermilion-700">
                 源泉徴収票をまとめて印刷
               </Link>
             </div>

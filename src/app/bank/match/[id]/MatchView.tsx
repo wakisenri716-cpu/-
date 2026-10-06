@@ -178,7 +178,7 @@ export function MatchView({ id }: { id: string }) {
             </span>
           </p>
         </div>
-        <button disabled={busy || chosen.length === 0 || diff < 0} onClick={settle} className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button disabled={busy || chosen.length === 0 || diff < 0} onClick={settle} className="w-full rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           {chosen.length}件の請求書と消込む
         </button>
         <p className="text-xs text-slate-500">期日の古い請求書から順に充てます。残りが出るのは最後の1件だけです(一部入金)。消込むと、この摘要を顧客の「振込名義」として覚え、次からは同じ名義の入金を候補に出し、合計が合えば取り込みのときに自動で消込みます。</p>

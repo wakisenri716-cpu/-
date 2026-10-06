@@ -44,7 +44,7 @@ const TYPE_TABS: { key: MovementType; label: string; hint: string }[] = [
 
 const TYPE_BADGES: Record<MovementType, { label: string; className: string }> = {
   PURCHASE: { label: "入庫", className: "bg-emerald-100 text-emerald-800" },
-  ISSUE: { label: "出庫", className: "bg-blue-100 text-blue-800" },
+  ISSUE: { label: "出庫", className: "bg-indigo-100 text-indigo-800" },
   STOCKTAKE: { label: "棚卸", className: "bg-amber-100 text-amber-800" },
 };
 
@@ -317,7 +317,7 @@ export default function InventoryPage() {
               <button
                 type="submit"
                 disabled={recording || products.length === 0}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+                className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
               >
                 {recording ? "記録中..." : `${TYPE_BADGES[type].label}を記録`}
               </button>

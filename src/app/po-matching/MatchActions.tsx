@@ -20,7 +20,7 @@ export function MatchActions({ kind, orderId, invoiceId, label }: { kind: string
         <button
           disabled={busy}
           onClick={() => post({ action: "link", orderId, invoiceId }, kind === "MATCH" ? `${label} で発注書を検収済みにします。よろしいですか?` : `金額が違いますが、${label} で発注書を検収済みにします。差額は確かめましたか?`)}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${kind === "MATCH" ? "bg-indigo-600 text-white hover:bg-indigo-700" : "border border-amber-500 text-amber-800 hover:bg-amber-50"}`}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${kind === "MATCH" ? "bg-vermilion-600 text-white hover:bg-vermilion-700" : "border border-amber-500 text-amber-800 hover:bg-amber-50"}`}
         >
           {kind === "MATCH" ? "この請求書で検収する" : "差額を確かめて検収する"}
         </button>

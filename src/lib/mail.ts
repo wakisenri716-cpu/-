@@ -113,7 +113,7 @@ export async function sendMail(input: {
   let error: string | null = null;
   if (mode !== "test") {
     try {
-      await deliver({ to, subject, text, fromName: oneLine(company.name, 60) || "経理AI", replyTo: company.email });
+      await deliver({ to, subject, text, fromName: oneLine(company.name, 60) || "Clerkly", replyTo: company.email });
       status = "SENT";
     } catch (e) {
       status = "FAILED";

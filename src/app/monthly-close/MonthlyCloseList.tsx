@@ -148,7 +148,7 @@ export function MonthlyCloseList({ initial, monthLabel, customItems }: { initial
               会社で足す項目(1行に1つ。例: 在庫を数えて、在庫の金額を記帳した)
               <textarea value={itemsText} onChange={(e) => setItemsText(e.target.value)} rows={4} className="mt-1 w-full rounded-md border bg-white px-3 py-2 text-sm text-slate-900" />
             </label>
-            <button onClick={saveItems} disabled={busy !== null} className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+            <button onClick={saveItems} disabled={busy !== null} className="rounded-md bg-vermilion-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
               保存
             </button>
           </div>

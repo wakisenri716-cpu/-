@@ -64,7 +64,7 @@ export function ClosingForm({ initial, canEdit }: { initial: Closing; canEdit: b
               この日まで締める
               <input type="date" value={date} max={state.today} onChange={(e) => setDate(e.target.value)} className="mt-1 block rounded-md border px-2 py-1.5 text-sm text-slate-900" />
             </label>
-            <button onClick={() => save(date)} disabled={busy || !date} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+            <button onClick={() => save(date)} disabled={busy || !date} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
               締める
             </button>
             {state.closedThrough && (

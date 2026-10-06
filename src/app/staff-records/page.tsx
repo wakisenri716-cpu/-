@@ -144,7 +144,7 @@ export default function StaffRecordsPage() {
             <Field label="相談窓口" name="consultation" value={d.consultation} placeholder="例: 総務担当 山田(03-1234-5678)" />
             <Field label="退職に関する事項" name="retirement" value={d.retirement} placeholder="例: 自己都合退職は30日前までに届け出ること" wide />
             <div className="sm:col-span-2">
-              <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 保存
               </button>
             </div>
@@ -191,7 +191,7 @@ export default function StaffRecordsPage() {
               <button type="button" onClick={() => setEditing(null)} className="rounded-md border px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">
                 やめる
               </button>
-              <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 保存
               </button>
             </div>

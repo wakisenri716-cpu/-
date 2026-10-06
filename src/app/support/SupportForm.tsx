@@ -67,7 +67,7 @@ export function SupportForm({ name = "", email = "" }: { name?: string; email?: 
       </label>
       {/* ロボットよけ(人には見えない欄) */}
       <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-      <button disabled={busy} className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+      <button disabled={busy} className="rounded-md bg-vermilion-600 px-5 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
         {busy ? "送信中..." : "送信する"}
       </button>
     </form>

@@ -208,7 +208,7 @@ export default function ReimbursementsPage() {
                         <button
                           onClick={() => act(r, "POST")}
                           disabled={busy === r.id}
-                          className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                          className="rounded-md bg-vermilion-600 px-3 py-1 text-xs font-medium text-white hover:bg-vermilion-700 disabled:opacity-50"
                         >
                           精算する
                         </button>

@@ -65,7 +65,7 @@ export default function AccountPage() {
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+          className="w-full rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
         >
           {busy ? "変更中..." : "パスワードを変更"}
         </button>

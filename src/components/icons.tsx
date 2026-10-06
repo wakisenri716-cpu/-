@@ -6,7 +6,7 @@ const base = {
   viewBox: "0 0 24 24",
   fill: "none",
   stroke: "currentColor",
-  strokeWidth: 1.6,
+  strokeWidth: 1.5,
   strokeLinecap: "round" as const,
   strokeLinejoin: "round" as const,
 };
@@ -436,11 +436,19 @@ export function PlaneIcon(props: IconProps) {
   );
 }
 
+export function CheckIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </svg>
+  );
+}
+
+// AIの機能の目印。キラキラではなく、ブランドのマークと同じゼムクリップの形(名前は以前のまま)
 export function SparkleIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>
-      <path d="M12 3.5 13.8 9a2 2 0 0 0 1.2 1.2l5.5 1.8-5.5 1.8a2 2 0 0 0-1.2 1.2L12 20.5 10.2 15A2 2 0 0 0 9 13.8L3.5 12 9 10.2A2 2 0 0 0 10.2 9z" />
-      <path d="M19 3v3M17.5 4.5h3" />
+      <path d="M15.5 8v8.5a3.5 3.5 0 0 1-7 0V6a2.5 2.5 0 0 1 5 0v9.5a1 1 0 0 1-2 0V8" />
     </svg>
   );
 }

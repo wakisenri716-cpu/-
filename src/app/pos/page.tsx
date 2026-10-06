@@ -170,7 +170,7 @@ export default function PosPage() {
             <button
               type="submit"
               disabled={syncing}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+              className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
             >
               {syncing ? "同期中..." : "売上を同期"}
             </button>
@@ -202,7 +202,7 @@ export default function PosPage() {
             <button
               type="submit"
               disabled={uploading}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+              className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
             >
               {uploading ? "取込中..." : "CSVを取り込む"}
             </button>

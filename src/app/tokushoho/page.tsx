@@ -5,7 +5,7 @@ import { plans, TRIAL_DAYS } from "@/lib/billing/plans";
 import { formatYen } from "@/lib/format";
 import { LegalLinks } from "@/components/LegalLinks";
 
-export const metadata: Metadata = { title: "特定商取引法に基づく表記 | AI経理オートメーション" };
+export const metadata: Metadata = { title: "特定商取引法に基づく表記 | Clerkly" };
 
 // 運営者の情報は環境変数(SERVICE_OPERATOR_NAME など)から。住所・電話番号を出さない場合は「請求があれば開示」と表示する
 const ON_REQUEST = "請求があったときは、遅滞なく開示します(上記メールアドレスまでご連絡ください)";

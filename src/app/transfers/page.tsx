@@ -294,7 +294,7 @@ export default function TransfersPage() {
               <button
                 onClick={download}
                 disabled={busy || !data.source || preview.missing.length > 0}
-                className="rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+                className="rounded-md bg-vermilion-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
               >
                 振込データをダウンロード
               </button>
@@ -396,7 +396,7 @@ export default function TransfersPage() {
               <button type="button" onClick={() => setEditing(null)} className="rounded-md border px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">
                 やめる
               </button>
-              <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 保存
               </button>
             </div>

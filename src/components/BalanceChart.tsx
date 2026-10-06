@@ -8,7 +8,7 @@ import { formatYen } from "@/lib/format";
 
 type Point = { date: string; balance: number };
 
-const COLOR = "#2a78d6";
+const COLOR = "#3b5a94";
 const H = 200;
 const PAD = { top: 14, right: 16, bottom: 26, left: 52 };
 const DAY = 86_400_000;
@@ -133,7 +133,7 @@ export function BalanceChart({
                   x2={W - PAD.right}
                   y1={y(v)}
                   y2={y(v)}
-                  stroke={v === 0 ? "#cbd5e1" : "#eef2f6"}
+                  stroke={v === 0 ? "#c3cad5" : "#e4e7ec"}
                   strokeWidth="1"
                 />
                 <text
@@ -170,7 +170,7 @@ export function BalanceChart({
                 x2={x(hovered.date)}
                 y1={PAD.top}
                 y2={PAD.top + plotH}
-                stroke="#94a3b8"
+                stroke="#8f99ab"
                 strokeWidth="1"
                 strokeDasharray="3 3"
               />

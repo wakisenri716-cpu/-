@@ -1,49 +1,63 @@
 @import "tailwindcss";
 
 /* ── デザインの基本(色・文字・角丸・影) ──────────────────────────────
-   画面ごとのクラスはそのままで、ここで全体の見た目をそろえる。
-   文字は欧文・数字を Inter、和文を Noto Sans JP にする(layout.tsx で読み込む)。 */
+   Clerkly: 事務用品のように落ち着いて軽い見た目。画面ごとのクラスはそのままで、ここで全体の色・文字をそろえる。
+   ・背景 #EDEFF2、サブの面 #DADFE6、文字と濃色の面 #1B2A4A(紺)、アクセント #E0522D(朱色。主なボタンなど要所だけ)
+   ・文字は欧文・数字を Outfit、和文を Zen Kaku Gothic New(layout.tsx で読み込む)
+   ・グラデーション・発光・ネオンのような色は使わない */
 @theme inline {
-  --font-sans: var(--font-inter), var(--font-noto-jp), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
+  --font-sans: var(--font-outfit), var(--font-zen-kaku), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
 }
 
 @theme {
-  /* 落ち着いた、少し青みのあるグレー */
-  --color-slate-50: #f7f8fa;
-  --color-slate-100: #eff1f5;
-  --color-slate-200: #e3e6ec;
-  --color-slate-300: #cdd2db;
-  --color-slate-400: #9aa2b1;
-  --color-slate-500: #6b7385;
-  --color-slate-600: #4f5668;
-  --color-slate-700: #3b4152;
-  --color-slate-800: #252a37;
-  --color-slate-900: #161a24;
-  --color-slate-950: #0c0f16;
+  /* 紺みのグレー(背景 #EDEFF2・サブの面 #DADFE6・文字 #1B2A4A) */
+  --color-slate-50: #edeff2;
+  --color-slate-100: #e4e7ec;
+  --color-slate-200: #dadfe6;
+  --color-slate-300: #c3cad5;
+  --color-slate-400: #8f99ab;
+  --color-slate-500: #67728a;
+  --color-slate-600: #4b5671;
+  --color-slate-700: #36425e;
+  --color-slate-800: #263352;
+  --color-slate-900: #1b2a4a;
+  --color-slate-950: #121c33;
 
-  /* ブランド色: 鮮やかな青紫 */
-  --color-indigo-50: #f3f3ff;
-  --color-indigo-100: #e7e7ff;
-  --color-indigo-200: #d2d1ff;
-  --color-indigo-300: #b1adff;
-  --color-indigo-400: #8d84fb;
-  --color-indigo-500: #6f63f4;
-  --color-indigo-600: #5b4ae6;
-  --color-indigo-700: #4c3ccb;
-  --color-indigo-800: #3f33a4;
-  --color-indigo-900: #352f82;
-  --color-indigo-950: #201b4d;
+  /* ブランドの紺(リンク・選択中・AIのパネルなど)。以前の青紫の名前(indigo)のまま置き換える */
+  --color-indigo-50: #f1f3f7;
+  --color-indigo-100: #e3e7ef;
+  --color-indigo-200: #cbd2df;
+  --color-indigo-300: #a9b4c8;
+  --color-indigo-400: #7e8ba5;
+  --color-indigo-500: #56658a;
+  --color-indigo-600: #364872;
+  --color-indigo-700: #3b5a94;
+  --color-indigo-800: #223254;
+  --color-indigo-900: #1b2a4a;
+  --color-indigo-950: #111b31;
 
-  /* 角丸は少し大きく、影は薄く重ねてやわらかく */
+  /* アクセントの朱色(主なボタン・強調だけ) */
+  --color-vermilion-50: #fdf2ee;
+  --color-vermilion-100: #fbe2d9;
+  --color-vermilion-200: #f6c3b1;
+  --color-vermilion-300: #ef9c80;
+  --color-vermilion-400: #e8734f;
+  --color-vermilion-500: #e0522d;
+  --color-vermilion-600: #e0522d;
+  --color-vermilion-700: #c4431f;
+  --color-vermilion-800: #9e3519;
+  --color-vermilion-900: #7f2c16;
+
+  /* 角丸は大きめ、影はごく薄く(紺を少しだけ) */
   --radius-md: 0.5rem;
-  --radius-lg: 0.625rem;
-  --radius-xl: 0.875rem;
-  --radius-2xl: 1.125rem;
-  --shadow-xs: 0 1px 2px 0 rgb(22 26 36 / 0.04);
-  --shadow-sm: 0 1px 2px 0 rgb(22 26 36 / 0.04), 0 1px 3px 0 rgb(22 26 36 / 0.05);
-  --shadow: 0 2px 4px -1px rgb(22 26 36 / 0.05), 0 4px 10px -2px rgb(22 26 36 / 0.06);
-  --shadow-md: 0 4px 8px -2px rgb(22 26 36 / 0.06), 0 8px 20px -4px rgb(22 26 36 / 0.08);
-  --shadow-lg: 0 12px 28px -6px rgb(22 26 36 / 0.12), 0 4px 10px -4px rgb(22 26 36 / 0.06);
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --shadow-xs: 0 1px 2px 0 rgb(27 42 74 / 0.04);
+  --shadow-sm: 0 1px 2px 0 rgb(27 42 74 / 0.04), 0 1px 3px 0 rgb(27 42 74 / 0.04);
+  --shadow: 0 1px 3px 0 rgb(27 42 74 / 0.05), 0 2px 8px -2px rgb(27 42 74 / 0.05);
+  --shadow-md: 0 2px 6px -1px rgb(27 42 74 / 0.06), 0 6px 16px -4px rgb(27 42 74 / 0.06);
+  --shadow-lg: 0 10px 24px -6px rgb(27 42 74 / 0.1), 0 4px 10px -4px rgb(27 42 74 / 0.05);
 }
 
 /* Tailwind v4 defaults border color to currentColor, which made every bare
@@ -60,8 +74,7 @@
 
 body {
   font-family: var(--font-sans);
-  font-feature-settings: "cv11", "ss01";
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   line-height: 1.65;
   /* iPhoneのノッチ・ステータスバーや、横向きの丸い角の下に中身が入らないようにする(スマホアプリ・ホーム画面に追加したとき) */
   padding-top: env(safe-area-inset-top);
@@ -95,11 +108,11 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--color-indigo-400);
-  box-shadow: 0 0 0 3px rgb(111 99 244 / 0.16);
+  box-shadow: 0 0 0 3px rgb(27 42 74 / 0.1);
 }
 input[type="checkbox"],
 input[type="radio"] {
-  accent-color: var(--color-indigo-600);
+  accent-color: var(--color-slate-900);
 }
 button,
 a {
@@ -127,11 +140,6 @@ td {
   font-variant-numeric: tabular-nums;
 }
 
-/* AIの機能のパネル(青紫の枠の白いカード)は、うっすら色を乗せて目印にする */
-.border-indigo-200.bg-white {
-  background-image: linear-gradient(135deg, rgb(243 243 255 / 0.9) 0%, rgb(255 255 255 / 0) 55%);
-}
-
 /* スクロールバーを細く目立たなく */
 * {
   scrollbar-width: thin;
@@ -147,7 +155,7 @@ tbody tr:hover {
 }
 
 ::selection {
-  background-color: var(--color-indigo-100, #e0e7ff);
+  background-color: var(--color-vermilion-100);
 }
 
 /* 請求書などを印刷・PDF保存するときの用紙の余白 */

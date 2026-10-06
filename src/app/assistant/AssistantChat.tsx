@@ -177,7 +177,7 @@ export function AssistantChat({ initialQuestion, aiEnabled }: { initialQuestion:
           aria-label="質問"
           className="min-w-0 flex-1 rounded-full border px-4 py-2 text-sm"
         />
-        <button disabled={busy || !input.trim()} className="rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button disabled={busy || !input.trim()} className="rounded-full bg-vermilion-600 px-5 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           聞く
         </button>
       </form>

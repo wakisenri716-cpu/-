@@ -34,7 +34,7 @@ export default async function QuotesPage() {
           <Link href="/quotes/ai" className="rounded-md border border-indigo-300 bg-white px-4 py-2 text-sm font-medium whitespace-nowrap text-indigo-700 shadow-sm hover:bg-indigo-50">
             AIで見積を作る
           </Link>
-          <Link href="/quotes/new" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm hover:bg-indigo-700">
+          <Link href="/quotes/new" className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm hover:bg-vermilion-700">
             + 見積書を作成
           </Link>
         </div>

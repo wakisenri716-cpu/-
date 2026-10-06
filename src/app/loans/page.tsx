@@ -162,7 +162,7 @@ function LoanForm({ data, loan, busy, onSubmit, onCancel }: { data: Data; loan: 
         <button type="button" onClick={onCancel} className="rounded-md border px-4 py-2 text-sm">
           やめる
         </button>
-        <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+        <button type="submit" disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
           {busy ? "保存中..." : loan ? "保存" : "登録"}
         </button>
       </div>
@@ -208,7 +208,7 @@ function PayForm({ loan, row, busy, onSubmit, onCancel }: { loan: Loan; row: Sch
         <button type="button" onClick={onCancel} className="rounded-md border px-4 py-2 text-sm">
           やめる
         </button>
-        <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+        <button type="submit" disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
           記帳する
         </button>
       </div>
@@ -272,7 +272,7 @@ export default function LoansPage() {
               返済日が来た分を予定どおり記帳({s.due})
             </button>
           )}
-          <button onClick={() => setModal({ kind: "edit", loan: null })} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+          <button onClick={() => setModal({ kind: "edit", loan: null })} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700">
             + 借入を登録
           </button>
         </div>

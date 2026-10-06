@@ -396,7 +396,7 @@ export function FileManager({ folderId }: { folderId: string | null }) {
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={!!uploading}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
         >
           ファイルを追加
         </button>
@@ -480,7 +480,7 @@ export function FileManager({ folderId }: { folderId: string | null }) {
           <button
             type="button"
             onClick={doMove}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700"
           >
             移動する
           </button>

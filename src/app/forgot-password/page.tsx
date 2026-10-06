@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
             メールアドレス
             <input name="email" type="email" required autoComplete="email" className={inputClass} placeholder="you@example.com" />
           </label>
-          <button type="submit" disabled={busy} className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={busy} className="w-full rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             {busy ? "送信中..." : "再設定のメールを送る"}
           </button>
           <Link href="/login" className="block text-center text-xs text-slate-500 hover:underline">
