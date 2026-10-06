@@ -201,6 +201,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/analysis", label: "経営分析", icon: GaugeIcon },
       { href: "/sales-analysis", label: "売上分析(ABC)", icon: ChartIcon },
       { href: "/labor-analysis", label: "人件費の分析", icon: ChartIcon },
+      { href: "/customer-profit", label: "顧客別の採算", icon: ChartIcon },
       { href: "/documents", label: "証憑の検索", icon: SearchIcon },
       { href: "/compliance", label: "電子帳簿保存法", icon: ShieldIcon },
     ],
