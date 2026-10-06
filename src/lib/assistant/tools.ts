@@ -27,6 +27,7 @@ import { getBillingGaps, GAP_LABELS } from "@/lib/billingGaps";
 import { draftQuote } from "@/lib/quoteAssist";
 import { getDuplicateParties } from "@/lib/partyMerge";
 import { getYearEndChecklist } from "@/lib/yearEndClose";
+import { findAndExplainJournal } from "@/lib/journalExplain";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
 // 書き換えは利用者が画面で「実行する」を押したときだけ行う。
@@ -288,6 +289,20 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { year: { type: "integer", description: "年度の開始年(任意)" } }, additionalProperties: false },
   },
   {
+    name: "explain_journal",
+    description: "仕訳1件が何の取引かを説明する(「この仕訳は何?」「3日の5万円の仕訳はなぜ前払費用?」など)。何が増えて何が減ったか、利益と現預金への影響、確かめた方がよい点を返す。摘要の言葉・日付・金額で探し、複数あれば候補を返すので entryId で選び直す。",
+    input_schema: {
+      type: "object",
+      properties: {
+        keyword: { type: "string", description: "摘要の一部(任意)" },
+        date: { type: "string", description: "日付 YYYY-MM-DD(任意)" },
+        amount: { type: "integer", description: "金額(円・任意)" },
+        entryId: { type: "string", description: "候補から選んだ仕訳のID(任意)" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "get_todos",
     description: "いま会社でやるべきこと(レビュー待ち・承認待ち・期限切れの請求書・納付期限など)の一覧を返す。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
@@ -353,7 +368,7 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
       };
     }
     case "draft_quote": {
-      const user = await prisma.user.findUniqueOrThrow({ where: { id: ctx.userId }, select: { id: true, name: true } });
+      const user = (ctx.userId && (await prisma.user.findUnique({ where: { id: ctx.userId }, select: { id: true, name: true } }))) || { id: ctx.userId, name: "AIアシスタント" };
       const d = await draftQuote({ ...user, companyId }, input);
       return { lines: d.lines.map((l) => ({ description: l.description, quantity: l.quantity, unit: l.unit, unitPrice: l.unitPrice, taxRate: l.taxRate, pastPrices: l.history ? `${l.history.min}〜${l.history.max}円(${l.history.count}件)` : null, warning: l.priceWarning })), subtotal: d.subtotal, link: `/quotes/new?draft=${d.draftId}`, note: "下書きです。リンクを開いて内容を確かめ、見積書を作ってください。" };
     }
@@ -529,6 +544,12 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_vendor_insights": {
       const r = await findVendorInsights(companyId);
       return { vendors: r.vendors, insights: r.insights.map((i) => ({ vendor: i.name, kind: VENDOR_INSIGHT_LABELS[i.kind], detail: i.detail, nextStep: i.action, link: `/vendors/vendor/${i.vendorId}` })), link: "/vendor-insights" };
+    }
+    case "explain_journal": {
+      const user = (ctx.userId && (await prisma.user.findUnique({ where: { id: ctx.userId }, select: { id: true, name: true } }))) || { id: ctx.userId, name: "AIアシスタント" };
+      const r = await findAndExplainJournal(companyId, user, { keyword: str(input.keyword) || undefined, date: str(input.date) || undefined, amount: typeof input.amount === "number" ? input.amount : undefined, entryId: str(input.entryId) || undefined });
+      if ("error" in r) return r;
+      return { date: r.date, description: r.description, source: r.source, pattern: r.kind, lines: r.lines.map((l) => `${l.side} ${l.account} ${l.amount}円: ${l.meaning}`), effects: r.effects, explanation: r.story, points: r.points, cautions: r.cautions, link: "/journal" };
     }
     case "get_todos": {
       const todos = await getTodos(companyId);

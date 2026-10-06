@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Fragment, useCallback, useEffect, useState, type FormEvent } from "react";
 import { formatDate, formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
+import { JournalExplain } from "./JournalExplain";
 
 type Account = { id: string; code: string; name: string; category: string };
 
@@ -74,6 +75,9 @@ const inputClass = "w-full rounded-md border px-2 py-1.5 text-sm";
 
 export default function JournalPage() {
   const [entries, setEntries] = useState<Entry[] | null>(null);
+  // 「これは何?」の説明を開いている仕訳
+  const [explaining, setExplaining] = useState<string[]>([]);
+  const toggleExplain = (id: string) => setExplaining((all) => (all.includes(id) ? all.filter((x) => x !== id) : [...all, id]));
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [departmentId, setDepartmentId] = useState("");
@@ -584,67 +588,79 @@ export default function JournalPage() {
                       </div>
                     ));
                 return (
-                  <tr key={entry.id} className={`align-top ${isVoid ? "text-slate-400 line-through" : ""}`}>
-                    <td className="px-4 py-2 whitespace-nowrap">{formatDate(entry.date)}</td>
-                    <td className="min-w-[10rem] px-4 py-2">
-                      {entry.description}
-                      {(departments.length > 0 || entry.department) && !isVoid && (
-                        <select
-                          value={entry.department?.id ?? ""}
-                          onChange={(e) => changeDepartment(entry, e.target.value)}
-                          className="mt-1 block max-w-[10rem] rounded border px-1 py-0.5 text-xs text-slate-600"
-                          aria-label="部門"
-                        >
-                          <option value="">部門なし</option>
-                          {entry.department && !departments.some((d) => d.id === entry.department!.id) && (
-                            <option value={entry.department.id}>{entry.department.name}(停止中)</option>
-                          )}
-                          {departments.map((d) => (
-                            <option key={d.id} value={d.id}>
-                              {d.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      {(projects.length > 0 || entry.project) && !isVoid && (
-                        <select
-                          value={entry.project?.id ?? ""}
-                          onChange={(e) => changeProject(entry, e.target.value)}
-                          className="mt-1 block max-w-[10rem] rounded border px-1 py-0.5 text-xs text-slate-600"
-                          aria-label="案件"
-                        >
-                          <option value="">案件なし</option>
-                          {entry.project && !projects.some((p) => p.id === entry.project!.id) && <option value={entry.project.id}>{entry.project.name}(完了)</option>}
-                          {projects.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">{side("debit")}</td>
-                    <td className="px-4 py-2">{side("credit")}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                        {SOURCE_LABELS[entry.sourceType] ?? entry.sourceType}
-                      </span>
-                      {isVoid && <span className="ml-1 text-xs text-rose-600">取消済み</span>}
-                      {entry.status === "PENDING_REVIEW" && <span className="ml-1 text-xs text-amber-700">レビュー待ち</span>}
-                    </td>
-                    <td className="space-x-3 px-4 py-2 text-right whitespace-nowrap">
-                      {!isVoid && (
-                        <button type="button" onClick={() => duplicate(entry)} className="text-xs text-indigo-700 hover:underline">
-                          複製
+                  <Fragment key={entry.id}>
+                    <tr className={`align-top ${isVoid ? "text-slate-400 line-through" : ""}`}>
+                      <td className="px-4 py-2 whitespace-nowrap">{formatDate(entry.date)}</td>
+                      <td className="min-w-[10rem] px-4 py-2">
+                        {entry.description}
+                        {(departments.length > 0 || entry.department) && !isVoid && (
+                          <select
+                            value={entry.department?.id ?? ""}
+                            onChange={(e) => changeDepartment(entry, e.target.value)}
+                            className="mt-1 block max-w-[10rem] rounded border px-1 py-0.5 text-xs text-slate-600"
+                            aria-label="部門"
+                          >
+                            <option value="">部門なし</option>
+                            {entry.department && !departments.some((d) => d.id === entry.department!.id) && (
+                              <option value={entry.department.id}>{entry.department.name}(停止中)</option>
+                            )}
+                            {departments.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {(projects.length > 0 || entry.project) && !isVoid && (
+                          <select
+                            value={entry.project?.id ?? ""}
+                            onChange={(e) => changeProject(entry, e.target.value)}
+                            className="mt-1 block max-w-[10rem] rounded border px-1 py-0.5 text-xs text-slate-600"
+                            aria-label="案件"
+                          >
+                            <option value="">案件なし</option>
+                            {entry.project && !projects.some((p) => p.id === entry.project!.id) && <option value={entry.project.id}>{entry.project.name}(完了)</option>}
+                            {projects.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">{side("debit")}</td>
+                      <td className="px-4 py-2">{side("credit")}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                          {SOURCE_LABELS[entry.sourceType] ?? entry.sourceType}
+                        </span>
+                        {isVoid && <span className="ml-1 text-xs text-rose-600">取消済み</span>}
+                        {entry.status === "PENDING_REVIEW" && <span className="ml-1 text-xs text-amber-700">レビュー待ち</span>}
+                      </td>
+                      <td className="space-x-3 px-4 py-2 text-right whitespace-nowrap">
+                        <button type="button" onClick={() => toggleExplain(entry.id)} aria-expanded={explaining.includes(entry.id)} className="text-xs text-indigo-700 hover:underline">
+                          これは何?
                         </button>
-                      )}
-                      {["MANUAL", "RECURRING", "IMPORT"].includes(entry.sourceType) && !isVoid && (
-                        <button type="button" onClick={() => handleVoid(entry)} className="text-xs text-rose-600 hover:underline">
-                          取消
-                        </button>
-                      )}
-                    </td>
-                  </tr>
+                        {!isVoid && (
+                          <button type="button" onClick={() => duplicate(entry)} className="text-xs text-indigo-700 hover:underline">
+                            複製
+                          </button>
+                        )}
+                        {["MANUAL", "RECURRING", "IMPORT"].includes(entry.sourceType) && !isVoid && (
+                          <button type="button" onClick={() => handleVoid(entry)} className="text-xs text-rose-600 hover:underline">
+                            取消
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                    {explaining.includes(entry.id) && (
+                      <tr className="hover:bg-transparent">
+                        <td colSpan={6} className="px-4 pb-3">
+                          <JournalExplain entryId={entry.id} onClose={() => toggleExplain(entry.id)} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })}
               {entries && entries.length === 0 && (

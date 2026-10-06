@@ -176,6 +176,17 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     if (!r.insights.length) return { reply: "目立った変化のある顧客はいません。", tools: ["get_customer_insights"], mode: "simple" };
     return { reply: ["顧客の変化:", ...r.insights.slice(0, 5).map((i) => `・${i.customer}(${i.kind}): ${i.detail}`), "[顧客の見守り](/customer-insights)"].join("\n"), tools: ["get_customer_insights"], mode: "simple" };
   }
+  // 「文房具の仕訳は何?」「家賃の仕訳を説明して」
+  const journalAsk = /(.{1,20}?)の仕訳.*(何|なに|なぜ|どうして|説明|意味)/.exec(q);
+  if (journalAsk) {
+    const keyword = /^(この|その|あの)仕訳/.test(q) ? "" : journalAsk[1].replace(/^(この|その|あの)/, "").trim();
+    const r = (await run("explain_journal", keyword ? { keyword } : {})) as { error?: string; candidates?: { date: string; description: string; amount: number }[]; explanation?: string; effects?: string[]; cautions?: string[] };
+    if (r.error) {
+      const list = (r.candidates ?? []).slice(0, 5).map((c) => `・${c.date} ${c.description} ${formatYen(c.amount)}`);
+      return { reply: [r.error, ...list, "仕訳帳の各行の「これは何?」でも説明が見られます。[仕訳帳](/journal)"].join("\n"), tools: ["explain_journal"], mode: "simple" };
+    }
+    return { reply: [r.explanation ?? "", ...(r.effects ?? []).map((e) => `・${e}`), ...(r.cautions ?? []).map((c) => `・確かめること: ${c}`), "[仕訳帳](/journal)"].join("\n"), tools: ["explain_journal"], mode: "simple" };
+  }
   if (/決算/.test(q)) {
     const r = (await run("get_year_end")) as { fiscalYear: string; left: number; total: number; items: { label: string; done: boolean }[] };
     return { reply: [r.left ? `${r.fiscalYear} の決算までに残っている作業が ${r.left}件(全${r.total}件)あります:` : `${r.fiscalYear} の決算の準備はすべて済んでいます。`, ...r.items.filter((i) => !i.done).slice(0, 5).map((i) => `・${i.label}`), "[決算の準備](/year-end-close)"].join("\n"), tools: ["get_year_end"], mode: "simple" };

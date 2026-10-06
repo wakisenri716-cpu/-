@@ -17,6 +17,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_sales_by_customer: "売上分析",
   get_budget_progress: "予算",
   get_todos: "やること",
+  explain_journal: "仕訳の説明",
   get_anomalies: "いつもと違う動き",
   propose_invoice: "請求書の下書き",
   propose_journal: "仕訳の下書き",
