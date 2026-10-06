@@ -9,7 +9,7 @@ type Result = { ok: true; item: Item } | { ok: false; fileName: string; error: s
 const KIND: Record<string, { label: string; cls: string }> = {
   RECEIVED_INVOICE: { label: "受け取った請求書", cls: "bg-sky-100 text-sky-800" },
   RECEIPT: { label: "領収書・レシート", cls: "bg-emerald-100 text-emerald-800" },
-  CONTRACT: { label: "契約書", cls: "bg-violet-100 text-violet-800" },
+  CONTRACT: { label: "契約書", cls: "bg-amber-100 text-amber-800" },
   OTHER: { label: "その他の書類", cls: "bg-slate-100 text-slate-700" },
 };
 const OPEN_LABEL: Record<string, string> = { INVOICE: "請求書を開く", EXPENSE: "経費精算を開く", FILE: "書類フォルダを開く" };

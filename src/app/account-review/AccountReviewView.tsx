@@ -80,7 +80,7 @@ function Row({ s, accounts, onDone }: { s: Suggestion; accounts: { code: string;
       </div>
       {error && <p className="mt-2 text-sm text-rose-700">{error}</p>}
       <div className="mt-3 flex flex-wrap gap-2">
-        <button disabled={busy} onClick={() => act("fix")} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button disabled={busy} onClick={() => act("fix")} className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           振替の仕訳を作って直す
         </button>
         <button disabled={busy} onClick={() => act("keep")} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">
@@ -116,7 +116,7 @@ export function AccountReviewView({ initial, accounts }: { initial: Data; accoun
             <SparkleIcon className="h-4 w-4" />
             AIの見直し
           </h2>
-          <button onClick={review} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button onClick={review} disabled={busy} className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             {busy ? "AIが仕訳を読んでいます…" : data.review ? "もう一度AIに見直してもらう" : "AIに見直してもらう"}
           </button>
         </div>

@@ -15,6 +15,7 @@ const PUBLIC_PATHS = [
   "/api/seed",
   "/manifest.webmanifest",
   "/pwa-icon",
+  "/icon.svg",
   "/share",
   "/forgot-password",
   "/reset-password",

@@ -340,7 +340,7 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
         )}
 
         <div className="flex justify-end">
-          <button type="submit" disabled={saving} className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={saving} className="rounded-md bg-vermilion-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
             {saving ? "作成中..." : correction ? "訂正版を発行する" : text.title}
           </button>
         </div>

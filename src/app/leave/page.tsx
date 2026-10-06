@@ -240,7 +240,7 @@ function OvertimeView({ data, month, setMonth, busy, send }: { data: Overtime; m
             <span className="mb-1 block text-xs text-slate-500">年の上限(時間)</span>
             <input name="yearlyLimit" type="number" min={1} max={720} defaultValue={data.settings.yearlyLimit} className={`${inputClass} w-24`} />
           </label>
-          <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             保存
           </button>
         </form>
@@ -378,7 +378,7 @@ function StaffLeave({ s, users, today, busy, send }: { s: LeaveStaff; users: Lea
           <span className="mb-1 block text-xs text-slate-500">メモ(任意)</span>
           <input name="note" maxLength={100} className={`${inputClass} w-full`} />
         </label>
-        <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           登録
         </button>
       </form>

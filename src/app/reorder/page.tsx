@@ -179,7 +179,7 @@ export default function ReorderPage() {
                 納期
                 <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="ml-1 rounded-md border px-2 py-1" />
               </label>
-              <button type="button" onClick={order} disabled={busy || chosen.length === 0} className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button type="button" onClick={order} disabled={busy || chosen.length === 0} className="rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 発注書を作る
               </button>
             </div>

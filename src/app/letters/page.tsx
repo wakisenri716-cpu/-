@@ -80,7 +80,7 @@ export default function LettersPage() {
         <Link
           href={selected.size ? `/letters/labels?keys=${[...selected].join(",")}` : "#"}
           aria-disabled={!selected.size}
-          className={`ml-auto rounded-md px-4 py-2 font-medium text-white ${selected.size ? "bg-indigo-600 hover:bg-indigo-700" : "pointer-events-none bg-indigo-300"}`}
+          className={`ml-auto rounded-md px-4 py-2 font-medium text-white ${selected.size ? "bg-vermilion-600 hover:bg-vermilion-700" : "pointer-events-none bg-indigo-300"}`}
         >
           宛名ラベルを印刷(A4 12面)
         </Link>

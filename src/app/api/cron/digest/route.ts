@@ -57,7 +57,7 @@ export async function GET(request: Request) {
     ].join("\n");
     for (const admin of admins) {
       try {
-        const log = await sendMail({ companyId: company.id, kind: "DIGEST", to: admin.email, subject: `【経理AI】今日のやること ${todos.length}件`, text, sentByName: "システム" });
+        const log = await sendMail({ companyId: company.id, kind: "DIGEST", to: admin.email, subject: `【Clerkly】今日のやること ${todos.length}件`, text, sentByName: "システム" });
         if (log.status === "SENT") sent++;
       } catch (error) {
         console.error("やることメールの送信に失敗しました", error);

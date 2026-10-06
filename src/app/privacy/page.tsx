@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { TERMS_EFFECTIVE, operator } from "@/lib/legal";
 import { LegalDocument, Article } from "@/components/LegalDocument";
 
-export const metadata: Metadata = { title: "プライバシーポリシー | AI経理オートメーション" };
+export const metadata: Metadata = { title: "プライバシーポリシー | Clerkly" };
 
 export default function PrivacyPage() {
   const op = operator();
   return (
     <LegalDocument title="プライバシーポリシー" effective={TERMS_EFFECTIVE}>
       <p>
-        {op.name}(以下「運営者」)は、会計・経理・人事労務の業務支援サービス「AI経理オートメーション」(以下「本サービス」)における個人情報の取扱いについて、個人情報の保護に関する法律(以下「個人情報保護法」)その他の法令を守り、次のとおり定めます。
+        {op.name}(以下「運営者」)は、会計・経理・人事労務の業務支援サービス「Clerkly(クラークリー)」(以下「本サービス」)における個人情報の取扱いについて、個人情報の保護に関する法律(以下「個人情報保護法」)その他の法令を守り、次のとおり定めます。
       </p>
 
       <Article n={1} title="運営者">

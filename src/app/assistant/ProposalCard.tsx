@@ -53,7 +53,7 @@ export function ProposalCard({ proposal, onChange, note }: { proposal: Proposal;
       {error && <p className="mt-2 text-xs text-rose-700">{error}</p>}
       {proposal.status === "PENDING" ? (
         <div className="mt-2 flex flex-wrap gap-2">
-          <button disabled={busy} onClick={() => act("execute")} className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button disabled={busy} onClick={() => act("execute")} className="rounded-md bg-vermilion-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             {ACTION_LABEL[proposal.kind]}
           </button>
           <button disabled={busy} onClick={() => act("cancel")} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50">

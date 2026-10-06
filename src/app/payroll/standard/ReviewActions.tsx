@@ -66,7 +66,7 @@ export function ReviewActions({ year, changing, applied }: { year: number; chang
               </li>
             ))}
           </ul>
-          <button disabled={busy || selected.size === 0} onClick={() => run("POST")} className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button disabled={busy || selected.size === 0} onClick={() => run("POST")} className="rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             選んだ{selected.size}人の標準報酬月額を変える
           </button>
           <p className="text-xs text-slate-500">8月分までの給与を計上し終えてから反映してください(反映後に計算する給与は新しい金額になります)。</p>

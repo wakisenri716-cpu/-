@@ -201,7 +201,7 @@ export function StaffYearEnd({ staffId, year }: { staffId: string; year: number 
                       if (await call("PUT", { inputs }, "保存しました")) await call("POST", { action: "finalize" }, "年末調整を確定しました。源泉徴収票を印刷できます");
                     }}
                     disabled={busy}
-                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+                    className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700"
                   >
                     保存して確定
                   </button>

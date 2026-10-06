@@ -80,7 +80,7 @@ export function FileViewerActions({
     <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
       <div className="flex flex-wrap gap-2">
         {viewable && (
-          <button type="button" onClick={print} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+          <button type="button" onClick={print} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700">
             印刷
           </button>
         )}

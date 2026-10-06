@@ -1,5 +1,6 @@
 "use client";
 
+import { ClerklyLogo } from "@/components/Logo";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CompanyFields, TermsAgreement } from "@/components/CompanyFields";
@@ -40,9 +41,8 @@ export function SetupForm({ endpoint = "/api/auth/setup", trialDays }: { endpoin
 
   return (
     <div className="mx-auto max-w-2xl py-10">
-      <div className="mb-6 flex items-center gap-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">AI</span>
-        <span className="font-semibold">経理オートメーション</span>
+      <div className="mb-6">
+        <ClerklyLogo size={28} />
       </div>
       <h1 className="text-xl font-semibold">新規登録{trialDays ? `(${trialDays}日間無料)` : ""}</h1>
       {trialDays && (
@@ -97,7 +97,7 @@ export function SetupForm({ endpoint = "/api/auth/setup", trialDays }: { endpoin
 
         <section className="space-y-3">
           <TermsAgreement />
-          <button type="submit" disabled={submitting} className="w-full rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={submitting} className="w-full rounded-md bg-vermilion-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
             {submitting ? "登録中..." : "登録してはじめる"}
           </button>
         </section>

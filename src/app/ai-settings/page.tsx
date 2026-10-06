@@ -162,7 +162,7 @@ export default function AiSettingsPage() {
             placeholder="sk-ant-..."
             className="flex-1 rounded-md border border-slate-300 px-3 py-2 font-mono text-sm"
           />
-          <button type="submit" disabled={busy || !key.trim()} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={busy || !key.trim()} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             {busy ? "確かめています..." : data.hasKey ? "キーを入れ替える" : "キーを登録"}
           </button>
         </form>
@@ -253,7 +253,7 @@ function McpSection(props: {
 
       <form onSubmit={props.onCreate} className="flex flex-col gap-2 sm:flex-row">
         <input value={props.tokenName} onChange={(e) => props.setTokenName(e.target.value)} maxLength={40} placeholder="つなぐAIの名前(例: 社長のClaude)" className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm" />
-        <button type="submit" disabled={busy || !props.tokenName.trim()} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button type="submit" disabled={busy || !props.tokenName.trim()} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           つなぐための鍵を作る
         </button>
       </form>

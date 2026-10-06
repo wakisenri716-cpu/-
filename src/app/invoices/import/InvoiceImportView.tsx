@@ -145,7 +145,7 @@ export function InvoiceImportView() {
                 </li>
               ))}
             </ul>
-            <button disabled={busy || preview.errors.length > 0} onClick={() => upload("import")} className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+            <button disabled={busy || preview.errors.length > 0} onClick={() => upload("import")} className="w-full rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
               請求書を{preview.invoices.length}枚作る(合計 {formatYen(preview.total)})
             </button>
             <p className="text-xs text-slate-500">作ると、請求書ごとに売上の仕訳(売掛金 / 売上高・仮受消費税)が記帳されます。請求書番号は請求日の月ごとの連番です。</p>
@@ -235,7 +235,7 @@ export function InvoiceImportView() {
           </table>
         </div>
         <div className="border-t p-4">
-          <button disabled={busy || selected.size === 0} onClick={send} className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button disabled={busy || selected.size === 0} onClick={send} className="w-full rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             選んだ{selected.size}件をメールで送る
           </button>
         </div>

@@ -317,7 +317,7 @@ export default function BankPage() {
               </span>
             </label>
             <div className="flex gap-2">
-              <button type="submit" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+              <button type="submit" className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700">
                 登録する
               </button>
               <button type="button" onClick={() => setAdding(false)} className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
@@ -403,7 +403,7 @@ export default function BankPage() {
           <button
             type="submit"
             disabled={uploading || (current ? !current.active : false)}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
           >
             {uploading ? "AIが判定中..." : "取り込んで自動仕訳"}
           </button>
@@ -488,7 +488,7 @@ export default function BankPage() {
                         <button
                           onClick={() => act(row, "confirm")}
                           disabled={busyId === row.id}
-                          className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                          className="rounded-md bg-vermilion-600 px-3 py-1 text-xs font-medium text-white hover:bg-vermilion-700 disabled:opacity-50"
                         >
                           確定
                         </button>

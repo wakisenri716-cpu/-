@@ -9,7 +9,7 @@ export function LegalDocument({ title, effective, children }: { title: string; e
     <div className="mx-auto max-w-3xl py-6">
       <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
         <Link href="/" className="text-sm text-indigo-700 hover:underline">
-          ← 経理オートメーション
+          ← Clerkly
         </Link>
         <PrintButton variant="outline" />
       </div>

@@ -146,7 +146,7 @@ export function StockView({ initialLow }: { initialLow: boolean }) {
               <button onClick={() => setSelected(null)} className="rounded-xl border py-3 text-sm">
                 やめる
               </button>
-              <button onClick={submit} disabled={busy || (mode === "ISSUE" && qty <= 0)} className="rounded-xl bg-indigo-600 py-3 text-sm font-medium text-white disabled:opacity-50">
+              <button onClick={submit} disabled={busy || (mode === "ISSUE" && qty <= 0)} className="rounded-xl bg-vermilion-600 py-3 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 {busy ? "記録中..." : "記録する"}
               </button>
             </div>

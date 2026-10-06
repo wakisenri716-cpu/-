@@ -57,7 +57,7 @@ export default async function DashboardPage() {
   const toneClasses = {
     emerald: "bg-emerald-50 text-emerald-600",
     amber: "bg-amber-50 text-amber-600",
-    blue: "bg-blue-50 text-blue-600",
+    blue: "bg-indigo-50 text-indigo-700",
     indigo: "bg-indigo-50 text-indigo-600",
   };
 
@@ -74,7 +74,7 @@ export default async function DashboardPage() {
       <form action="/assistant" className="flex flex-wrap items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 print:hidden">
         <span className="text-sm font-medium text-indigo-900">AIに聞く</span>
         <input name="q" maxLength={500} required placeholder="例: 今月の利益は? 入金が遅れている取引先は?" aria-label="AIへの質問" className="min-w-0 flex-1 rounded-full border border-indigo-200 bg-white px-4 py-2 text-sm" />
-        <button className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">聞く</button>
+        <button className="rounded-full bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700">聞く</button>
       </form>
 
       <BriefingCard initial={briefing as unknown as BriefingView | null} />
@@ -140,12 +140,12 @@ export default async function DashboardPage() {
         <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="font-semibold">顧客別の売上(今期・税抜)</h2>
           <p className="mb-3 text-xs text-slate-500">{rankings.fiscalYear}年度の発行請求書から集計</p>
-          <RankList items={rankings.customers} color="#2a78d6" empty="今期の請求書はまだありません" />
+          <RankList items={rankings.customers} color="#3b5a94" empty="今期の請求書はまだありません" />
         </section>
         <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="font-semibold">費用の内訳(今期)</h2>
           <p className="mb-3 text-xs text-slate-500">{rankings.fiscalYear}年度の記帳済みの費用を科目別に集計</p>
-          <RankList items={rankings.expenses} color="#eb6834" empty="今期の費用はまだありません" />
+          <RankList items={rankings.expenses} color="#c27a3a" empty="今期の費用はまだありません" />
         </section>
       </div>
 

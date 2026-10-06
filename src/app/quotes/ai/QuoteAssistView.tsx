@@ -38,7 +38,7 @@ export function QuoteAssistView({ initialCustomer }: { initialCustomer: string }
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} maxLength={2000} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" placeholder={`例: ${EXAMPLE}`} />
         </label>
         {error && <p className="text-sm text-rose-700">{error}</p>}
-        <button onClick={run} disabled={busy || !text.trim()} className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button onClick={run} disabled={busy || !text.trim()} className="inline-flex items-center gap-1.5 rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           <SparkleIcon className="h-4 w-4" />
           {busy ? "AIが明細を作っています…" : "明細の下書きを作る"}
         </button>
@@ -77,7 +77,7 @@ export function QuoteAssistView({ initialCustomer }: { initialCustomer: string }
             <span className="text-sm">
               小計(税抜) <b className="tabular-nums">{formatYen(draft.subtotal)}</b>
             </span>
-            <Link href={`/quotes/new?draft=${draft.draftId}`} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+            <Link href={`/quotes/new?draft=${draft.draftId}`} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700">
               この明細で見積書を作る →
             </Link>
           </div>

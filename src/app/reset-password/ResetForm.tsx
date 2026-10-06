@@ -28,7 +28,7 @@ export function ResetForm({ token, name }: { token: string; name: string }) {
     return (
       <div className="mt-6 space-y-3 rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-700 shadow-sm">
         <p>新しいパスワードを設定しました。ほかの端末のログインはすべて解除しています。</p>
-        <Link href="/login" className="inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+        <Link href="/login" className="inline-block rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700">
           ログインする
         </Link>
       </div>
@@ -47,7 +47,7 @@ export function ResetForm({ token, name }: { token: string; name: string }) {
         新しいパスワード(確認)
         <input name="passwordConfirm" type="password" required minLength={8} autoComplete="new-password" className={inputClass} />
       </label>
-      <button type="submit" disabled={busy} className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+      <button type="submit" disabled={busy} className="w-full rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
         {busy ? "設定中..." : "パスワードを設定する"}
       </button>
     </form>

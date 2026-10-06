@@ -21,7 +21,7 @@ const CHIP_COLORS = [
   "bg-amber-50 text-amber-800 border-amber-200",
   "bg-rose-50 text-rose-800 border-rose-200",
   "bg-sky-50 text-sky-800 border-sky-200",
-  "bg-violet-50 text-violet-800 border-violet-200",
+  "bg-stone-50 text-stone-800 border-stone-200",
 ];
 const BREAK_OPTIONS = [0, 15, 30, 45, 60, 90, 120];
 
@@ -366,7 +366,7 @@ export default function ShiftsPage() {
                 <button
                   type="submit"
                   disabled={busy}
-                  className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+                  className="rounded-md bg-vermilion-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
                 >
                   保存
                 </button>
@@ -460,7 +460,7 @@ export default function ShiftsPage() {
               <button
                 onClick={() => call("/api/payroll", { method: "POST", body: JSON.stringify({ month }) }, "給料を計上しました")}
                 disabled={busy || !payroll || payroll.total === 0}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+                className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
               >
                 給料として計上
               </button>
@@ -558,7 +558,7 @@ export default function ShiftsPage() {
                       className="w-28 rounded-md border px-2 py-1 text-sm tracking-widest"
                       aria-label={`${person.name}さんの暗証番号`}
                     />
-                    <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                    <button type="submit" disabled={busy} className="rounded-md bg-vermilion-600 px-3 py-1 text-xs font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                       {person.hasPin ? "変更" : "設定"}
                     </button>
                     {person.hasPin && (

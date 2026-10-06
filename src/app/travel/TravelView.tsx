@@ -164,7 +164,7 @@ export function TravelView() {
                     <span>合計</span>
                     <span className="tabular-nums">{formatYen(preview.allowance + preview.lodging)}</span>
                   </p>
-                  <button type="button" disabled={busy || preview.allowance + preview.lodging <= 0} onClick={submit} className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                  <button type="button" disabled={busy || preview.allowance + preview.lodging <= 0} onClick={submit} className="w-full rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                     経費精算に入れる
                   </button>
                   <p className="text-xs text-slate-500">交通費(電車・飛行機など)は実費なので、レシートを経費精算に別に入れてください。</p>
@@ -200,7 +200,7 @@ export function TravelView() {
                 <span>施行日</span>
                 <input type="date" value={policy.effectiveDate ?? ""} onChange={(e) => setPolicy((p) => ({ ...p, effectiveDate: e.target.value }))} className="rounded-md border px-2 py-1.5" />
               </label>
-              <button disabled={busy} className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button disabled={busy} className="w-full rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 規程の金額を保存する
               </button>
               <p className="text-xs text-slate-500">日当は、役員・従業員の全員に同じ基準で、世間一般の相場(同業・同規模の会社くらい)にしておくと、税務上も認められやすくなります。規程の文書は株主総会や取締役会の議事録と一緒に保管してください。</p>

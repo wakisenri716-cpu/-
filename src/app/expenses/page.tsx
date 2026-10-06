@@ -130,7 +130,7 @@ export default function ExpensesPage() {
         <button
           onClick={createReport}
           disabled={creating}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
         >
           {creating ? "作成中..." : "新しい経費精算を作成"}
         </button>
@@ -249,7 +249,7 @@ export default function ExpensesPage() {
                 <button
                   type="submit"
                   disabled={uploadingFor === report.id}
-                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
+                  className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm text-white hover:bg-vermilion-700 disabled:opacity-50"
                 >
                   {uploadingFor === report.id ? "AI解析中..." : "レシートを追加"}
                 </button>

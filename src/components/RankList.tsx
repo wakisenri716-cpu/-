@@ -27,7 +27,7 @@ export function RankList({ items, color, empty }: { items: RankItem[]; color: st
               </span>
             </div>
             <div className="h-2 rounded-full bg-slate-100" aria-hidden>
-              <div className="h-2 rounded-full" style={{ width: `${Math.max(2, (item.amount / max) * 100)}%`, background: item.label === "その他" ? "#94a3b8" : color }} />
+              <div className="h-2 rounded-full" style={{ width: `${Math.max(2, (item.amount / max) * 100)}%`, background: item.label === "その他" ? "#8f99ab" : color }} />
             </div>
           </li>
         );

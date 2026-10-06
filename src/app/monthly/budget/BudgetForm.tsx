@@ -121,7 +121,7 @@ export function BudgetForm({ year, accounts }: { year: number; accounts: Account
           来期の予定(任意)
           <textarea value={draft.plans} onChange={(e) => setDraft((d) => ({ ...d, plans: e.target.value }))} rows={2} maxLength={1000} placeholder="例: 10月に1名採用(月給25万円)。家賃が月3万円上がる。広告は半分にする。" className="mt-0.5 block w-full rounded-md border bg-white px-2 py-1 text-sm" />
         </label>
-        <button type="button" onClick={makeDraft} disabled={drafting} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button type="button" onClick={makeDraft} disabled={drafting} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           {drafting ? "下書きを作っています..." : "下書きを入れる"}
         </button>
         {summary && (
@@ -146,7 +146,7 @@ export function BudgetForm({ year, accounts }: { year: number; accounts: Account
           </table>
         </div>
         <div className="flex justify-end">
-          <button type="submit" disabled={saving} className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={saving} className="rounded-md bg-vermilion-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
             {saving ? "保存中..." : "保存する"}
           </button>
         </div>

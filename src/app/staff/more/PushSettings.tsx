@@ -66,7 +66,7 @@ export function PushSettings() {
       {device === "no-fcm" && <p className="text-amber-700">このアプリは通知の設定なしで作られています。管理者に、通知を使えるアプリを作り直してもらってください(mobile/PUSH.md)。</p>}
       {device === "denied" && <p className="text-amber-700">通知がオフになっています。スマホの「設定」→「スタッフアプリ」→「通知」をオンにしてください。</p>}
       {(device === "prompt" || device === "granted") && (
-        <button onClick={enable} disabled={busy} className="w-full rounded-full bg-indigo-600 px-4 py-2.5 font-medium text-white disabled:opacity-50">
+        <button onClick={enable} disabled={busy} className="w-full rounded-full bg-vermilion-600 px-4 py-2.5 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           通知を受け取る
         </button>
       )}

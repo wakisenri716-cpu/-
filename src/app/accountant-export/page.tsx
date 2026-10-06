@@ -34,7 +34,7 @@ export default async function AccountantExportPage({ searchParams }: { searchPar
           {/* ページ遷移ではなくファイルのダウンロードなので <a> を使う */}
           <a
             href={`/api/accountant-export?${periodQuery(period)}`}
-            className="rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+            className="rounded-md bg-vermilion-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700"
           >
             ZIPでダウンロード
           </a>

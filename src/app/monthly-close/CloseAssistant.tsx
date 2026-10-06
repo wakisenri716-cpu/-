@@ -53,7 +53,7 @@ export function CloseAssistant({ month, monthLabel, tasks, missing, review: init
           <SparkleIcon className="h-4 w-4" />
           AIの月次決算アシスト({monthLabel})
         </h2>
-        <button onClick={ask} disabled={busy !== null} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button onClick={ask} disabled={busy !== null} className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           {busy === "review" ? "AIが確かめています…" : review ? "もう一度見立てる" : "締めてよいかAIに見立ててもらう"}
         </button>
       </div>

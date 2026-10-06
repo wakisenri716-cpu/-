@@ -142,11 +142,11 @@ export function CashCountView() {
           <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} placeholder="メモ(例: 本店レジ・閉店後)" className="w-full rounded-md border px-3 py-2" />
           <div className="space-y-2">
             {diff !== null && diff !== 0 && (
-              <button disabled={busy || !entered} onClick={() => save(true)} className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button disabled={busy || !entered} onClick={() => save(true)} className="w-full rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 記録して帳簿を合わせる({diff > 0 ? "雑収入" : "雑損失"} {formatYen(Math.abs(diff))})
               </button>
             )}
-            <button disabled={busy || !entered} onClick={() => save(false)} className={`w-full rounded-md px-4 py-2 font-medium disabled:opacity-50 ${diff === 0 ? "bg-indigo-600 text-white hover:bg-indigo-700" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
+            <button disabled={busy || !entered} onClick={() => save(false)} className={`w-full rounded-md px-4 py-2 font-medium disabled:opacity-50 ${diff === 0 ? "bg-vermilion-600 text-white hover:bg-vermilion-700" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
               {diff === 0 ? "記録する" : "記録だけする(帳簿は合わせない)"}
             </button>
           </div>

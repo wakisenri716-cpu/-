@@ -193,7 +193,7 @@ export default function BonusPage() {
             <button onClick={calc} disabled={busy || items.length === 0} className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-50">
               計算する
             </button>
-            <button onClick={post} disabled={busy || !preview} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+            <button onClick={post} disabled={busy || !preview} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
               計上する
             </button>
           </div>

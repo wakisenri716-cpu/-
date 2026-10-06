@@ -21,13 +21,13 @@ export async function sendVerification(userId: string, baseUrl: string) {
   if (recent >= MAX_PER_HOUR) throw new UserError("確認のメールを送りすぎています。1時間ほどしてからもう一度お試しください");
   const token = randomBytes(32).toString("base64url");
   await prisma.emailVerification.create({ data: { userId, tokenHash: hash(token), expiresAt: new Date(Date.now() + VALID_HOURS * 3_600_000) } });
-  const intro = [`${user.name} さん`, "", "経理AIにご登録いただき、ありがとうございます。", `下記のリンクを開いて、メールアドレスの確認を済ませてください(${VALID_HOURS}時間有効)。`, ""];
+  const intro = [`${user.name} さん`, "", "Clerkly にご登録いただき、ありがとうございます。", `下記のリンクを開いて、メールアドレスの確認を済ませてください(${VALID_HOURS}時間有効)。`, ""];
   const outro = ["", "このメールに心当たりがない場合は、何もしなくて大丈夫です。"];
   await sendMail({
     companyId: user.companyId,
     kind: "VERIFY",
     to: user.email,
-    subject: "【経理AI】メールアドレスの確認",
+    subject: "【Clerkly】メールアドレスの確認",
     text: [...intro, `${baseUrl}/verify-email?token=${token}`, ...outro].join("\n"),
     logBody: [...intro, "(確認のリンクは安全のため記録していません)", ...outro].join("\n"),
     sentByName: "システム",

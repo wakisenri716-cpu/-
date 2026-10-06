@@ -139,7 +139,7 @@ export default function InvoicesPage() {
       {direction === "ISSUED" && (
         <Link
           href="/invoices/new"
-          className="inline-flex rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+          className="inline-flex rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700"
         >
           + 請求書を作成
         </Link>
@@ -163,7 +163,7 @@ export default function InvoicesPage() {
         <button
           type="submit"
           disabled={uploading}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
         >
           {uploading ? "AI解析中..." : "アップロードしてAI処理"}
         </button>
@@ -230,7 +230,7 @@ export default function InvoicesPage() {
                           <button
                             onClick={() => recordPayment(invoice.id)}
                             disabled={payingId === invoice.id}
-                            className="rounded-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                            className="rounded-md bg-vermilion-600 px-2 py-1 text-xs font-medium text-white hover:bg-vermilion-700 disabled:opacity-50"
                           >
                             記録
                           </button>

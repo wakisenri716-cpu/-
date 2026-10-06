@@ -206,7 +206,7 @@ export default function AdvancesPage() {
               </select>
             </label>
             <div className="flex items-end">
-              <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 記録する(仮払金 / 現金・預金)
               </button>
             </div>
@@ -260,7 +260,7 @@ export default function AdvancesPage() {
               <button type="button" onClick={() => setSettling(null)} className="rounded-md border px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">
                 やめる
               </button>
-              <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 精算する
               </button>
             </div>

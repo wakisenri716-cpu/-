@@ -7,8 +7,8 @@ type Point = { month: string; cash: number; baseCash: number };
 
 // 現預金の見込み(もしも / いまのまま)。色は印だけに使い、文字は文字の色で書く
 const SERIES = {
-  cash: { label: "もしもの場合", color: "#2a78d6" },
-  baseCash: { label: "いまのまま", color: "#94a3b8" },
+  cash: { label: "もしもの場合", color: "#3b5a94" },
+  baseCash: { label: "いまのまま", color: "#8f99ab" },
 } as const;
 const W = 640;
 const H = 240;
@@ -58,7 +58,7 @@ export function CashChart({ data, start }: { data: Point[]; start: number }) {
         <svg viewBox={`0 0 ${W} ${H}`} className="block w-full min-w-[520px]" role="img" aria-label="これから12か月の現預金の見込み">
           {ticks.map((t) => (
             <g key={t}>
-              <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? "#f43f5e" : "#eef2f6"} strokeWidth="1" strokeDasharray={t === 0 ? "3 3" : undefined} />
+              <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? "#f43f5e" : "#e4e7ec"} strokeWidth="1" strokeDasharray={t === 0 ? "3 3" : undefined} />
               <text x={PAD.left - 8} y={y(t)} textAnchor="end" dominantBaseline="middle" className="fill-slate-500 text-[11px]">
                 {axis(t)}
               </text>
@@ -66,7 +66,7 @@ export function CashChart({ data, start }: { data: Point[]; start: number }) {
           ))}
           {data.map((d, i) => (
             <g key={d.month}>
-              {hover === i && <rect x={PAD.left + band * i} y={PAD.top} width={band} height={plotH} fill="#f1f5f9" />}
+              {hover === i && <rect x={PAD.left + band * i} y={PAD.top} width={band} height={plotH} fill="#e4e7ec" />}
               <text x={x(i)} y={H - 8} textAnchor="middle" className="fill-slate-500 text-[11px]">
                 {Number(d.month.slice(5))}月
               </text>

@@ -40,7 +40,7 @@ export function DepartmentManager({ departments }: { departments: Dept[] }) {
       )}
       <form onSubmit={add} className="flex flex-wrap gap-2">
         <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="例: 渋谷店、Web事業部" className="min-w-0 flex-1 rounded-md border px-2 py-1.5 text-sm" aria-label="部門名" />
-        <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button type="submit" disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           追加
         </button>
       </form>

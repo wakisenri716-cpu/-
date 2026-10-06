@@ -68,7 +68,7 @@ export function AddCompany({ companies }: { companies: { id: string; name: strin
               ))}
             </select>
           </label>
-          <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             追加して開く
           </button>
           <button type="button" onClick={() => setOpen(false)} className="rounded-md border px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">

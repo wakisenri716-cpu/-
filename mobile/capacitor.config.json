@@ -2,7 +2,7 @@
   "appId": "com.saaserp.staffapp",
   "appName": "スタッフアプリ",
   "webDir": "www",
-  "backgroundColor": "#f8fafc",
+  "backgroundColor": "#EDEFF2",
   "appendUserAgent": "StaffAppNative/1.0",
   "server": {
     "url": "https://saas-erp-se-n.vercel.app/staff",

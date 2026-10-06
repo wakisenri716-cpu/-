@@ -45,7 +45,7 @@ export function JournalExplain({ entryId, onClose }: { entryId: string; onClose:
 
   // 表が横に長いスマホでも、画面の幅に収めて左に留める
   return (
-    <div className="sticky left-4 max-w-[calc(100vw-4.5rem)] rounded-xl border border-indigo-200 bg-linear-to-br from-indigo-50/80 to-white p-4 text-sm whitespace-normal">
+    <div className="sticky left-4 max-w-[calc(100vw-4.5rem)] rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm whitespace-normal">
       <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-medium text-indigo-700">この仕訳は何?{data && (data.mode === "claude" ? "(AIの説明)" : "(決まったルールでの説明)")}</p>
         <button type="button" onClick={onClose} className="text-xs text-slate-500 hover:underline">

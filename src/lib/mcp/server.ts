@@ -8,7 +8,7 @@ import { authenticateMcp, countMcpCall, DAILY_CALLS, type McpCaller } from "./to
 // 道具は AIアシスタントと同じもの: get_ などは読むだけ、propose_ は下書きを作るだけで、確定は人が画面(/ai-proposals)で行う。
 
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
-const SERVER_INFO = { name: "keiri-automation", title: "AI経理オートメーション", version: "1.0.0" };
+const SERVER_INFO = { name: "clerkly", title: "Clerkly", version: "1.0.0" };
 const READ_ONLY = /^(get_|list_|search_)/;
 
 type JsonRpc = { jsonrpc?: string; id?: string | number | null; method?: string; params?: Record<string, unknown> };

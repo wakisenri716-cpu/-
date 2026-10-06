@@ -187,7 +187,7 @@ export function ShiftsView({ initialTab, initialMonth }: { initialTab: "request"
           {!data.locked && (
             <div className="sticky bottom-20 z-10 md:bottom-4">
               {message && <p className={`mb-2 rounded-lg px-3 py-2 text-sm shadow ${message.ok ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>{message.text}</p>}
-              <button onClick={save} disabled={busy} className="w-full rounded-xl bg-indigo-600 py-3 font-medium text-white shadow-lg disabled:opacity-50">
+              <button onClick={save} disabled={busy} className="w-full rounded-xl bg-vermilion-600 py-3 font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
                 {busy ? "提出中..." : `${m}月の希望を提出する(◯${counts.available ?? 0}日・✕${counts.off ?? 0}日)`}
               </button>
             </div>

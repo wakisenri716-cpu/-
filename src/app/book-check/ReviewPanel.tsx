@@ -26,7 +26,7 @@ export function ReviewPanel({ initial }: { initial: Review | null }) {
           <SparkleIcon className="h-4 w-4" />
           AIの所見
         </h2>
-        <button onClick={run} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button onClick={run} disabled={busy} className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           {busy ? "AIが読んでいます…" : review ? "もう一度まとめる" : "どこから直すかAIにまとめてもらう"}
         </button>
       </div>

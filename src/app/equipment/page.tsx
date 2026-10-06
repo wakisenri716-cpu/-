@@ -143,7 +143,7 @@ export default function EquipmentPage() {
           <button onClick={() => window.print()} className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50">
             台帳を印刷
           </button>
-          <button onClick={() => setModal({ kind: "edit", item: null })} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+          <button onClick={() => setModal({ kind: "edit", item: null })} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700">
             + 備品を登録
           </button>
         </div>
@@ -443,7 +443,7 @@ function Buttons({ busy, label, onCancel }: { busy: boolean; label: string; onCa
       <button type="button" onClick={onCancel} className="rounded-md border px-4 py-2 text-sm">
         やめる
       </button>
-      <button type="submit" disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+      <button type="submit" disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
         {busy ? "処理中..." : label}
       </button>
     </div>

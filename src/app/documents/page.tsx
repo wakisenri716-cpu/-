@@ -66,7 +66,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
           </select>
         </label>
         <div className="flex gap-2 sm:col-span-2 lg:col-span-4">
-          <button type="submit" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+          <button type="submit" className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700">
             検索
           </button>
           {qs && (

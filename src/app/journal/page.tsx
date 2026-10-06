@@ -498,7 +498,7 @@ export default function JournalPage() {
             <button
               type="submit"
               disabled={saving || !balanced}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+              className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
             >
               {saving ? "登録中..." : "仕訳を登録"}
             </button>
@@ -561,7 +561,7 @@ export default function JournalPage() {
             ))}
           </select>
           <div className="flex gap-2">
-            <button type="submit" className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-indigo-700">
+            <button type="submit" className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-vermilion-700">
               検索
             </button>
             {searching && (
@@ -660,7 +660,7 @@ export default function JournalPage() {
                         </button>
                         <button type="button" onClick={() => toggleComments(entry.id)} aria-expanded={commenting.includes(entry.id)} className={`text-xs hover:underline ${commentCounts[entry.id]?.open ? "font-semibold text-sky-700" : "text-slate-600"}`}>
                           コメント{commentCounts[entry.id]?.total ? `(${commentCounts[entry.id].total})` : ""}
-                          {commentCounts[entry.id]?.open ? <span className="ml-1 inline-block size-1.5 rounded-full bg-sky-600 align-middle" aria-label="未解決あり" /> : null}
+                          {commentCounts[entry.id]?.open ? <span className="ml-1 inline-block size-1.5 rounded-full bg-vermilion-500 align-middle" aria-label="未解決あり" /> : null}
                         </button>
                         {!isVoid && (
                           <button type="button" onClick={() => duplicate(entry)} className="text-xs text-indigo-700 hover:underline">

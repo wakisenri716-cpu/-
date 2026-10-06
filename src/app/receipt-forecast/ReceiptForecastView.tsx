@@ -53,7 +53,7 @@ export function ReceiptForecastView({ initial }: { initial: Data }) {
             <SparkleIcon className="h-4 w-4" />
             AIの見直し
           </h2>
-          <button onClick={review} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button onClick={review} disabled={busy} className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             {busy ? "AIが読んでいます…" : f.review ? "もう一度AIに見直してもらう" : "AIに見直してもらう"}
           </button>
         </div>

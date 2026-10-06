@@ -72,7 +72,7 @@ export function WelcomeForm({
         )}
         {needsTerms && <TermsAgreement />}
         <div className="flex flex-wrap items-center gap-3">
-          <button type="submit" disabled={submitting} className="rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={submitting} className="rounded-md bg-vermilion-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
             {submitting ? "保存中..." : needsCompanyInfo ? "保存してはじめる" : "同意してはじめる"}
           </button>
           {needsCompanyInfo && (

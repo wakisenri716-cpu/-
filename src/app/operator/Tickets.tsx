@@ -66,7 +66,7 @@ export function Tickets({ tickets }: { tickets: Ticket[] }) {
             <div className="mt-3 space-y-2">
               {error && <p className="text-rose-600">{error}</p>}
               <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={6} className="w-full rounded-md border px-3 py-2" placeholder={`${t.name} 様あての返信(メールで送ります。お問い合わせの内容は下に自動で付きます)`} />
-              <button disabled={busy || reply.trim().length < 2} onClick={() => send(t.id, { action: "reply", reply })} className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+              <button disabled={busy || reply.trim().length < 2} onClick={() => send(t.id, { action: "reply", reply })} className="rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                 {busy ? "送信中..." : "メールで返信して対応済みにする"}
               </button>
             </div>

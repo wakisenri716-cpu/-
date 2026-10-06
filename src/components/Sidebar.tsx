@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ClerklyLogo } from "@/components/Logo";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -325,7 +326,7 @@ function NavLink({
     >
       {active && (
         <span
-          className="absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-full bg-indigo-600"
+          className="absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-full bg-vermilion-500"
           aria-hidden
         />
       )}
@@ -461,21 +462,7 @@ function MenuSearch({
 }
 
 function Brand() {
-  return (
-    <span className="flex items-center gap-2.5">
-      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-linear-to-br from-indigo-500 to-violet-600 text-[13px] font-bold text-white shadow-sm shadow-indigo-500/30">
-        AI
-      </span>
-      <span className="leading-tight">
-        <span className="block text-[13.5px] font-bold tracking-wide text-slate-900">
-          経理オートメーション
-        </span>
-        <span className="block text-[10.5px] font-medium text-slate-400">
-          AI-first back office
-        </span>
-      </span>
-    </span>
-  );
+  return <ClerklyLogo size={24} />;
 }
 
 export function Sidebar({
@@ -514,7 +501,7 @@ export function Sidebar({
   }, []);
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-slate-200/80 bg-slate-50/80 backdrop-blur md:flex print:hidden">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-slate-50 md:flex print:hidden">
       <div className="px-4 pt-4 pb-3">
         <Brand />
       </div>

@@ -50,7 +50,7 @@ export function Notices({ notices }: { notices: Notice[] }) {
             <input type="datetime-local" name="endsAt" className="rounded-md border px-2 py-1" />
           </label>
         </div>
-        <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           全員に出す
         </button>
         <p className="text-xs text-slate-500">ログインしているすべての会社・ユーザー(スタッフアプリを含む)の画面の上に出ます。見た人は「×」で閉じられます。</p>

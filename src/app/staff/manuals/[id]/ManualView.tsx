@@ -62,7 +62,7 @@ export function ManualView({ id }: { id: string }) {
           {manual.read ? (
             <p className="rounded-xl bg-emerald-50 py-3 text-center text-sm font-medium text-emerald-800 shadow">✓ 読みました</p>
           ) : (
-            <button onClick={read} disabled={busy} className="w-full rounded-xl bg-indigo-600 py-3 font-medium text-white shadow-lg disabled:opacity-50">
+            <button onClick={read} disabled={busy} className="w-full rounded-xl bg-vermilion-600 py-3 font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
               読みました
             </button>
           )}

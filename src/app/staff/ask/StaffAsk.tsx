@@ -95,7 +95,7 @@ export function StaffAsk() {
         className="fixed inset-x-0 bottom-16 z-20 mx-auto flex max-w-2xl gap-2 border-t border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur md:static md:border-0 md:bg-transparent md:p-0"
       >
         <input value={input} onChange={(e) => setInput(e.target.value)} maxLength={1000} placeholder="例: 有給はあと何日?" className="min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm" />
-        <button disabled={busy || !input.trim()} className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button disabled={busy || !input.trim()} className="rounded-full bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           聞く
         </button>
       </form>

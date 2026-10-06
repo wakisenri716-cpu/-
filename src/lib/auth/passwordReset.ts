@@ -26,13 +26,13 @@ export async function requestPasswordReset(emailInput: unknown, baseUrl: string)
     await prisma.passwordReset.delete({ where: { id: created.id } });
     return;
   }
-  const intro = [`${user.name} さん`, "", "経理AIのパスワード再設定のご依頼を受け付けました。", `下記のリンクから、${VALID_MINUTES}分以内に新しいパスワードを設定してください。`, ""];
+  const intro = [`${user.name} さん`, "", "Clerkly のパスワード再設定のご依頼を受け付けました。", `下記のリンクから、${VALID_MINUTES}分以内に新しいパスワードを設定してください。`, ""];
   const outro = ["", "このメールに心当たりがない場合は、何もしなくて大丈夫です(パスワードは変わりません)。"];
   await sendMail({
     companyId: user.companyId,
     kind: "PASSWORD_RESET",
     to: user.email,
-    subject: "【経理AI】パスワード再設定のご案内",
+    subject: "【Clerkly】パスワード再設定のご案内",
     text: [...intro, `${baseUrl}/reset-password?token=${token}`, ...outro].join("\n"),
     // 記録を見られる人がリンクを使えないよう、履歴にはリンクを残さない
     logBody: [...intro, "(再設定のリンクは安全のため記録していません)", ...outro].join("\n"),

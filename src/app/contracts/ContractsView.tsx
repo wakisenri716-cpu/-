@@ -121,7 +121,7 @@ function Editor({ c, kinds, onDone }: { c: Contract; kinds: Record<string, strin
         <button onClick={onDone} className="rounded-md border px-3 py-1.5 text-sm text-slate-700 hover:bg-white">
           やめる
         </button>
-        <button onClick={save} className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700">
+        <button onClick={save} className="rounded-md bg-vermilion-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700">
           保存
         </button>
       </div>
@@ -159,7 +159,7 @@ export function ContractsView({ contracts, kinds }: { contracts: Contract[]; kin
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-indigo-200 bg-white p-4 shadow-sm">
-        <label className={`cursor-pointer rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 ${busy ? "pointer-events-none opacity-50" : ""}`}>
+        <label className={`cursor-pointer rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 ${busy ? "pointer-events-none opacity-50" : ""}`}>
           {busy ? "AIが読み取っています…" : "契約書を入れる(PDF・写真)"}
           <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} disabled={busy} />
         </label>

@@ -33,7 +33,7 @@ export function BillingGapsView({ initial }: { initial: Data }) {
             <SparkleIcon className="h-4 w-4" />
             AIの見立て
           </h2>
-          <button onClick={() => post({ action: "review" }, "review")} disabled={!!busy} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button onClick={() => post({ action: "review" }, "review")} disabled={!!busy} className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
             {busy === "review" ? "AIが読んでいます…" : data.review ? "もう一度AIに見てもらう" : "AIに見てもらう"}
           </button>
         </div>
@@ -75,7 +75,7 @@ export function BillingGapsView({ initial }: { initial: Data }) {
                   </p>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Link href={g.href} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700">
+                  <Link href={g.href} className="rounded-md bg-vermilion-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-vermilion-700">
                     {g.hrefLabel}
                   </Link>
                   <button onClick={() => post({ action: "dismiss", key: g.key }, g.key)} disabled={!!busy} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">

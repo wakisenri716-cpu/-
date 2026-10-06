@@ -275,7 +275,7 @@ export default function AutoShift({ initialMonth, ai }: { initialMonth: string |
         <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2">
           <h2 className="text-sm font-semibold">下書き(日ごと)</h2>
           <span className="text-xs text-slate-500">チェックを外したものは作りません</span>
-          <button onClick={create} disabled={busy || selected === 0} className="ml-auto rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+          <button onClick={create} disabled={busy || selected === 0} className="ml-auto rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50">
             このシフトで作る({selected}件)
           </button>
         </div>

@@ -5,7 +5,7 @@ import { GUIDE, type GuideSection } from "@/lib/guide";
 import { PrintButton } from "@/components/PrintButton";
 import { LegalLinks } from "@/components/LegalLinks";
 
-export const metadata: Metadata = { title: "使い方ガイド | AI経理オートメーション" };
+export const metadata: Metadata = { title: "使い方ガイド | Clerkly" };
 
 const WHO = { 全員: "bg-emerald-100 text-emerald-800", 管理者: "bg-indigo-100 text-indigo-800", 従業員: "bg-sky-100 text-sky-800" } as const;
 
@@ -69,7 +69,7 @@ export default function GuidePage() {
     <div className="mx-auto max-w-3xl space-y-8 py-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold tracking-wide text-indigo-700">AI経理オートメーション</p>
+          <p className="text-xs font-semibold tracking-wide text-indigo-700">Clerkly(クラークリー)</p>
           <h1 className="mt-1 text-2xl font-bold sm:text-3xl">使い方ガイドブック</h1>
           <p className="mt-2 text-sm text-slate-600">
             登録から、毎日の経費・請求、毎月の給与と締め、年に1回の決算まで、仕事の流れにそって使い方をまとめました。画面の写真の<span className="font-semibold text-rose-600">赤い枠</span>が、押すところです(写真はクリックすると大きく見られます)。「印刷・PDF」で1冊の冊子として保存できます。

@@ -131,7 +131,7 @@ export function AllocationView() {
         <button
           onClick={() => setDraft({ name: "", accountCodes: [], basis: "FIXED", weights: Object.fromEntries(activeDepartments.map((d) => [d.id, ""])) })}
           disabled={activeDepartments.length < 2}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700 disabled:opacity-50"
         >
           配賦の設定を追加
         </button>
@@ -209,7 +209,7 @@ export function AllocationView() {
             </div>
           </fieldset>
           <div className="flex gap-2">
-            <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+            <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
               {draft.id ? "変更する" : "登録する"}
             </button>
             <button type="button" onClick={() => setDraft(null)} className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
@@ -306,7 +306,7 @@ export function AllocationView() {
                   ) : p.problem ? (
                     <p className="text-sm text-slate-500">{p.problem}</p>
                   ) : (
-                    <button onClick={() => run(a)} disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                    <button onClick={() => run(a)} disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                       {monthLabel(month)}を配賦する
                     </button>
                   )}

@@ -44,7 +44,7 @@ function NoticeForm({ item, busy, onSubmit, onCancel }: { item?: Item; busy: boo
         )}
       </div>
       <div className="flex gap-2">
-        <button disabled={busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           {item ? "保存" : "お知らせを出す"}
         </button>
         {onCancel && (
@@ -140,7 +140,7 @@ export default function NoticesPage() {
           </p>
         </div>
         {data?.canWrite && !writing && (
-          <button onClick={() => setWriting(true)} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+          <button onClick={() => setWriting(true)} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-vermilion-700">
             + お知らせを書く
           </button>
         )}

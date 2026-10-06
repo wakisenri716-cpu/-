@@ -76,7 +76,7 @@ async function mark(page, text) {
   await target.evaluate((el) => {
     // 真ん中あたりに来るようにスクロールしてから、印の位置を決める
     el.scrollIntoView({ block: "center" });
-    el.style.outline = "3px solid #ef4444";
+    el.style.outline = "3px solid #E0522D";
     el.style.outlineOffset = "3px";
     el.style.borderRadius = el.style.borderRadius || "6px";
     const r = el.getBoundingClientRect();
@@ -86,7 +86,7 @@ async function mark(page, text) {
       position: "fixed",
       left: `${Math.max(4, r.left - 6)}px`,
       top: `${Math.max(4, r.top - 30)}px`,
-      background: "#ef4444",
+      background: "#E0522D",
       color: "white",
       font: "bold 13px sans-serif",
       padding: "3px 8px",
