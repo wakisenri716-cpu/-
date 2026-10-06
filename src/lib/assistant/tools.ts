@@ -37,6 +37,7 @@ import { simulatePriceIncrease } from "@/lib/priceMath";
 import { findFixedCosts } from "@/lib/fixedCosts";
 import { getTaxForecast } from "@/lib/taxForecast";
 import { SAVING_OPTIONS } from "@/lib/taxSavingOptions";
+import { getLaborAnalysis } from "@/lib/laborAnalysis";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
@@ -327,6 +328,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_tax_forecast",
     description: "今期の着地見込みと納税の目安。終わった月の実績と直近3か月の平均から期末の税引前利益を見込み、法人税等(標準税率の目安)・中間納付を引いた納付額・納付期限・いまの現預金と、決算までにできること(決算賞与・経営セーフティ共済・少額の備品・短期前払費用・処分)の一覧を返す。「今期の税金はいくら?」「節税は?」「決算対策は?」などに使う。税理士への確認を必ず勧める。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_labor_analysis",
+    description: "人件費の分析。直近6か月の売上・粗利・人件費・人件費率・労働分配率・勤務時間・人時売上高、指定の月(YYYY-MM、任意)のスタッフごとの勤務時間・残業(月45時間超の印)・深夜・支給額、曜日ごとの1時間あたりの売上を返す。「人件費は高い?」「残業が多い人は?」「何曜日が暇?」などに使う。",
+    input_schema: { type: "object", properties: { month: { type: "string", description: "YYYY-MM(任意)" } }, additionalProperties: false },
   },
   {
     name: "simulate_scenario",
@@ -688,6 +694,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         note: "標準税率での目安。実際の申告・節税は税理士に確認すること",
         link: "/tax-forecast",
       };
+    }
+    case "get_labor_analysis": {
+      const r = await getLaborAnalysis(companyId, str(input.month) || null);
+      return { months: r.months, staffMonth: r.month, staff: r.staff.map(({ staffId: _s, ...s }) => (void _s, s)), weekdays: r.weekdays, findings: r.findings, link: "/labor-analysis" };
     }
     case "simulate_scenario": {
       const structured = input.revenuePct !== undefined || Array.isArray(input.items) || Array.isArray(input.oneTime);
