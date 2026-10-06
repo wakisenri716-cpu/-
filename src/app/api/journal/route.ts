@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { commentCounts } from "@/lib/journalComments";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyId } from "@/lib/auth/session";
 import { ensureChartOfAccounts } from "@/lib/accounting/accounts";
@@ -25,7 +26,8 @@ export async function GET(request: Request) {
     prisma.department.findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } }),
     listActiveProjects(companyId),
   ]);
-  return NextResponse.json({ entries, accounts, departments, projects });
+  const comments = await commentCounts(companyId, entries.map((e) => e.id));
+  return NextResponse.json({ entries, accounts, departments, projects, comments });
 }
 
 export async function POST(request: Request) {

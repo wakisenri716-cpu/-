@@ -5,6 +5,7 @@ import { Fragment, useCallback, useEffect, useState, type FormEvent } from "reac
 import { formatDate, formatYen } from "@/lib/format";
 import { CsvDownloadLink } from "@/components/CsvDownloadLink";
 import { JournalExplain } from "./JournalExplain";
+import { JournalComments } from "./JournalComments";
 
 type Account = { id: string; code: string; name: string; category: string };
 
@@ -78,6 +79,10 @@ export default function JournalPage() {
   // 「これは何?」の説明を開いている仕訳
   const [explaining, setExplaining] = useState<string[]>([]);
   const toggleExplain = (id: string) => setExplaining((all) => (all.includes(id) ? all.filter((x) => x !== id) : [...all, id]));
+  // 仕訳へのコメント(税理士とのやりとり)の数と、開いている仕訳
+  const [commentCounts, setCommentCounts] = useState<Record<string, { total: number; open: number }>>({});
+  const [commenting, setCommenting] = useState<string[]>([]);
+  const toggleComments = (id: string) => setCommenting((all) => (all.includes(id) ? all.filter((x) => x !== id) : [...all, id]));
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [departmentId, setDepartmentId] = useState("");
@@ -104,6 +109,7 @@ export default function JournalPage() {
     const res = await fetch(`/api/journal${query ? `?${query}` : ""}`);
     const body = await res.json();
     setEntries(body.entries);
+    setCommentCounts(body.comments ?? {});
     setAccounts(body.accounts);
     setDepartments(body.departments ?? []);
     setProjects(body.projects ?? []);
@@ -652,6 +658,10 @@ export default function JournalPage() {
                         <button type="button" onClick={() => toggleExplain(entry.id)} aria-expanded={explaining.includes(entry.id)} className="text-xs text-indigo-700 hover:underline">
                           これは何?
                         </button>
+                        <button type="button" onClick={() => toggleComments(entry.id)} aria-expanded={commenting.includes(entry.id)} className={`text-xs hover:underline ${commentCounts[entry.id]?.open ? "font-semibold text-sky-700" : "text-slate-600"}`}>
+                          コメント{commentCounts[entry.id]?.total ? `(${commentCounts[entry.id].total})` : ""}
+                          {commentCounts[entry.id]?.open ? <span className="ml-1 inline-block size-1.5 rounded-full bg-sky-600 align-middle" aria-label="未解決あり" /> : null}
+                        </button>
                         {!isVoid && (
                           <button type="button" onClick={() => duplicate(entry)} className="text-xs text-indigo-700 hover:underline">
                             複製
@@ -664,6 +674,13 @@ export default function JournalPage() {
                         )}
                       </td>
                     </tr>
+                    {commenting.includes(entry.id) && (
+                      <tr className="hover:bg-transparent">
+                        <td colSpan={6} className="px-4 pb-3">
+                          <JournalComments entryId={entry.id} onClose={() => toggleComments(entry.id)} onCount={(c) => setCommentCounts((all) => ({ ...all, [entry.id]: c }))} />
+                        </td>
+                      </tr>
+                    )}
                     {explaining.includes(entry.id) && (
                       <tr className="hover:bg-transparent">
                         <td colSpan={6} className="px-4 pb-3">

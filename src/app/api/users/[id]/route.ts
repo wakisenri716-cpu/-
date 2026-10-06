@@ -6,7 +6,7 @@ import { audit } from "@/lib/audit";
 import { checkSeat } from "@/lib/billing";
 import { UserError } from "@/lib/errors";
 
-const ROLE_LABELS = { ADMIN: "管理者", ACCOUNTANT: "経理担当", EMPLOYEE: "従業員" } as const;
+const ROLE_LABELS = { ADMIN: "管理者", ACCOUNTANT: "経理担当", EMPLOYEE: "従業員", ADVISOR: "税理士(閲覧のみ)" } as const;
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await adminOr403();

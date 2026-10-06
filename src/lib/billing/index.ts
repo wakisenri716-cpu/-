@@ -75,7 +75,7 @@ export const BILLING_OPEN_PATHS = ["/billing", "/account", "/backup", "/accounta
 
 // ライトプランは管理者・経理担当の人数に上限がある(無料期間中は上限なし)
 export async function checkSeat(companyId: string, role: string, exceptUserId?: string) {
-  if (role === "EMPLOYEE") return;
+  if (role === "EMPLOYEE" || role === "ADVISOR") return;
   const { state } = await companyBilling(companyId);
   if (state.phase !== "active" && state.phase !== "past_due") return;
   const plan = plans()[state.plan ?? "STANDARD"];

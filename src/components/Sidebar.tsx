@@ -173,6 +173,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "帳票",
     items: [
       { href: "/journal", label: "仕訳帳", icon: JournalIcon },
+      { href: "/journal-comments", label: "税理士とのやりとり", icon: JournalIcon },
       { href: "/ledger", label: "総勘定元帳", icon: BookIcon },
       { href: "/trial-balance", label: "試算表", icon: ScaleIcon },
       { href: "/income-statement", label: "損益計算書", icon: ChartIcon },
@@ -198,7 +199,7 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-type Role = "ADMIN" | "ACCOUNTANT" | "EMPLOYEE";
+type Role = "ADMIN" | "ACCOUNTANT" | "EMPLOYEE" | "ADVISOR";
 
 const EMPLOYEE_SECTIONS: NavSection[] = [
   {
