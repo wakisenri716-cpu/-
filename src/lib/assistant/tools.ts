@@ -39,6 +39,8 @@ import { getTaxForecast } from "@/lib/taxForecast";
 import { SAVING_OPTIONS } from "@/lib/taxSavingOptions";
 import { getLaborAnalysis } from "@/lib/laborAnalysis";
 import { getCustomerProfit } from "@/lib/customerProfit";
+import { getAnalysis } from "@/lib/accounting/analysis";
+import { templateExplanation } from "@/lib/analysisExplain";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
@@ -339,6 +341,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_customer_profit",
     description: "顧客別の採算。直近12か月の顧客ごとの売上(税抜)・案件に付いた原価と経費・日報の作業時間と人件費・粗利・粗利率・1時間あたりの粗利・入金の遅れと、赤字・粗利率が低い・手間のわりに粗利が少ない・入金が遅れがちの印を返す。「儲かっている顧客は?」「採算の悪い取引先は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_business_analysis",
+    description: "経営分析。期間(既定は今期の期首から今日まで)の売上・粗利・営業利益・現預金と、粗利率・営業利益率・人件費率・流動比率・当座比率・自己資本比率・手元資金(月商の何か月分)・売掛金の回収日数、前年同期の値、一般的な目安、良いところ・気をつけるところを返す。「会社の状態は?」「つぶれにくい?」「経営分析して」などに使う。",
+    input_schema: { type: "object", properties: { from: { type: "string", description: "YYYY-MM-DD(任意)" }, to: { type: "string", description: "YYYY-MM-DD(任意)" } }, additionalProperties: false },
   },
   {
     name: "simulate_scenario",
@@ -713,6 +720,23 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         customers: r.rows.slice(0, 20).map((c) => ({ name: c.name, revenue: c.revenue, share: c.share, cost: c.cost + c.laborCost, hours: c.hours, gross: c.gross, margin: c.margin, grossPerHour: c.grossPerHour, avgLateDays: c.avgLateDays, overdue: c.overdue, flags: c.flags })),
         findings: r.findings,
         link: "/customer-profit",
+      };
+    }
+    case "get_business_analysis": {
+      const today = jstDateKey(new Date());
+      const fyStart = resolvePeriod({ preset: "this-fy" }, await getFiscalStartMonth(companyId)).from ?? `${today.slice(0, 4)}-01-01`;
+      const from = /^\d{4}-\d{2}-\d{2}$/.test(str(input.from)) ? str(input.from) : fyStart;
+      const to = /^\d{4}-\d{2}-\d{2}$/.test(str(input.to)) ? str(input.to) : today;
+      const a = await getAnalysis(companyId, { from, to }, today);
+      const e = templateExplanation(a);
+      return {
+        period: `${a.from}〜${a.to}`,
+        figures: a.figures,
+        metrics: a.metrics.map((m) => ({ name: m.label, unit: m.unit, current: m.current === null ? null : Math.round(m.current * 10) / 10, prior: m.prior === null ? null : Math.round(m.prior * 10) / 10, guide: m.guide })),
+        summary: e.summary,
+        strengths: e.strengths,
+        concerns: e.concerns,
+        link: "/analysis?preset=this-fy",
       };
     }
     case "simulate_scenario": {

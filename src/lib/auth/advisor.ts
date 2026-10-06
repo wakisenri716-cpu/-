@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { forbidden } from "next/navigation";
 
 // 税理士・会計事務所(ADVISOR)は閲覧だけ。データを変える送信(GET 以外)は、自分のアカウントの操作・会社の切り替え・
-// AIアシスタントへの質問・シミュレーション・予算の差の原因・着地見込みの見立て・仕訳の説明・仕訳へのコメントだけを通し、ほかは 403 にする。
+// AIアシスタントへの質問・シミュレーション・予算の差の原因・着地見込みの見立て・経営分析の解説・仕訳の説明・仕訳へのコメントだけを通し、ほかは 403 にする。
 // proxy が実際のメソッドとパスを x-method / x-pathname に入れて渡す(外から送られた同じ名前のヘッダーは上書きされる)。
 const SAFE = ["GET", "HEAD", "OPTIONS"];
 const ALLOWED = [
@@ -14,6 +14,7 @@ const ALLOWED = [
   /^\/api\/simulation$/,
   /^\/api\/budgets\/variance$/,
   /^\/api\/tax-forecast$/,
+  /^\/api\/analysis\/explain$/,
   /^\/api\/journal\/[^/]+\/explain$/,
   /^\/api\/journal\/[^/]+\/comments$/,
   /^\/api\/support$/,
