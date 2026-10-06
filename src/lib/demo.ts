@@ -85,6 +85,10 @@ export async function createDemoCompany(userId: string) {
     await journal(dayOf(i, 26), "電話・インターネット", "5040", "1020", 18_400);
     await journal(dayOf(i, 25), "アルバイトの給料", "5110", "1020", 310_000 + k * 9_000);
     if (k % 2 === 0) await journal(dayOf(i, 15), "チラシの印刷", "5130", "1020", 45_000);
+    // 毎月のサブスク(固定費の見直しを試せるように。クラウドストレージは先月から値上がり)
+    await journal(dayOf(i, 3), "クラウドストレージの利用料", "5040", "1020", k >= 5 ? 1_650 : 1_320);
+    await journal(dayOf(i, 5), "Web会議サービス", "5040", "1020", 2_200);
+    await journal(dayOf(i, 8), "店内BGMの配信サービス", "5990", "1020", 1_980);
   }
   await journal(dayOf(1, 18), "Web広告(キャンペーン)", "5130", "1020", 160_000);
 

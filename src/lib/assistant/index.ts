@@ -30,6 +30,7 @@ const SCREENS = [
   ["/shifts/auto", "シフトの自動作成"],
   ["/sales-analysis", "売上分析"],
   ["/price-review", "値上げの検討"],
+  ["/fixed-costs", "固定費・サブスクの見直し"],
   ["/receivables", "売掛金・買掛金"],
   ["/invoices", "請求書"],
   ["/expenses", "経費精算"],
@@ -140,6 +141,17 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("simulate_scenario", { text: q })) as { comments?: string[]; error?: string };
     if (r.error) return { reply: r.error, tools: ["simulate_scenario"], mode: "simple" };
     return { reply: [...(r.comments ?? []), "[もしもシミュレーション](/simulation)"].join("\n"), tools: ["simulate_scenario"], mode: "simple" };
+  }
+  // 「固定費を減らしたい」「サブスクは?」→ 固定費・サブスクの見直し
+  if (/固定費|サブスク|定額|節約|経費を減ら|コスト削減/.test(q)) {
+    const r = (await run("get_fixed_costs")) as { monthlyTotal: number; count: number; items: { name: string; monthly: number; flags: string[]; note: string | null }[] };
+    if (!r.count) return { reply: "毎月くり返している支払いは見つかりませんでした。\n[固定費・サブスクの見直し](/fixed-costs)", tools: ["get_fixed_costs"], mode: "simple" };
+    const flagged = r.items.filter((i) => i.note);
+    return {
+      reply: [`毎月の支払いは ${r.count}件・月 ${formatYen(r.monthlyTotal)} です。`, ...(flagged.length ? flagged.slice(0, 5).map((i) => `・${i.name}(月 ${formatYen(i.monthly)}): ${i.note}`) : r.items.slice(0, 5).map((i) => `・${i.name}: 月 ${formatYen(i.monthly)}`)), "[固定費・サブスクの見直し](/fixed-costs)"].join("\n"),
+      tools: ["get_fixed_costs"],
+      mode: "simple",
+    };
   }
   // 「値上げしたほうがいい?」→ 値上げの検討
   if (/値上げ|価格改定|値段を上げ/.test(q)) {
