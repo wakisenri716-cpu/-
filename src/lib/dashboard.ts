@@ -207,7 +207,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     { key: "lateOrders", label: "納期を過ぎた発注", detail: "納品されたか確かめて、届いていれば「検収する」を押してください", count: lateOrders, href: "/purchase-orders", tone: "amber" },
     { key: "yearEnd", label: `${yearEnd.year}年分の年末調整`, detail: "扶養控除等申告書などを集めて申告を入力し、確定してください", count: yearEnd.count, href: `/year-end?year=${yearEnd.year}`, tone: "amber" },
     { key: "loans", label: "返却予定を過ぎた備品", detail: "貸し出した備品の返却予定日を過ぎています。返してもらうか、予定日を延ばしてください", count: overdueLoans, href: "/equipment", tone: "amber" },
-    { key: "stock", label: "発注が必要な商品", detail: "在庫切れ・発注点以下の商品があります", count: stockouts, href: "/inventory", tone: "slate" },
+    { key: "stock", label: "発注が必要な商品", detail: "在庫切れ・発注点以下の商品があります(発注の提案から発注書を作れます)", count: stockouts, href: "/reorder", tone: "slate" },
   ];
   return todos.filter((t) => t.count > 0);
 }
