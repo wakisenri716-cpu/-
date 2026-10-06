@@ -56,6 +56,7 @@ const SCREENS = [
   ["/billing-gaps", "請求漏れのチェック"],
   ["/quotes/ai", "AI見積アシスト"],
   ["/party-duplicates", "取引先の重複"],
+  ["/year-end-close", "決算の準備"],
   ["/transfers", "振込データ"],
   ["/vendors", "取引先"],
 ];
@@ -177,6 +178,10 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("get_customer_insights")) as { insights: { customer: string; kind: string; detail: string }[] };
     if (!r.insights.length) return { reply: "目立った変化のある顧客はいません。", tools: ["get_customer_insights"], mode: "simple" };
     return { reply: ["顧客の変化:", ...r.insights.slice(0, 5).map((i) => `・${i.customer}(${i.kind}): ${i.detail}`), "[顧客の見守り](/customer-insights)"].join("\n"), tools: ["get_customer_insights"], mode: "simple" };
+  }
+  if (/決算/.test(q)) {
+    const r = (await run("get_year_end")) as { fiscalYear: string; left: number; total: number; items: { label: string; done: boolean }[] };
+    return { reply: [r.left ? `${r.fiscalYear} の決算までに残っている作業が ${r.left}件(全${r.total}件)あります:` : `${r.fiscalYear} の決算の準備はすべて済んでいます。`, ...r.items.filter((i) => !i.done).slice(0, 5).map((i) => `・${i.label}`), "[決算の準備](/year-end-close)"].join("\n"), tools: ["get_year_end"], mode: "simple" };
   }
   if (/(取引先|顧客|仕入先).*(重複|ダブ|二重登録|同じ.*登録)/.test(q)) {
     const r = (await run("get_duplicate_parties")) as { count: number; groups: { strength: string; names: string[] }[] };

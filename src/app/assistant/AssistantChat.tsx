@@ -94,6 +94,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_billing_gaps: "請求漏れ",
   draft_quote: "見積の下書き",
   get_duplicate_parties: "取引先の重複",
+  get_year_end: "決算の準備",
 };
 
 // [名前](/パス) の形のリンクだけをアプリ内リンクにする(外のURLはリンクにしない)

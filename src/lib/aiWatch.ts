@@ -11,15 +11,16 @@ import { runBookCheck } from "@/lib/bookCheck";
 import { getAccountReview } from "@/lib/accountReview";
 import { findBillingGaps } from "@/lib/billingGaps";
 import { findDuplicateParties } from "@/lib/partyMerge";
+import { getYearEndChecklist } from "@/lib/yearEndClose";
 
-// AIの見張り: 会社のいろいろな見守り(資金・契約・顧客・仕入先・督促・発注書・異常・二重計上・帳簿・科目・請求漏れ・取引先の重複)の結果を1か所に集める。
+// AIの見張り: 会社のいろいろな見守り(資金・契約・顧客・仕入先・督促・発注書・異常・二重計上・帳簿・科目・請求漏れ・取引先の重複・決算の準備)の結果を1か所に集める。
 // 「AIの見張り」画面と、毎朝のブリーフィングで使う。
 
 export type WatchStatus = "ok" | "info" | "warn";
 export type Watch = { key: string; label: string; status: WatchStatus; headline: string; href: string; items: string[] };
 
 export async function getWatches(companyId: string): Promise<Watch[]> {
-  const [cash, contracts, customers, vendors, po, collections, anomalies, duplicates, book, accounts, billing, parties] = await Promise.all([
+  const [cash, contracts, customers, vendors, po, collections, anomalies, duplicates, book, accounts, billing, parties, yearEnd] = await Promise.all([
     buildCashFacts(companyId),
     listContracts(companyId),
     findCustomerInsights(companyId),
@@ -32,6 +33,7 @@ export async function getWatches(companyId: string): Promise<Watch[]> {
     getAccountReview(companyId),
     findBillingGaps(companyId),
     findDuplicateParties(companyId),
+    getYearEndChecklist(companyId),
   ]);
   const risk = riskOf(cash);
   const soon = contracts.contracts.filter((c) => c.status === "ACTIVE" && (c.daysToDeadline ?? c.daysToEnd ?? 999) >= 0 && (c.daysToDeadline ?? c.daysToEnd ?? 999) <= 30);
@@ -40,6 +42,8 @@ export async function getWatches(companyId: string): Promise<Watch[]> {
   const poIssues = po.filter((r) => r.kind === "DOUBLE" || r.kind === "MISMATCH");
   const late = collections.rows.filter((r) => r.stage === "CALL" || r.stage === "LEGAL");
   const bookWarn = book.findings.filter((f) => f.level === "warn");
+  // 決算の準備は、期末の60日前から申告の期限までだけ見張る
+  const yearEndActive = yearEnd.left > 0 && (yearEnd.ended || yearEnd.daysToEnd <= 60);
   return [
     {
       key: "cash",
@@ -120,6 +124,14 @@ export async function getWatches(companyId: string): Promise<Watch[]> {
       headline: billing.gaps.length ? `出し忘れかもしれない請求が ${billing.gaps.length}件` : "請求漏れは見つかりません",
       href: "/billing-gaps",
       items: billing.gaps.slice(0, 5).map((g) => g.title),
+    },
+    {
+      key: "yearEnd",
+      label: "決算の準備",
+      status: yearEndActive ? (yearEnd.ended ? "warn" : "info") : "ok",
+      headline: yearEndActive ? `決算までに残っている作業が ${yearEnd.left}件(${yearEnd.ended ? `申告の期限 ${yearEnd.filingDeadline}` : `期末まであと${yearEnd.daysToEnd}日`})` : yearEnd.left ? `期末(${yearEnd.to})はまだ先です` : "決算の準備は済んでいます",
+      href: "/year-end-close",
+      items: yearEndActive ? yearEnd.items.filter((i) => !i.done).slice(0, 5).map((i) => i.label) : [],
     },
     {
       key: "parties",
