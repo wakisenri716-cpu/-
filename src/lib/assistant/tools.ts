@@ -31,6 +31,7 @@ import { findAndExplainJournal } from "@/lib/journalExplain";
 import { runSimulation } from "@/lib/simulation";
 import { getReorderSuggestions, reorderOptions } from "@/lib/reorder";
 import { getBudgetVariance } from "@/lib/budgetVariance";
+import { buildShiftDraft } from "@/lib/shiftDraft";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
@@ -301,6 +302,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_budget_variance",
     description: "予算と実績の差の原因。予算を超えた・超えそうな費用と届かなそうな売上について、月の予算から外れた月・記帳のない月・前年の同じ時期より増えた/減った取引・一度に大きな支払いを返す。「なぜ予算を超えた?」「売上が予算に届かない理由は?」などに使う。",
     input_schema: { type: "object", properties: { year: { type: "integer", description: "年度の開始年(任意)" } }, additionalProperties: false },
+  },
+  {
+    name: "get_shift_draft",
+    description: "シフトの自動作成の下書き(保存しない)。スタッフのシフト希望と直近4週の曜日ごとの人数から、指定の月(既定は来月)のシフトの下書き件数・人が足りない日・スタッフごとの日数・人件費の見込みと売上に対する割合を返す。「来月のシフトを作って」「シフトは足りてる?」などに使う。作るのは画面で人が確かめてから。",
+    input_schema: { type: "object", properties: { month: { type: "string", description: "YYYY-MM(任意)" } }, additionalProperties: false },
   },
   {
     name: "simulate_scenario",
@@ -600,6 +606,20 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
           drivers: i.drivers.slice(0, 3).map((d) => ({ label: d.label, current: d.current, previous: i.basis === "lastYear" ? d.previous : null, diff: i.basis === "lastYear" ? d.diff : null })),
         })),
         link: "/monthly/variance",
+      };
+    }
+    case "get_shift_draft": {
+      const r = await buildShiftDraft(companyId, { month: str(input.month) || undefined });
+      return {
+        month: r.month,
+        draftShifts: r.draft.length,
+        existingShifts: r.existingCount,
+        shortages: r.shortages.map((s) => ({ date: s.date, weekday: s.weekday, missing: s.need - s.have })),
+        staff: r.perStaff.map((p) => ({ name: p.name, availableDays: p.availableDays, draftDays: p.draftDays, totalDays: p.totalDays, submittedRequests: p.submitted > 0 })),
+        laborCost: r.laborCost,
+        laborCostRatio: r.ratio === null ? null : `${Math.round(r.ratio * 100)}%`,
+        notes: r.notes,
+        link: `/shifts/auto?month=${r.month}`,
       };
     }
     case "simulate_scenario": {

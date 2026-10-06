@@ -14,7 +14,7 @@ export function addMonth(month: string, n: number) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-function daysOf(month: string) {
+export function daysOf(month: string) {
   const [y, m] = month.split("-").map(Number);
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
   return Array.from({ length: last }, (_, i) => {
@@ -23,7 +23,7 @@ function daysOf(month: string) {
   });
 }
 
-function range(month: string) {
+export function monthDateRange(month: string) {
   const [y, m] = month.split("-").map(Number);
   return { gte: new Date(Date.UTC(y, m - 1, 1)), lt: new Date(Date.UTC(y, m, 1)) };
 }
@@ -57,8 +57,8 @@ export async function myShiftMonth(companyId: string, userId: string, monthValue
   const base = { month, today, deadline, locked: !!deadline && today > deadline, staff: staff ? { id: staff.id, name: staff.name } : null };
   if (!staff) return { ...base, days: [] };
   const [requests, shifts] = await Promise.all([
-    prisma.shiftRequest.findMany({ where: { staffId: staff.id, date: range(month) } }),
-    prisma.shift.findMany({ where: { staffId: staff.id, date: range(month) }, orderBy: { startMinutes: "asc" } }),
+    prisma.shiftRequest.findMany({ where: { staffId: staff.id, date: monthDateRange(month) } }),
+    prisma.shift.findMany({ where: { staffId: staff.id, date: monthDateRange(month) }, orderBy: { startMinutes: "asc" } }),
   ]);
   const reqBy = new Map(requests.map((r) => [jstDateKey(r.date), r]));
   return {
@@ -153,8 +153,8 @@ export async function getRequestBoard(companyId: string, monthValue: unknown, no
   const month = parseMonth(monthValue, addMonth(today.slice(0, 7), 1));
   const [staff, requests, shifts, company] = await Promise.all([
     prisma.staff.findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, userId: true } }),
-    prisma.shiftRequest.findMany({ where: { companyId, date: range(month) } }),
-    prisma.shift.findMany({ where: { companyId, date: range(month) }, select: { staffId: true, date: true, startMinutes: true, endMinutes: true } }),
+    prisma.shiftRequest.findMany({ where: { companyId, date: monthDateRange(month) } }),
+    prisma.shift.findMany({ where: { companyId, date: monthDateRange(month) }, select: { staffId: true, date: true, startMinutes: true, endMinutes: true } }),
     prisma.company.findUnique({ where: { id: companyId }, select: { shiftRequestDeadline: true } }),
   ]);
   const key = (staffId: string, date: string) => `${staffId}:${date}`;
@@ -193,7 +193,7 @@ export async function getRequestBoard(companyId: string, monthValue: unknown, no
 }
 
 // 休憩の目安: 6時間を超えたら45分、8時間を超えたら60分(労働基準法の最低限)
-function breakFor(minutes: number) {
+export function breakFor(minutes: number) {
   if (minutes > 8 * 60) return 60;
   if (minutes > 6 * 60) return 45;
   return 0;
@@ -204,9 +204,9 @@ export async function applyRequests(companyId: string, monthValue: unknown, staf
   const month = String(monthValue ?? "");
   if (!MONTH.test(month)) throw new UserError("月を正しく指定してください");
   const requests = await prisma.shiftRequest.findMany({
-    where: { companyId, date: range(month), available: true, startMinutes: { not: null }, endMinutes: { not: null }, ...(staffId ? { staffId } : {}), staff: { active: true } },
+    where: { companyId, date: monthDateRange(month), available: true, startMinutes: { not: null }, endMinutes: { not: null }, ...(staffId ? { staffId } : {}), staff: { active: true } },
   });
-  const existing = await prisma.shift.findMany({ where: { companyId, date: range(month), ...(staffId ? { staffId } : {}) }, select: { staffId: true, date: true } });
+  const existing = await prisma.shift.findMany({ where: { companyId, date: monthDateRange(month), ...(staffId ? { staffId } : {}) }, select: { staffId: true, date: true } });
   const has = new Set(existing.map((s) => `${s.staffId}:${jstDateKey(s.date)}`));
   const create = requests
     .filter((r) => !has.has(`${r.staffId}:${jstDateKey(r.date)}`))
