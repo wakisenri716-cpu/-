@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { importPeppolInvoice } from "@/lib/peppol";
 import { UserError } from "@/lib/errors";
 import { formatYen } from "@/lib/format";
 import { getAiProvider } from "@/lib/ai";
@@ -45,6 +46,9 @@ export async function processInboxFile(user: User, file: File) {
   if (file.size === 0) throw new UserError(`「${file.name}」は空のファイルです`);
   if (file.size > MAX_FILE_BYTES) throw new UserError(`「${file.name}」は大きすぎます(4MBまで)`);
   const bytes = new Uint8Array(await file.arrayBuffer());
+  // デジタルインボイス(XML)は AI で見分けず、受け取った請求書としてそのまま取り込む
+  const head = Buffer.from(bytes.slice(0, 200)).toString("utf8").replace(/^\uFEFF/, "").trimStart();
+  if (/\.xml$/i.test(file.name) || head.startsWith("<?xml") || /^<([\w-]+:)?Invoice[\s>]/.test(head)) return importXmlToInbox(user, file, Buffer.from(bytes).toString("utf8"));
   const mediaType = sniffType(bytes);
   if (!mediaType || !ALLOWED.includes(mediaType)) throw new UserError(`「${file.name}」は読み取れない種類です(PDF・画像だけ)`);
   const base64 = Buffer.from(bytes).toString("base64");
@@ -112,6 +116,42 @@ export async function processInboxFile(user: User, file: File) {
       resultId,
       href,
       note: note?.slice(0, 300) ?? null,
+    },
+  });
+}
+
+async function importXmlToInbox(user: User, file: File, xml: string) {
+  let status = "DONE";
+  let note: string;
+  let resultId: string | null = null;
+  let href = "/invoices?direction=RECEIVED";
+  let title = "デジタルインボイス";
+  try {
+    const r = await importPeppolInvoice(user.companyId, xml.replace(/^\uFEFF/, ""));
+    resultId = r.invoiceId;
+    title = `${r.vendor} ${r.number}`;
+    note = `デジタルインボイスを受け取った請求書として登録しました(${r.vendor}・${formatYen(r.total)}・科目: ${r.accountReason})${r.matchedOrder ? "。発注書と金額が合ったので検収済みにしました" : ""}`;
+  } catch (error) {
+    if (!(error instanceof UserError)) throw error;
+    status = "ATTENTION";
+    href = "/inbox";
+    note = `デジタルインボイスとして読み込めませんでした: ${error.message}`;
+  }
+  return prisma.inboxItem.create({
+    data: {
+      companyId: user.companyId,
+      userId: user.id,
+      userName: user.name,
+      fileName: file.name.slice(0, 200),
+      kind: "RECEIVED_INVOICE",
+      title: title.slice(0, 100),
+      summary: "デジタルインボイス(Peppol / JP PINT の XML)",
+      confidence: status === "DONE" ? 1 : 0,
+      status,
+      resultType: status === "DONE" ? "INVOICE" : "FILE",
+      resultId,
+      href,
+      note: note.slice(0, 300),
     },
   });
 }

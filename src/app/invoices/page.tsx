@@ -24,7 +24,7 @@ type Invoice = {
 const SETTLEABLE_STATUSES = new Set(["CONFIRMED", "SENT", "PARTIALLY_PAID", "OVERDUE"]);
 
 const TABS: { key: Invoice["direction"]; label: string; hint: string }[] = [
-  { key: "RECEIVED", label: "受領請求書(支払)", hint: "取引先から届いた請求書をアップロードすると、AIが金額・税額・勘定科目を読み取り買掛金として仕訳します。" },
+  { key: "RECEIVED", label: "受領請求書(支払)", hint: "取引先から届いた請求書をアップロードすると、AIが金額・税額・勘定科目を読み取り買掛金として仕訳します。デジタルインボイス(Peppol の XML)は、AIを使わずにそのまま明細ごと取り込みます。" },
   {
     key: "ISSUED",
     label: "発行請求書(売上)",
@@ -38,6 +38,7 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [paymentAmounts, setPaymentAmounts] = useState<Record<string, string>>({});
   const [payingId, setPayingId] = useState<string | null>(null);
 
@@ -62,10 +63,16 @@ export default function InvoicesPage() {
     formData.set("direction", direction);
     setUploading(true);
     setError(null);
+    setNotice(null);
     try {
-      const res = await fetch("/api/invoices", { method: "POST", body: formData });
+      // デジタルインボイス(XML)は、AI で読み取らずにそのまま取り込む
+      const file = formData.get("file");
+      const isXml = file instanceof File && /\.xml$/i.test(file.name);
+      if (isXml && direction !== "RECEIVED") throw new Error("デジタルインボイス(XML)は「受け取った請求書」で取り込めます");
+      const res = await fetch(isXml ? "/api/invoices/peppol" : "/api/invoices", { method: "POST", body: formData });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "登録に失敗しました");
+      if (isXml) setNotice(`デジタルインボイスを取り込みました: ${body.vendor} ${body.number}(${body.accountReason})`);
       form.reset();
       await load(direction);
     } catch (e) {
@@ -127,6 +134,7 @@ export default function InvoicesPage() {
       </div>
 
       {error && <div className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
+      {notice && <div className="rounded-md bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{notice}</div>}
 
       {direction === "ISSUED" && (
         <Link
@@ -149,8 +157,8 @@ export default function InvoicesPage() {
 
       <form onSubmit={handleUpload} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white shadow-sm p-4 print:hidden">
         <div>
-          <label className="block text-xs text-slate-500">請求書ファイル(画像)</label>
-          <input type="file" name="file" accept="image/*" required className="text-sm" />
+          <label className="block text-xs text-slate-500">{direction === "RECEIVED" ? "請求書ファイル(画像、またはデジタルインボイスの XML)" : "請求書ファイル(画像)"}</label>
+          <input type="file" name="file" accept={direction === "RECEIVED" ? "image/*,.xml,application/xml,text/xml" : "image/*"} required className="text-sm" />
         </div>
         <button
           type="submit"
