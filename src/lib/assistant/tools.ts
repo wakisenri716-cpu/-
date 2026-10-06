@@ -32,6 +32,8 @@ import { runSimulation } from "@/lib/simulation";
 import { getReorderSuggestions, reorderOptions } from "@/lib/reorder";
 import { getBudgetVariance } from "@/lib/budgetVariance";
 import { buildShiftDraft } from "@/lib/shiftDraft";
+import { getPriceReview } from "@/lib/priceReview";
+import { simulatePriceIncrease } from "@/lib/priceMath";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
@@ -307,6 +309,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_shift_draft",
     description: "シフトの自動作成の下書き(保存しない)。スタッフのシフト希望と直近4週の曜日ごとの人数から、指定の月(既定は来月)のシフトの下書き件数・人が足りない日・スタッフごとの日数・人件費の見込みと売上に対する割合を返す。「来月のシフトを作って」「シフトは足りてる?」などに使う。作るのは画面で人が確かめてから。",
     input_schema: { type: "object", properties: { month: { type: "string", description: "YYYY-MM(任意)" } }, additionalProperties: false },
+  },
+  {
+    name: "get_price_review",
+    description: "値上げの検討。直近3か月の利益率と前の時期の比較、上がった費用、利益率を戻すのに必要な値上げの目安、品目ごとの売値と据え置き期間、値上げした場合の1か月の利益の増え方を返す。「値上げしたほうがいい?」「5%上げたらどうなる?」などに使う。",
+    input_schema: { type: "object", properties: { raisePct: { type: "number", description: "値上げの割合(%、任意)" }, lossPct: { type: "number", description: "お客さまが減る割合(%、任意)" } }, additionalProperties: false },
   },
   {
     name: "simulate_scenario",
@@ -620,6 +627,22 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         laborCostRatio: r.ratio === null ? null : `${Math.round(r.ratio * 100)}%`,
         notes: r.notes,
         link: `/shifts/auto?month=${r.month}`,
+      };
+    }
+    case "get_price_review": {
+      const r = await getPriceReview(companyId);
+      const raise = Number(input.raisePct ?? r.neededPct ?? 5) || 5;
+      const loss = Number(input.lossPct ?? 0) || 0;
+      return {
+        period: r.period,
+        marginBefore: r.margin.base,
+        marginRecent: r.margin.recent,
+        costUps: r.costUps.map((c) => ({ account: c.name, increasePerMonth: c.diff, pct: c.pct })),
+        neededPricePct: r.neededPct,
+        items: r.items.slice(0, 10).map((i) => ({ item: i.label, price: i.price, unchangedMonths: i.months, revenue12Months: i.revenue12 })),
+        ifRaised: raise > 0 && raise <= 100 && loss >= 0 && loss <= 90 ? simulatePriceIncrease(r.monthly, raise, loss) : null,
+        findings: r.findings,
+        link: "/price-review",
       };
     }
     case "simulate_scenario": {

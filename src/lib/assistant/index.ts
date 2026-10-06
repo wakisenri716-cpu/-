@@ -29,6 +29,7 @@ const SCREENS = [
   ["/monthly/variance", "予算と実績の差の原因"],
   ["/shifts/auto", "シフトの自動作成"],
   ["/sales-analysis", "売上分析"],
+  ["/price-review", "値上げの検討"],
   ["/receivables", "売掛金・買掛金"],
   ["/invoices", "請求書"],
   ["/expenses", "経費精算"],
@@ -139,6 +140,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("simulate_scenario", { text: q })) as { comments?: string[]; error?: string };
     if (r.error) return { reply: r.error, tools: ["simulate_scenario"], mode: "simple" };
     return { reply: [...(r.comments ?? []), "[もしもシミュレーション](/simulation)"].join("\n"), tools: ["simulate_scenario"], mode: "simple" };
+  }
+  // 「値上げしたほうがいい?」→ 値上げの検討
+  if (/値上げ|価格改定|値段を上げ/.test(q)) {
+    const r = (await run("get_price_review")) as { findings: string[] };
+    return { reply: [...(r.findings.length ? r.findings : ["比べられる記帳がまだありません。"]), "[値上げの検討](/price-review)"].join("\n"), tools: ["get_price_review"], mode: "simple" };
   }
   // 「来月のシフトは足りてる?」→ シフトの自動作成の下書き
   if (/シフト/.test(q) && /作|足り|自動|組/.test(q)) {
