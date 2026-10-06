@@ -24,7 +24,7 @@ export default function TokushohoPage() {
       <>
         {Object.values(p).map((x) => (
           <span key={x.key} className="block">
-            {x.name}プラン: 月額 {formatYen(x.price)}(税込)
+            {x.name}プラン: AI込み 月額 {formatYen(x.price)}(税込) / AI持ち込み 月額 {formatYen(x.byoPrice)}(税込)
           </span>
         ))}
         <Link href="/pricing" className="text-indigo-700 underline">
@@ -33,7 +33,7 @@ export default function TokushohoPage() {
         のページもご覧ください。
       </>,
     ],
-    ["商品代金以外の必要料金", "インターネットの接続料金・通信料金は、お客様のご負担となります。"],
+    ["商品代金以外の必要料金", "インターネットの接続料金・通信料金は、お客様のご負担となります。AI持ち込みのプランでは、お客様が契約したAI(Anthropic など)の利用料はお客様のご負担となります。"],
     ["お支払い方法", "クレジットカード(決済は Stripe, Inc. の決済サービスを利用します)"],
     ["お支払い時期", `お申し込み時にお支払いが確定し、以後は毎月同じ日に自動で更新・お支払いとなります。無料期間(登録から${TRIAL_DAYS}日間)中にお申し込みいただいた場合は、無料期間の終了時に初回のお支払いとなります。`],
     ["サービスの提供時期", "お支払いの手続きが完了した時点から、すぐにご利用いただけます。"],

@@ -57,7 +57,7 @@ export async function processInboxFile(user: User, file: File) {
   let status = "DONE";
   let note: string | null = null;
   try {
-    c = await getAiProvider().classifyDocument({ base64, mediaType, fileName: file.name });
+    c = await (await getAiProvider(companyId)).classifyDocument({ base64, mediaType, fileName: file.name });
     if (c.kind === "RECEIVED_INVOICE") {
       const { invoice, matchedOrder } = await createInvoiceFromUpload(companyId, "RECEIVED", base64, mediaType);
       resultType = "INVOICE";

@@ -146,6 +146,11 @@ model Company {
   dailyDigest            Boolean @default(false)
   // AIの見張りで新しく「要確認」になったものを、管理者にメールとスマホで知らせる
   watchAlerts            Boolean @default(true)
+  // AIの使い方: INCLUDED(AI込み=サービスのAI) / BYO(AI持ち込み=会社のAIのキー。暗号化して保存し、画面には末尾4文字だけ出す)
+  aiMode     String    @default("INCLUDED")
+  aiKeyEnc   String?
+  aiKeyHint  String?
+  aiKeySetAt DateTime?
   // 給与計算の保険料率(単位: 0.001%。9910 = 9.910%)。都道府県・年度で変わるので画面から直せる
   payrollPrefecture      String  @default("東京都")
   payrollHealthRate      Int     @default(9910)

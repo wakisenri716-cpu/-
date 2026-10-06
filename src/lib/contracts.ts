@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { createFolder, MAX_FILE_BYTES, saveFile, sniffType } from "@/lib/files";
@@ -103,7 +104,8 @@ export function templateContract(fileName: string): ContractFields {
 }
 
 async function analyze(companyId: string, userId: string, base64: string, mediaType: string, fileName: string): Promise<{ fields: ContractFields; mode: string }> {
-  if (!process.env.ANTHROPIC_API_KEY) return { fields: templateContract(fileName), mode: "template" };
+  const client = await aiFor(companyId);
+  if (!client) return { fields: templateContract(fileName), mode: "template" };
   const since = new Date(`${jstDateKey(new Date())}T00:00:00+09:00`);
   if ((await prisma.assistantLog.count({ where: { companyId, createdAt: { gte: since } } })) >= DAILY_LIMIT) return { fields: templateContract(fileName), mode: "template" };
   const media: Anthropic.Beta.BetaContentBlockParam =
@@ -112,7 +114,7 @@ async function analyze(companyId: string, userId: string, base64: string, mediaT
       : { type: "image", source: { type: "base64", media_type: mediaType as "image/png" | "image/jpeg" | "image/gif" | "image/webp", data: base64 } };
   let result: { fields: ContractFields; mode: string } = { fields: templateContract(fileName), mode: "template" };
   try {
-    const response = await new Anthropic().beta.messages.create({
+    const response = await client.beta.messages.create({
       model: MODEL,
       max_tokens: 16000,
       system: [

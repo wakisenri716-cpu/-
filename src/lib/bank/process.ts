@@ -250,7 +250,7 @@ export async function importBankStatement(companyId: string, rows: StatementRow[
       select: { code: true, name: true },
     });
     const allowed = new Set(accounts.map((a) => a.code));
-    const results = await getAiProvider().classifyBankTransactions(
+    const results = await (await getAiProvider(companyId)).classifyBankTransactions(
       needsAi.map((r) => ({
         description: r.description,
         direction: r.withdrawal > 0 ? "OUT" : "IN",

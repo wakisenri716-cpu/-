@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -178,12 +179,13 @@ export async function reviewPaymentPlan(user: { id: string; name: string; compan
     : "この2週間に支払期限の来る請求書はありません。";
   const notes: Record<string, string> = {};
   let mode = "template";
-  if (process.env.ANTHROPIC_API_KEY && plan.rows.length) {
+  const ai = await aiFor(companyId);
+  if (ai && plan.rows.length) {
     const since = new Date(`${plan.today}T00:00:00+09:00`);
     if ((await prisma.assistantLog.count({ where: { companyId, createdAt: { gte: since } } })) >= DAILY_LIMIT) throw new UserError(`AIの利用は1日${DAILY_LIMIT}回までです。明日またお試しください`);
     const pick = plan.rows.slice(0, 40);
     try {
-      const response = await new Anthropic().beta.messages.create({
+      const response = await ai.beta.messages.create({
         model: MODEL,
         max_tokens: 16000,
         system: [

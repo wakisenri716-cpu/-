@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -163,7 +164,8 @@ export async function reviewClose(user: { id: string; name: string; companyId: s
   const ready = !points.some((p) => p.level === "warn");
   let result = { ready, summary: ready ? "残っている作業は見当たりません。試算表を見て、問題がなければ帳簿を締めましょう。" : `締める前に片付けたいことが ${points.filter((p) => p.level === "warn").length}件 あります。`, points: points.slice(0, 8) };
   let mode = "template";
-  if (process.env.ANTHROPIC_API_KEY) {
+  const ai = await aiFor(companyId);
+  if (ai) {
     try {
       const facts = {
         month,
@@ -172,7 +174,7 @@ export async function reviewClose(user: { id: string; name: string; companyId: s
         possiblyMissing: missing.slice(0, 8),
         anomalies: anomalies.anomalies.slice(0, 5).map((a) => ({ title: a.title, detail: a.detail })),
       };
-      const response = await new Anthropic().beta.messages.create({
+      const response = await ai.beta.messages.create({
         model: MODEL,
         max_tokens: 16000,
         system: [

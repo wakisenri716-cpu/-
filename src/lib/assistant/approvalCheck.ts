@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { User } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -189,8 +190,8 @@ const SCHEMA = {
   additionalProperties: false,
 } as const;
 
-async function claudeCheck(kindLabel: string, facts: Record<string, unknown>, rulePoints: CheckPoint[]) {
-  const response = await new Anthropic().beta.messages.create({
+async function claudeCheck(client: Anthropic, kindLabel: string, facts: Record<string, unknown>, rulePoints: CheckPoint[]) {
+  const response = await client.beta.messages.create({
     model: MODEL,
     max_tokens: 16000,
     system: [
@@ -262,9 +263,10 @@ export async function runApprovalCheck(user: Actor, targetType: TargetType, targ
   const ruleVerdict = verdictOf(rulePoints);
   let result = { verdict: ruleVerdict, ...templateSummary(rulePoints), points: rulePoints };
   let mode = "template";
-  if (process.env.ANTHROPIC_API_KEY) {
+  const client = await aiFor(user.companyId);
+  if (client) {
     try {
-      const ai = await claudeCheck(targetType === "REQUEST" ? "稟議・申請" : "経費精算", gathered.facts, rulePoints);
+      const ai = await claudeCheck(client, targetType === "REQUEST" ? "稟議・申請" : "経費精算", gathered.facts, rulePoints);
       if (ai) {
         // ルールで見つけた点は必ず残し、AIの判定がルールより軽くならないようにする
         const points = [...rulePoints, ...ai.points];

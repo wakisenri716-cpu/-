@@ -3,12 +3,13 @@ import { requireCompanyId, requireMember } from "@/lib/auth/session";
 import { listInbox, processInboxFile } from "@/lib/inbox";
 import { UserError } from "@/lib/errors";
 import { audit } from "@/lib/audit";
+import { aiEnabled } from "@/lib/ai/access";
 
 const MAX_FILES = 10;
 
 export async function GET() {
   const companyId = await requireCompanyId();
-  return NextResponse.json({ items: await listInbox(companyId), aiEnabled: !!process.env.ANTHROPIC_API_KEY });
+  return NextResponse.json({ items: await listInbox(companyId), aiEnabled: await aiEnabled(companyId) });
 }
 
 // files: 書類(画像・PDF)を何枚でも(1回10枚まで)

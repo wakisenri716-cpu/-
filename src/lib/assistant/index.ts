@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -73,11 +74,7 @@ function systemPrompt(companyName: string) {
   ].join("\n");
 }
 
-function client() {
-  return new Anthropic();
-}
-
-async function askClaude(ctx: { companyId: string; userId: string }, companyName: string, history: ChatTurn[]): Promise<AssistantReply> {
+async function askClaude(client: Anthropic, ctx: { companyId: string; userId: string }, companyName: string, history: ChatTurn[]): Promise<AssistantReply> {
   const today = jstDateKey(new Date());
   const messages: Anthropic.Beta.BetaMessageParam[] = history.map((t) => ({ role: t.role, content: t.text }));
   // 今日の日付は、キャッシュを効かせるため system ではなく最後の質問に添える
@@ -88,7 +85,7 @@ async function askClaude(ctx: { companyId: string; userId: string }, companyName
   const done = async (reply: string): Promise<AssistantReply> => ({ reply, tools: used, mode: "claude", proposals: await getProposals(ctx.companyId, proposalIds) });
 
   for (let step = 0; step < MAX_STEPS; step++) {
-    const response = await client().beta.messages.create({
+    const response = await client.beta.messages.create({
       model: MODEL,
       max_tokens: 16000,
       system: [{ type: "text", text: systemPrompt(companyName), cache_control: { type: "ephemeral" } }],
@@ -137,7 +134,7 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   const run = (name: string, input: Record<string, unknown> = {}) => runAssistantTool({ companyId, userId: "" }, name, input) as Promise<Record<string, unknown>>;
 
   if (/(請求書|仕訳|督促).*(作|発行|記帳|送)|契約.*(終了にして|解約して)|経費.*(入れて|入力して)|科目.*(にして|変えて)/.test(q)) {
-    return { reply: "請求書・仕訳・督促メール・契約の終了・経費の入力などの下書きを作るには、AIのAPIキー(ANTHROPIC_API_KEY)の設定が必要です。いまは各画面から作ってください。\n[請求書](/invoices) [仕訳帳](/journal) [ひとことで経費入力](/quick-expense) [契約書](/contracts)", tools: [], mode: "simple" };
+    return { reply: "請求書・仕訳・督促メール・契約の終了・経費の入力などの下書きを作るには、AIが使える状態([AIの設定](/ai-settings))が必要です。いまは各画面から作ってください。\n[請求書](/invoices) [仕訳帳](/journal) [ひとことで経費入力](/quick-expense) [契約書](/contracts)", tools: [], mode: "simple" };
   }
   if (/やること|タスク|何をすれば|todo/i.test(q)) {
     const r = (await run("get_todos")) as { todos: { label: string; count: number; link: string }[] };
@@ -268,7 +265,7 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     };
   }
   return {
-    reply: "いまは簡易モード(AIのAPIキーが未設定)のため、次のような質問に答えられます: 「今月の利益は?」「未入金は?」「督促が必要なのは?」「更新が近い契約は?」「資金は大丈夫?」「帳簿に問題はある?」「先月の締めは?」「やることは?」",
+    reply: "いまは簡易モード(AIが使えない状態。[AIの設定](/ai-settings))のため、次のような質問に答えられます: 「今月の利益は?」「未入金は?」「督促が必要なのは?」「更新が近い契約は?」「資金は大丈夫?」「帳簿に問題はある?」「先月の締めは?」「やることは?」",
     tools: [],
     mode: "simple",
   };
@@ -291,9 +288,10 @@ export async function askAssistant(user: { id: string; companyId: string }, inpu
   }
   const company = await prisma.company.findUniqueOrThrow({ where: { id: user.companyId }, select: { name: true } });
   let result: AssistantReply;
-  if (process.env.ANTHROPIC_API_KEY) {
+  const client = await aiFor(user.companyId);
+  if (client) {
     try {
-      result = await askClaude({ companyId: user.companyId, userId: user.id }, company.name, history);
+      result = await askClaude(client, { companyId: user.companyId, userId: user.id }, company.name, history);
     } catch (error) {
       if (error instanceof Anthropic.RateLimitError) throw new UserError("AIが混み合っています。少し待ってからお試しください");
       if (error instanceof Anthropic.APIError) throw new UserError("AIに問い合わせできませんでした。時間をおいてお試しください");

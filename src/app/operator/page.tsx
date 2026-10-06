@@ -37,7 +37,7 @@ export default async function OperatorPage({ searchParams }: { searchParams: Pro
   const tabClass = (key: string) => `px-3 py-2 text-sm font-medium whitespace-nowrap ${active === key ? "border-b-2 border-indigo-600 text-indigo-700" : "text-slate-500"}`;
 
   const tiles = [
-    { label: "月の売上見込み", value: formatYen(s.mrr), note: `ライト ${s.light}社・スタンダード ${s.standard}社` },
+    { label: "月の売上見込み", value: formatYen(s.mrr), note: `ライト ${s.light}社・スタンダード ${s.standard}社(うちAI持ち込み ${s.byo}社)` },
     { label: "契約中", value: `${s.active + s.pastDue}社`, note: s.pastDue ? `うち支払い失敗 ${s.pastDue}社` : "支払い失敗なし" },
     { label: "無料期間中", value: `${s.trial}社`, note: `残り7日以内 ${s.endingSoon}社` },
     { label: "登録した会社", value: `${s.total}社`, note: `今月の新規 ${s.newThisMonth}社・期限切れ ${s.expired}社` },

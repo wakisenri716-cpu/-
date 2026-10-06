@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -145,8 +146,8 @@ const SCHEMA = {
   additionalProperties: false,
 } as const;
 
-async function claudeBriefing(companyName: string, f: BriefingFacts) {
-  const response = await new Anthropic().beta.messages.create({
+async function claudeBriefing(client: Anthropic, companyName: string, f: BriefingFacts) {
+  const response = await client.beta.messages.create({
     model: MODEL,
     max_tokens: 16000,
     system: [
@@ -205,9 +206,10 @@ export async function generateBriefing(companyId: string, userId = "system", now
   const [facts, company] = await Promise.all([buildBriefingFacts(companyId, now), prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { name: true } })]);
   let result: ReturnType<typeof templateBriefing> | null = null;
   let mode = "template";
-  if (process.env.ANTHROPIC_API_KEY) {
+  const client = await aiFor(companyId);
+  if (client) {
     try {
-      result = await claudeBriefing(company.name, facts);
+      result = await claudeBriefing(client, company.name, facts);
       if (result) mode = "claude";
     } catch (error) {
       // AIに問い合わせできない・答えが読めないときは決まったルールで並べる
