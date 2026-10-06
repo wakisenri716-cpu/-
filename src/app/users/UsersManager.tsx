@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { formatDate } from "@/lib/format";
 
-type Role = "ADMIN" | "ACCOUNTANT" | "EMPLOYEE";
+type Role = "ADMIN" | "ACCOUNTANT" | "EMPLOYEE" | "ADVISOR";
 type User = {
   id: string;
   name: string;
@@ -18,7 +18,7 @@ type User = {
   homeCompany?: boolean;
 };
 
-const ROLE_LABELS: Record<Role, string> = { ADMIN: "管理者", ACCOUNTANT: "経理担当", EMPLOYEE: "従業員" };
+const ROLE_LABELS: Record<Role, string> = { ADMIN: "管理者", ACCOUNTANT: "経理担当", EMPLOYEE: "従業員", ADVISOR: "税理士(閲覧のみ)" };
 const inputClass = "w-full rounded-md border px-2.5 py-1.5 text-sm";
 
 export function UsersManager({ currentUserId }: { currentUserId: string }) {
@@ -81,6 +81,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
           アプリにログインできるメンバーを管理します。追加したメンバーには、メールアドレスと初期パスワードを伝えてください
           (本人は「アカウント」からパスワードを変更できます)。ほかの会社のアカウントを持っている人は、メールアドレスと権限だけで追加できます。
           権限と利用停止は、この会社の中だけに効きます。
+          顧問の税理士・会計事務所は「税理士(閲覧のみ)」で招待すると、帳簿・書類を見て仕訳にコメントできます(データの変更はできず、料金プランの人数にも数えません)。
         </p>
       </div>
 

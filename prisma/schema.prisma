@@ -11,6 +11,8 @@ enum UserRole {
   ADMIN
   ACCOUNTANT
   EMPLOYEE
+  // 税理士・会計事務所など(閲覧だけ。仕訳へのコメントはできる)
+  ADVISOR
 }
 
 enum AccountCategory {
@@ -278,6 +280,7 @@ model Company {
   recurringEntries     RecurringEntry[]
   auditLogs            AuditLog[]
   mcpTokens            McpToken[]
+  journalComments      JournalComment[]
 }
 
 model User {
@@ -939,6 +942,7 @@ model JournalEntry {
   allocationOpening Allocation?        @relation("AllocationOpening")
   loanPayment       LoanPayment?
   loanOpening       Loan?              @relation("LoanOpening")
+  comments          JournalComment[]
 }
 
 // 毎月決まった日に同じ仕訳を記帳する定期取引(家賃・リース料・借入金の返済など)
@@ -2258,4 +2262,23 @@ model McpToken {
   createdAt  DateTime  @default(now())
 
   @@index([companyId])
+}
+
+// 仕訳へのコメント(税理士からの質問と、会社からの回答など)。resolvedAt が入ったら解決済み
+model JournalComment {
+  id             String       @id @default(cuid())
+  companyId      String
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  userId         String
+  userName       String
+  role           String
+  body           String
+  resolvedAt     DateTime?
+  resolvedBy     String?
+  createdAt      DateTime     @default(now())
+
+  @@index([companyId, resolvedAt])
+  @@index([journalEntryId])
 }

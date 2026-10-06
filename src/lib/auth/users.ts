@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { UserRole } from "@prisma/client";
 import { requireAdmin } from "./session";
 
-export const ROLES: UserRole[] = ["ADMIN", "ACCOUNTANT", "EMPLOYEE"];
+export const ROLES: UserRole[] = ["ADMIN", "ACCOUNTANT", "EMPLOYEE", "ADVISOR"];
 
 export async function adminOr403() {
   const admin = await requireAdmin();

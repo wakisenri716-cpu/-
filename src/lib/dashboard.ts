@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { countOpenThreads } from "@/lib/journalComments";
 import { countBudgetAlerts } from "@/lib/accounting/budgetProgress";
 import { countDuplicates } from "@/lib/duplicates";
 import { countAnomalies } from "@/lib/anomalies";
@@ -106,7 +107,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -144,9 +145,12 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     countPoIssues(companyId, now),
     // 自分のAIからつないで作った下書き(24時間以内・確かめ待ち)
     prisma.assistantProposal.count({ where: { companyId, source: "MCP", status: "PENDING", createdAt: { gte: new Date(now.getTime() - 24 * 3_600_000) } } }),
+    // 税理士からの未解決の質問がある仕訳
+    countOpenThreads(companyId),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
+    { key: "advisorQuestions", label: "税理士からの質問", detail: "仕訳へのコメントに回答して、解決済みにしてください", count: advisorQuestions, href: "/journal-comments", tone: "amber" },
     { key: "aiProposals", label: "自分のAIが作った下書き", detail: "内容を確かめて「実行する」を押すと確定します(24時間で期限切れ)", count: mcpProposals, href: "/ai-proposals", tone: "amber" },
     { key: "review", label: "AI仕訳のレビュー待ち", detail: "経費・請求書のAI判定を確認してください", count: reviews, href: "/review", tone: "amber" },
     {

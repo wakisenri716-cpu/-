@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { pickMembership } from "./companies";
 import { clientIp } from "@/lib/security";
 import { TERMS_VERSION } from "@/lib/legal";
+import { guardAdvisor } from "./advisor";
 
 export const SESSION_COOKIE = "session";
 const SESSION_DAYS = 30;
@@ -94,6 +95,8 @@ export async function getCurrentSessionId() {
 export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  // 税理士(閲覧だけ)は、データを変える送信を断る
+  if (user.role === "ADVISOR") await guardAdvisor();
   return user;
 }
 

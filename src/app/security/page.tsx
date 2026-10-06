@@ -17,7 +17,7 @@ const IDLE = [
   [480, "8時間"],
   [1440, "1日"],
 ] as const;
-const ROLE: Record<string, string> = { ADMIN: "管理者", ACCOUNTANT: "経理担当", EMPLOYEE: "従業員" };
+const ROLE: Record<string, string> = { ADMIN: "管理者", ACCOUNTANT: "経理担当", EMPLOYEE: "従業員", ADVISOR: "税理士(閲覧のみ)" };
 
 export default function SecurityPage() {
   const [data, setData] = useState<Data | null>(null);

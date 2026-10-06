@@ -62,6 +62,8 @@ export function proxy(request: NextRequest) {
   const withPath = () => {
     const headers = new Headers(request.headers);
     headers.set("x-pathname", pathname);
+    // 閲覧だけの人(税理士)の送信を見分けるため、実際のメソッドを渡す
+    headers.set("x-method", request.method);
     return NextResponse.next({ request: { headers } });
   };
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return withPath();

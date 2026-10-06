@@ -4,7 +4,7 @@ import { MailError, appUrl, sendMail } from "@/lib/mail";
 
 // 社内のお知らせ: 管理者・経理担当が書き、全員(従業員も)が読む。読んだ人を記録する。
 
-type Viewer = { id: string; name: string; companyId: string; role: "ADMIN" | "ACCOUNTANT" | "EMPLOYEE" };
+type Viewer = { id: string; name: string; companyId: string; role: "ADMIN" | "ACCOUNTANT" | "EMPLOYEE" | "ADVISOR" };
 
 const canWrite = (user: Viewer) => user.role !== "EMPLOYEE";
 

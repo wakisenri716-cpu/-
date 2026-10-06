@@ -30,6 +30,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // 閲覧だけの人(税理士)がデータを変えようとしたら forbidden() で 403 を返す
+  experimental: { authInterrupts: true },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -86,6 +86,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 )}
                 {notices.length > 0 && <ServiceNotices notices={notices} />}
                 {user.isDemoCompany && <DemoBanner />}
+                {user.role === "ADVISOR" && (
+                  <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm text-sky-900 print:hidden">
+                    税理士(閲覧のみ)としてログインしています。帳簿・書類は見られますが、データの変更はできません。気になる仕訳には、仕訳帳の「コメント」で質問できます。
+                  </div>
+                )}
                 {user.needsEmailVerify && <VerifyEmailBanner email={user.email} />}
                 {user.role === "ADMIN" && !nativeApp && <BillingBanner billing={user.billing} companyId={user.companyId} />}
                 {children}
