@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -185,7 +186,8 @@ export async function reviewAccounts(user: { id: string; name: string; companyId
   let suggestions = r.suggestions;
   let summary = suggestions.length ? `科目を見直したい仕訳が ${suggestions.length}件 あります。` : `直近${SCAN_DAYS}日の経費の仕訳 ${r.checked}件 を見ましたが、決まったルールでは科目の違いは見つかりませんでした。`;
   let mode = "template";
-  if (process.env.ANTHROPIC_API_KEY && r.recent.length) {
+  const ai = await aiFor(companyId);
+  if (ai && r.recent.length) {
     const since = new Date(`${today}T00:00:00+09:00`);
     if ((await prisma.assistantLog.count({ where: { companyId, createdAt: { gte: since } } })) >= DAILY_LIMIT) throw new UserError(`AIの利用は1日${DAILY_LIMIT}回までです。明日またお試しください`);
     // ルールで見つかったものと、雑費・取引先のないものを優先して、最近の仕訳を読んでもらう
@@ -193,7 +195,7 @@ export async function reviewAccounts(user: { id: string; name: string; companyId
     const pick = [...r.recent].sort((a, b) => Number(flagged.has(b.lineId)) - Number(flagged.has(a.lineId)) || Number(b.code === "5990") - Number(a.code === "5990") || b.amount - a.amount).slice(0, AI_SAMPLE);
     const accounts = EXPENSE_ACCOUNT_CODES.filter((c) => r.names.has(c)).map((c) => `${c} ${r.names.get(c)}`);
     try {
-      const response = await new Anthropic().beta.messages.create({
+      const response = await ai.beta.messages.create({
         model: MODEL,
         max_tokens: 16000,
         system: [

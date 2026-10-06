@@ -167,7 +167,7 @@ export function AssistantChat({ initialQuestion, aiEnabled }: { initialQuestion:
       <div>
         <h1 className="text-2xl font-semibold">AIアシスタント</h1>
         <p className="mt-1 text-sm text-slate-600">会社の帳簿・請求書・予算・やることについて、ふつうの言葉で聞いてください。AIが実際のデータを調べて答えます。請求書・仕訳・督促メール・経費の入力・契約の終了なども頼めます。AIが下書きを作り、あなたが内容を確かめてボタンを押したときだけ確定します。</p>
-        {!aiEnabled && <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">AIのAPIキー(ANTHROPIC_API_KEY)が未設定のため、決まった質問にだけ答える簡易モードです。</p>}
+        {!aiEnabled && <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">いまはAIを使えないため(AI持ち込みでキーが未登録など)、決まった質問にだけ答える簡易モードです。<Link href="/ai-settings" className="ml-1 underline">AIの設定</Link></p>}
       </div>
 
       <div className="space-y-3">

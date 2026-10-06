@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   if (user.needsEmailVerify) return NextResponse.json({ error: "先にメールアドレスの確認を済ませてください(画面の上の案内から、確認のメールをもう一度送れます)" }, { status: 400 });
   try {
     return await respond(async () => {
-      const url = await createCheckout(user, body.plan, appUrl(request));
+      const url = await createCheckout(user, body.plan, appUrl(request), body.aiMode);
       await audit("有料プランの申し込みを開始", String(body.plan));
       return { url };
     });

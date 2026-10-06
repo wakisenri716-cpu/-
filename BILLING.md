@@ -21,16 +21,18 @@
 
 ## 2. ★ 商品と価格を作る
 
-Stripe の「商品カタログ」→「商品を追加」で、2つ作ります。
+Stripe の「商品カタログ」→「商品を追加」で、4つ作ります。それぞれのプランに「AI込み」(このサービスのAIを使う・割高)と「AI持ち込み」(会社が自分で契約したAIのキーを使う・割安)があります。
 
-| 商品名 | 料金 | 請求期間 |
-| --- | --- | --- |
-| ライト | 2,980円(税込として扱う) | 毎月 |
-| スタンダード | 6,980円 | 毎月 |
+| 商品名 | 料金 | 請求期間 | 環境変数 |
+| --- | --- | --- | --- |
+| ライト(AI込み) | 2,980円(税込として扱う) | 毎月 | `STRIPE_PRICE_LIGHT` |
+| スタンダード(AI込み) | 6,980円 | 毎月 | `STRIPE_PRICE_STANDARD` |
+| ライト(AI持ち込み) | 1,980円 | 毎月 | `STRIPE_PRICE_LIGHT_BYO` |
+| スタンダード(AI持ち込み) | 4,980円 | 毎月 | `STRIPE_PRICE_STANDARD_BYO` |
 
-作ったら、それぞれの価格の **価格ID**(`price_` で始まる文字)を控えます。
+作ったら、それぞれの価格の **価格ID**(`price_` で始まる文字)を控えます。AI持ち込みの価格を作らないうちは、AI持ち込みで申し込もうとすると「価格が設定されていません」と出ます(AI込みはそのまま申し込めます)。
 
-※ 金額を変えたいときは、Stripe の価格と、下の `PRICE_LIGHT_YEN` / `PRICE_STANDARD_YEN`(画面に出す金額)の両方を変えてください。
+※ 金額を変えたいときは、Stripe の価格と、下の `PRICE_LIGHT_YEN` / `PRICE_STANDARD_YEN` / `PRICE_LIGHT_BYO_YEN` / `PRICE_STANDARD_BYO_YEN`(画面に出す金額)の両方を変えてください。
 
 ## 3. ★ Webhook(Stripe からのお知らせ)を登録する
 
@@ -46,7 +48,7 @@ Stripe の「設定」→「Billing」→「カスタマーポータル」で、
 - 支払い方法の更新
 - 請求書の履歴
 - サブスクリプションのキャンセル(「請求期間の終了時にキャンセル」)
-- プランの切り替え(商品に「ライト」「スタンダード」を追加)
+- プランの切り替え(商品に4つすべてを追加。ライト⇔スタンダード、AI込み⇔AI持ち込みを切り替えられます)
 
 ## 5. ★ Vercel に登録する
 
@@ -58,6 +60,8 @@ Vercel のプロジェクト →「Settings」→「Environment Variables」で�
 | `STRIPE_WEBHOOK_SECRET` | 3 の署名シークレット(`whsec_...`) |
 | `STRIPE_PRICE_LIGHT` | 2 のライトの価格ID |
 | `STRIPE_PRICE_STANDARD` | 2 のスタンダードの価格ID |
+| `STRIPE_PRICE_LIGHT_BYO` / `STRIPE_PRICE_STANDARD_BYO` | 2 のAI持ち込みの価格ID |
+| `AI_KEY_SECRET` | 会社が登録したAIのキーを暗号化する合言葉(32文字以上の好きな文字列。**一度決めたら変えない**。変えると登録済みのキーが読めなくなり、登録し直しになります) |
 | `BILLING_FREE_EMAILS` | **あなた自身の会社の管理者のメールアドレス**(その会社はずっと無料。カンマ区切りで複数可) |
 | `OPERATOR_EMAILS` | **あなたのログインのメールアドレス**(「運営者メニュー」が出ます) |
 | `SERVICE_OPERATOR_NAME` | 販売事業者の名前(会社名か、個人ならお名前) |
@@ -65,7 +69,8 @@ Vercel のプロジェクト →「Settings」→「Environment Variables」で�
 | `SERVICE_OPERATOR_ADDRESS` | 所在地(個人で出したくないときは空にすると「請求があれば開示」と表示) |
 | `SERVICE_PHONE` | 電話番号(空にすると「請求があれば開示」と表示) |
 | `SERVICE_CONTACT_EMAIL` | お問い合わせのメールアドレス |
-| `PRICE_LIGHT_YEN` / `PRICE_STANDARD_YEN` | 省略可。画面に出す月額(税込)を変えるとき |
+| `PRICE_LIGHT_YEN` / `PRICE_STANDARD_YEN` | 省略可。画面に出すAI込みの月額(税込)を変えるとき |
+| `PRICE_LIGHT_BYO_YEN` / `PRICE_STANDARD_BYO_YEN` | 省略可。画面に出すAI持ち込みの月額(税込。省略時は 1980・4980) |
 
 `STRIPE_SECRET_KEY` を入れると、**新規登録の受け付けと無料期間の数え始め**が有効になります。
 

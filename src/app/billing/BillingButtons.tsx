@@ -3,14 +3,14 @@
 import { useState } from "react";
 
 // Stripe の画面(申し込み・お支払い情報の管理)へ移る
-export function BillingButton({ action, plan, label, primary = true }: { action: "checkout" | "portal"; plan?: string; label: string; primary?: boolean }) {
+export function BillingButton({ action, plan, aiMode, label, primary = true }: { action: "checkout" | "portal"; plan?: string; aiMode?: "INCLUDED" | "BYO"; label: string; primary?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function go() {
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/billing/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan }) });
+    const res = await fetch(`/api/billing/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan, aiMode }) });
     const json = await res.json().catch(() => ({}));
     if (res.ok && json.url) {
       window.location.assign(json.url);

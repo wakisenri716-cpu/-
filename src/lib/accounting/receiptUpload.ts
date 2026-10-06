@@ -8,7 +8,7 @@ import { postExpenseItemJournal } from "./automation";
 
 // レシート・領収書の画像・PDFをAIで読み取り、経費精算の明細と仕訳を作る。経費精算の画面と AI受付箱 で使う。
 export async function addReceiptToReport(report: ExpenseReport, base64: string, mediaType: string, override: { amount?: number | null; description?: string | null } = {}) {
-  const extraction = await getAiProvider().extractReceipt({ imageBase64: base64, mediaType });
+  const extraction = await (await getAiProvider(report.companyId)).extractReceipt({ imageBase64: base64, mediaType });
   const amount = override.amount ? override.amount : extraction.amount;
   if (!amount || amount <= 0) throw new UserError("金額を読み取れませんでした。金額を入れて登録してください");
 

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { UserError } from "@/lib/errors";
 import { getCurrentUser } from "@/lib/auth/session";
 import { billingEnabled, billingState, BILLING_SELECT, trialEnd } from "@/lib/billing";
-import { plans } from "@/lib/billing/plans";
+import { planPrice } from "@/lib/billing/plans";
 
 // 運営者メニュー: このサービスを運営する人(OPERATOR_EMAILS に入れたメールアドレス)だけが見られる。
 // 申し込んだ会社の一覧・契約の状態・売上の見込み・無料期間の延長・本番のエラー。
@@ -42,6 +42,7 @@ export async function listCompanies(q?: string | null) {
       id: true,
       name: true,
       stripeCustomerId: true,
+      aiMode: true,
       ...BILLING_SELECT,
       members: { where: { active: true }, select: { role: true, user: { select: { name: true, email: true, emailVerifiedAt: true } } }, orderBy: { createdAt: "asc" } },
       _count: { select: { journalEntries: true } },
@@ -79,6 +80,7 @@ export async function listCompanies(q?: string | null) {
       entries: c._count.journalEntries,
       phase: envFree ? "free" : state.phase,
       plan: state.plan,
+      aiMode: c.aiMode === "BYO" ? ("BYO" as const) : ("INCLUDED" as const),
       trialEndsAt: trialEnd(c),
       daysLeft: state.daysLeft,
       currentPeriodEnd: c.currentPeriodEnd,
@@ -98,9 +100,8 @@ export function summarize(all: OperatorCompany[], now = new Date()) {
   // お試し用の会社(サンプルデータ)は数に入れない
   const companies = all.filter((c) => !c.isDemo);
   const count = (phase: string) => companies.filter((c) => c.phase === phase).length;
-  const p = plans();
   const paying = companies.filter((c) => c.phase === "active" || c.phase === "past_due");
-  const mrr = paying.reduce((s, c) => s + (c.plan ? p[c.plan].price : 0), 0);
+  const mrr = paying.reduce((s, c) => s + (c.plan ? planPrice(c.plan, c.aiMode) : 0), 0);
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   return {
     total: companies.length,
@@ -111,6 +112,7 @@ export function summarize(all: OperatorCompany[], now = new Date()) {
     free: count("free"),
     light: paying.filter((c) => c.plan === "LIGHT").length,
     standard: paying.filter((c) => c.plan === "STANDARD").length,
+    byo: paying.filter((c) => c.aiMode === "BYO").length,
     mrr,
     newThisMonth: companies.filter((c) => c.createdAt >= monthStart).length,
     endingSoon: companies.filter((c) => c.phase === "trial" && c.daysLeft <= 7).length,

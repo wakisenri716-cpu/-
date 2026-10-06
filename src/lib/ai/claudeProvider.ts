@@ -11,9 +11,6 @@ import type {
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
-function client() {
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-}
 
 const receiptTool: Anthropic.Tool = {
   name: "record_receipt_extraction",
@@ -143,8 +140,11 @@ function extractToolInput<T>(message: Anthropic.Message, toolName: string): T {
 }
 
 export class ClaudeAiProvider implements AiProvider {
+  // 会社ごとのAI(AI込みならサービスのキー、AI持ち込みなら会社のキー)
+  constructor(private client: Anthropic) {}
+
   async classifyDocument(input: { base64: string; mediaType: string; fileName: string }): Promise<DocumentClassification> {
-    const message = await client().messages.create({
+    const message = await this.client.messages.create({
       model: MODEL,
       max_tokens: 2048,
       tools: [documentTool],
@@ -166,7 +166,7 @@ export class ClaudeAiProvider implements AiProvider {
   }
 
   async extractReceipt(input: { imageBase64: string; mediaType: string }): Promise<ReceiptExtraction> {
-    const message = await client().messages.create({
+    const message = await this.client.messages.create({
       model: MODEL,
       max_tokens: 1024,
       tools: [receiptTool],
@@ -197,7 +197,7 @@ export class ClaudeAiProvider implements AiProvider {
         ? "これは自社が受け取った請求書(仕入・経費側)です。counterpartyName には請求元(取引先)の名前を入れてください。"
         : "これは自社が発行した請求書(売上側)です。counterpartyName には請求先(顧客)の名前を入れ、suggestedAccountCode は 4010 (売上高) にしてください。";
 
-    const message = await client().messages.create({
+    const message = await this.client.messages.create({
       model: MODEL,
       max_tokens: 1024,
       tools: [invoiceTool],
@@ -232,7 +232,7 @@ export class ClaudeAiProvider implements AiProvider {
         .map((item, i) => `${i}\t${item.direction === "OUT" ? "出金" : "入金"}\t${item.amount}円\t${item.description}`)
         .join("\n");
 
-      const message = await client().messages.create({
+      const message = await this.client.messages.create({
         model: MODEL,
         max_tokens: 8000,
         tools: [tool],

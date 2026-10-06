@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -191,11 +192,12 @@ export async function reviewBillingGaps(user: { id: string; name: string; compan
   let summary = r.gaps.length ? `出し忘れかもしれない請求が ${r.gaps.length}件(税抜 ${formatYen(total)} ほど)あります。` : "請求漏れは見つかりませんでした。";
   const notes: Record<string, string> = {};
   let mode = "template";
-  if (process.env.ANTHROPIC_API_KEY && r.gaps.length) {
+  const ai = await aiFor(companyId);
+  if (ai && r.gaps.length) {
     if ((await prisma.assistantLog.count({ where: { companyId, createdAt: { gte: new Date(`${r.today}T00:00:00+09:00`) } } })) >= DAILY_LIMIT) throw new UserError(`AIの利用は1日${DAILY_LIMIT}回までです。明日またお試しください`);
     const pick = r.gaps.slice(0, 40);
     try {
-      const response = await new Anthropic().beta.messages.create({
+      const response = await ai.beta.messages.create({
         model: MODEL,
         max_tokens: 16000,
         system: [

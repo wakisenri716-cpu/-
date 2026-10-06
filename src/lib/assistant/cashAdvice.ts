@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -130,9 +131,10 @@ export async function generateCashAdvice(user: { id: string; name: string; compa
   const facts = await buildCashFacts(companyId);
   let result = templateAdvice(facts);
   let mode = "template";
-  if (process.env.ANTHROPIC_API_KEY) {
+  const ai = await aiFor(companyId);
+  if (ai) {
     try {
-      const response = await new Anthropic().beta.messages.create({
+      const response = await ai.beta.messages.create({
         model: MODEL,
         max_tokens: 16000,
         system: [

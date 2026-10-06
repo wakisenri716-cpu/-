@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { UserError } from "@/lib/errors";
-import { TRIAL_DAYS, planOfPrice, plans, priceIdOf, type PlanKey } from "./plans";
+import { AI_MODE_INFO, TRIAL_DAYS, planOfPrice, plans, priceEnvName, priceIdOf, type AiMode, type PlanKey } from "./plans";
 
 // 有料プラン(Stripe のサブスクリプション)。STRIPE_SECRET_KEY を設定するまでは課金せず、全機能をそのまま使える。
 
@@ -64,7 +64,7 @@ export async function isFreeCompany(companyId: string) {
 }
 
 export async function companyBilling(companyId: string) {
-  const company = await prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { ...BILLING_SELECT, name: true, stripeCustomerId: true, stripeSubscriptionId: true } });
+  const company = await prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { ...BILLING_SELECT, name: true, aiMode: true, stripeCustomerId: true, stripeSubscriptionId: true } });
   const state = billingState(company);
   const free = state.phase !== "off" && (await isFreeCompany(companyId));
   return { company, state: free ? { ...state, phase: "free" as const, access: true } : state };
@@ -95,13 +95,16 @@ export async function syncSubscription(sub: Stripe.Subscription) {
   const company = await prisma.company.findFirst({ where: companyId ? { OR: [{ id: companyId }, { stripeCustomerId: customerId }] } : { stripeCustomerId: customerId }, select: { id: true } });
   if (!company) return null;
   const ended = sub.status === "canceled" || sub.status === "incomplete_expired";
+  const priced = planOfPrice(item?.price?.id);
   return prisma.company.update({
     where: { id: company.id },
     data: {
       stripeCustomerId: customerId,
       stripeSubscriptionId: ended ? null : sub.id,
       subscriptionStatus: sub.status,
-      plan: planOfPrice(item?.price?.id) ?? undefined,
+      plan: priced?.plan ?? undefined,
+      // 契約したプランのAIの使い方に合わせる(AI持ち込みで契約したらサービスのAIは使わない)
+      ...(priced && !ended ? { aiMode: priced.aiMode } : {}),
       currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
       cancelAtPeriodEnd: !ended && !!(sub.cancel_at_period_end || sub.cancel_at),
     },
@@ -123,13 +126,14 @@ async function customerFor(user: Admin) {
 }
 
 // 申し込み: Stripe の支払い画面の URL を返す。無料期間が残っていれば、その終わりから課金する
-export async function createCheckout(user: Admin, planValue: unknown, baseUrl: string) {
+export async function createCheckout(user: Admin, planValue: unknown, baseUrl: string, aiModeValue: unknown = "INCLUDED") {
   requireAdmin(user);
   if (!billingEnabled()) throw new UserError("お支払いの設定(Stripe)がまだされていません");
   const plan = String(planValue ?? "") as PlanKey;
   if (!(plan in plans())) throw new UserError("プランを選んでください");
-  const price = priceIdOf(plan);
-  if (!price) throw new UserError(`${plans()[plan].name}プランの価格(STRIPE_PRICE_${plan})が設定されていません`);
+  const aiMode: AiMode = aiModeValue === "BYO" ? "BYO" : "INCLUDED";
+  const price = priceIdOf(plan, aiMode);
+  if (!price) throw new UserError(`${plans()[plan].name}プラン(${AI_MODE_INFO[aiMode].name})の価格(${priceEnvName(plan, aiMode)})が設定されていません`);
   const { state } = await companyBilling(user.companyId);
   if (state.phase === "active" || state.phase === "past_due") throw new UserError("すでに契約中です。プランの変更・解約は「お支払い情報の管理」からできます");
   // Stripe は、無料期間の終わりを2日以上先にしか指定できない
@@ -140,8 +144,8 @@ export async function createCheckout(user: Admin, planValue: unknown, baseUrl: s
     line_items: [{ price, quantity: 1 }],
     locale: "ja",
     allow_promotion_codes: true,
-    metadata: { companyId: user.companyId },
-    subscription_data: { metadata: { companyId: user.companyId }, ...(trialEnd ? { trial_end: trialEnd } : {}) },
+    metadata: { companyId: user.companyId, aiMode },
+    subscription_data: { metadata: { companyId: user.companyId, aiMode }, ...(trialEnd ? { trial_end: trialEnd } : {}) },
     success_url: `${baseUrl}/billing?success=1`,
     cancel_url: `${baseUrl}/billing`,
   });

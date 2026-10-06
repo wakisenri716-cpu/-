@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -135,13 +136,13 @@ function systemPrompt(companyName: string, name: string) {
   ].join("\n");
 }
 
-async function askClaude(me: Me, companyName: string, history: StaffTurn[]): Promise<StaffReply> {
+async function askClaude(client: Anthropic, me: Me, companyName: string, history: StaffTurn[]): Promise<StaffReply> {
   const messages: Anthropic.Beta.BetaMessageParam[] = history.map((t) => ({ role: t.role, content: t.text }));
   const last = messages[messages.length - 1];
   messages[messages.length - 1] = { role: "user", content: `${last.content as string}\n\n(今日は ${jstDateKey(new Date())} です)` };
   const used: string[] = [];
   for (let step = 0; step < MAX_STEPS; step++) {
-    const response = await new Anthropic().beta.messages.create({
+    const response = await client.beta.messages.create({
       model: MODEL,
       max_tokens: 16000,
       system: [{ type: "text", text: systemPrompt(companyName, me.name), cache_control: { type: "ephemeral" } }],
@@ -238,9 +239,10 @@ export async function askStaffAssistant(me: Me, input: unknown): Promise<StaffRe
   if (companyCount >= DAILY_LIMIT || userCount >= USER_DAILY_LIMIT) throw new UserError("今日のAIへの質問の回数が上限になりました。明日またお試しください");
   const company = await prisma.company.findUniqueOrThrow({ where: { id: me.companyId }, select: { name: true } });
   let result: StaffReply;
-  if (process.env.ANTHROPIC_API_KEY) {
+  const client = await aiFor(me.companyId);
+  if (client) {
     try {
-      result = await askClaude(me, company.name, history);
+      result = await askClaude(client, me, company.name, history);
     } catch (error) {
       if (error instanceof Anthropic.APIError) throw new UserError("AIに問い合わせできませんでした。時間をおいてお試しください");
       throw error;

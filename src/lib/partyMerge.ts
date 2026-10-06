@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 
@@ -216,12 +217,13 @@ export async function reviewDuplicateParties(user: { id: string; name: string; c
   let summary = groups.length ? `同じ相手の重複が ${same}組、似ている名前が ${groups.length - same}組 あります。` : "重複している取引先は見つかりませんでした。";
   const judgments: NoteData["judgments"] = {};
   let mode = "template";
-  if (process.env.ANTHROPIC_API_KEY && groups.length) {
+  const ai = await aiFor(companyId);
+  if (ai && groups.length) {
     const today = jstDateKey(new Date());
     if ((await prisma.assistantLog.count({ where: { companyId, createdAt: { gte: new Date(`${today}T00:00:00+09:00`) } } })) >= DAILY_LIMIT) throw new UserError(`AIの利用は1日${DAILY_LIMIT}回までです。明日またお試しください`);
     const pick = groups.slice(0, 40);
     try {
-      const response = await new Anthropic().beta.messages.create({
+      const response = await ai.beta.messages.create({
         model: MODEL,
         max_tokens: 16000,
         system: [

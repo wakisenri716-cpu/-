@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { EXPENSE_ACCOUNT_CODES } from "@/lib/accounting/chartOfAccounts";
@@ -137,14 +138,15 @@ export async function parseExpenseText(user: { id: string; companyId: string }, 
   await ensureChartOfAccounts(user.companyId);
   let items: DraftItem[] = templateParse(text, today);
   let mode = "template";
-  if (process.env.ANTHROPIC_API_KEY) {
+  const ai = await aiFor(user.companyId);
+  if (ai) {
     const since = new Date(`${today}T00:00:00+09:00`);
     if ((await prisma.assistantLog.count({ where: { companyId: user.companyId, createdAt: { gte: since } } })) >= DAILY_LIMIT) {
       throw new UserError(`AIの利用は1日${DAILY_LIMIT}回までです。明日またお試しください`);
     }
     const accounts = await prisma.account.findMany({ where: { companyId: user.companyId, code: { in: EXPENSE_ACCOUNT_CODES } }, select: { code: true, name: true } });
     try {
-      const response = await new Anthropic().beta.messages.create({
+      const response = await ai.beta.messages.create({
         model: MODEL,
         max_tokens: 16000,
         system: [

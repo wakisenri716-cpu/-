@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -110,11 +111,12 @@ export async function adviseCustomers(user: { id: string; name: string; companyI
   let summary = r.insights.length ? `気になる顧客の変化が ${r.insights.filter((i) => i.level === "warn").length}件、よい知らせが ${r.insights.filter((i) => i.level === "good").length}件 あります。` : "目立った変化のある顧客はいません。";
   const insights = r.insights.map((i) => ({ ...i }));
   let mode = "template";
-  if (process.env.ANTHROPIC_API_KEY && insights.length) {
+  const ai = await aiFor(companyId);
+  if (ai && insights.length) {
     const since = new Date(`${r.today}T00:00:00+09:00`);
     if ((await prisma.assistantLog.count({ where: { companyId, createdAt: { gte: since } } })) >= DAILY_LIMIT) throw new UserError(`AIの利用は1日${DAILY_LIMIT}回までです。明日またお試しください`);
     try {
-      const response = await new Anthropic().beta.messages.create({
+      const response = await ai.beta.messages.create({
         model: MODEL,
         max_tokens: 16000,
         system: [

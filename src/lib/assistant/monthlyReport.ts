@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -126,8 +127,8 @@ export function templateReport(f: Facts) {
   ].join("\n");
 }
 
-async function claudeReport(companyName: string, f: Facts) {
-  const response = await new Anthropic().beta.messages.create({
+async function claudeReport(client: Anthropic, companyName: string, f: Facts) {
+  const response = await client.beta.messages.create({
     model: MODEL,
     max_tokens: 16000,
     system: [
@@ -165,9 +166,10 @@ export async function generateMonthlyReport(user: { id: string; name: string; co
   const [facts, company] = await Promise.all([buildFacts(user.companyId, month), prisma.company.findUniqueOrThrow({ where: { id: user.companyId }, select: { name: true } })]);
   let body: string | null = null;
   let mode = "template";
-  if (process.env.ANTHROPIC_API_KEY) {
+  const client = await aiFor(user.companyId);
+  if (client) {
     try {
-      body = await claudeReport(company.name, facts);
+      body = await claudeReport(client, company.name, facts);
       if (body) mode = "claude";
     } catch (error) {
       if (!(error instanceof Anthropic.APIError)) throw error;

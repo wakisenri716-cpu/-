@@ -2,7 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { requireUser } from "@/lib/auth/session";
 import { companyBilling } from "@/lib/billing";
-import { plans } from "@/lib/billing/plans";
+import { AI_MODE_INFO, plans } from "@/lib/billing/plans";
 import { formatYen } from "@/lib/format";
 import { BillingButton } from "./BillingButtons";
 
@@ -24,7 +24,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
     off: { tone: "bg-slate-100 text-slate-700", text: "有料プランの準備中です(今はすべての機能を無料で使えます)" },
     free: { tone: "bg-emerald-50 text-emerald-800", text: "この会社は無料でご利用いただけます" },
     trial: { tone: "bg-indigo-50 text-indigo-800", text: `無料期間中です(あと${state.daysLeft}日・${date(state.trialEndsAt)}まで)` },
-    active: { tone: "bg-emerald-50 text-emerald-800", text: `${current?.name ?? ""}プランをご契約中です` },
+    active: { tone: "bg-emerald-50 text-emerald-800", text: `${current?.name ?? ""}プラン(${AI_MODE_INFO[company.aiMode === "BYO" ? "BYO" : "INCLUDED"].name})をご契約中です` },
     past_due: { tone: "bg-amber-50 text-amber-900", text: "お支払いができませんでした。カードの情報を確かめてください" },
     expired: { tone: "bg-rose-50 text-rose-800", text: "無料期間が終わりました。続けて使うには有料プランにお申し込みください" },
   }[state.phase];
@@ -60,7 +60,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           {(state.phase === "active" || state.phase === "past_due") && company.stripeCustomerId ? (
             <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="font-semibold">お支払い情報の管理</h2>
-              <p className="text-sm text-slate-600">カードの変更、プランの変更(ライト⇔スタンダード)、領収書のダウンロード、解約ができます(Stripe の画面が開きます)。</p>
+              <p className="text-sm text-slate-600">カードの変更、プランの変更(ライト⇔スタンダード・AI込み⇔AI持ち込み)、領収書のダウンロード、解約ができます(Stripe の画面が開きます)。</p>
               <div className="sm:w-64">
                 <BillingButton action="portal" label="お支払い情報の管理" />
               </div>
@@ -69,22 +69,50 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             <section className="space-y-3">
               <h2 className="font-semibold">プランを選んで申し込む</h2>
               {state.phase === "trial" && <p className="text-sm text-slate-600">いま申し込んでも、無料期間が終わる{date(state.trialEndsAt)}までは料金はかかりません。</p>}
+              <p className="text-sm text-slate-600">
+                AI持ち込みは、自社で契約したAIのキーを
+                <Link href="/ai-settings" className="mx-1 text-indigo-700 hover:underline">
+                  AIの設定
+                </Link>
+                で登録して使うプランです(AIの利用料は自社でのお支払い)。
+              </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 {list.map((p) => (
                   <div key={p.key} className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                     <h3 className="text-lg font-semibold">{p.name}</h3>
                     <p className="text-xs text-slate-500">{p.summary}</p>
-                    <p className="mt-2 text-2xl font-semibold tabular-nums">
-                      {formatYen(p.price)}
-                      <span className="text-sm font-normal text-slate-500"> / 月(税込)</span>
-                    </p>
                     <ul className="mt-3 flex-1 space-y-1 text-sm text-slate-700">
                       {p.features.map((f) => (
                         <li key={f}>✓ {f}</li>
                       ))}
                     </ul>
-                    <div className="mt-4">
-                      <BillingButton action="checkout" plan={p.key} label={`${p.name}で申し込む`} />
+                    <div className="mt-4 grid gap-3">
+                      <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3">
+                        <p className="flex items-baseline justify-between gap-2">
+                          <span className="text-sm font-medium">{AI_MODE_INFO.INCLUDED.name}</span>
+                          <span className="text-xl font-semibold tabular-nums">
+                            {formatYen(p.price)}
+                            <span className="text-xs font-normal text-slate-500"> / 月(税込)</span>
+                          </span>
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">{AI_MODE_INFO.INCLUDED.summary}</p>
+                        <div className="mt-2">
+                          <BillingButton action="checkout" plan={p.key} aiMode="INCLUDED" label={`${p.name}(${AI_MODE_INFO.INCLUDED.name})で申し込む`} />
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 p-3">
+                        <p className="flex items-baseline justify-between gap-2">
+                          <span className="text-sm font-medium">{AI_MODE_INFO.BYO.name}</span>
+                          <span className="text-xl font-semibold tabular-nums">
+                            {formatYen(p.byoPrice)}
+                            <span className="text-xs font-normal text-slate-500"> / 月(税込)</span>
+                          </span>
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">{AI_MODE_INFO.BYO.summary}</p>
+                        <div className="mt-2">
+                          <BillingButton action="checkout" plan={p.key} aiMode="BYO" primary={false} label={`${p.name}(${AI_MODE_INFO.BYO.name})で申し込む`} />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}

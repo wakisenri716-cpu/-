@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -163,10 +164,11 @@ export async function reviewBooks(user: { id: string; name: string; companyId: s
   const r = await runBookCheck(companyId);
   let result = templateReview(r);
   let mode = "template";
-  if (process.env.ANTHROPIC_API_KEY && r.findings.length) {
+  const ai = await aiFor(companyId);
+  if (ai && r.findings.length) {
     try {
       const allowed = new Set(r.findings.map((f) => f.href));
-      const response = await new Anthropic().beta.messages.create({
+      const response = await ai.beta.messages.create({
         model: MODEL,
         max_tokens: 16000,
         system: [

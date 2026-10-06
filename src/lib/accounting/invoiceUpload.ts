@@ -9,7 +9,7 @@ import { autoMatchImportedInvoice } from "@/lib/poMatching";
 
 // 請求書の画像・PDFをAIで読み取り、請求書(下書き)と仕訳を作る。請求書の画面と AI受付箱 で使う。
 export async function createInvoiceFromUpload(companyId: string, direction: InvoiceDirection, base64: string, mediaType: string) {
-  const extraction = await getAiProvider().extractInvoice({ imageBase64: base64, mediaType, direction });
+  const extraction = await (await getAiProvider(companyId)).extractInvoice({ imageBase64: base64, mediaType, direction });
 
   const subtotalAmount = extraction.subtotalAmount ?? 0;
   const taxAmount = extraction.taxAmount ?? 0;

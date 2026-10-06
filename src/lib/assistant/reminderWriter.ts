@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
@@ -27,7 +28,8 @@ export async function writeReminderWithAi(user: { id: string; companyId: string 
   const ctx = await getReminderContext(user.companyId, invoiceId, baseUrl);
   const base = reminderMail(ctx);
   const stageNote = STAGE_LABELS[ctx.stage].action;
-  if (!process.env.ANTHROPIC_API_KEY) return { ...base, writer: "template", reason: `段階「${STAGE_LABELS[ctx.stage].label}」の決まった文面です。${stageNote}` };
+  const client = await aiFor(user.companyId);
+  if (!client) return { ...base, writer: "template", reason: `段階「${STAGE_LABELS[ctx.stage].label}」の決まった文面です。${stageNote}` };
 
   const since = new Date(`${jstDateKey(new Date())}T00:00:00+09:00`);
   if ((await prisma.assistantLog.count({ where: { companyId: user.companyId, createdAt: { gte: since } } })) >= DAILY_LIMIT) {
@@ -51,7 +53,7 @@ export async function writeReminderWithAi(user: { id: string; companyId: string 
   };
   let result: { subject: string; body: string; reason: string } | null = null;
   try {
-    const response = await new Anthropic().beta.messages.create({
+    const response = await client.beta.messages.create({
       model: MODEL,
       max_tokens: 16000,
       system: [

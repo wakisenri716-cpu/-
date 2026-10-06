@@ -59,7 +59,7 @@ export function InboxView() {
         <p className="mt-1 text-sm text-slate-600">
           請求書・領収書・契約書など、会社に届いた書類(PDF・写真)をここに入れるだけで、AIがどんな書類かを見分けて振り分けます。受け取った請求書は請求書として、領収書はあなたの経費精算に登録し(仕訳も作ります)、契約書は満了日をお知らせするように書類フォルダへ保存します。
         </p>
-        {!aiEnabled && <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">AIのAPIキー(ANTHROPIC_API_KEY)が未設定のため、ファイル名(「請求書」「領収書」「契約書」など)で見分ける簡易モードです。</p>}
+        {!aiEnabled && <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">いまはAIを使えないため(AI持ち込みでキーが未登録など)、ファイル名(「請求書」「領収書」「契約書」など)で見分ける簡易モードです。<Link href="/ai-settings" className="ml-1 underline">AIの設定</Link></p>}
       </div>
 
       <label
