@@ -56,7 +56,7 @@ export type Suggestion = {
 
 export const SOURCE_LABELS: Record<SuggestionSource, string> = { keyword: "摘要の言葉", vendor: "取引先のいつもの科目", ai: "AIの見立て" };
 
-function keywordCode(text: string) {
+export function keywordCode(text: string) {
   const hits = Object.entries(KEYWORDS)
     .filter(([, re]) => re.test(text))
     .map(([code]) => code);

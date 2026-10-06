@@ -75,6 +75,12 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
             </Link>
           )}
           {!cancelled && paid === 0 && <CancelInvoiceButton invoiceId={invoice.id} />}
+          {!cancelled && invoice.status !== "DRAFT" && (
+            // デジタルインボイス(Peppol / JP PINT の XML)。Peppol で送るときは、この XML をアクセスポイント事業者のサービスに渡す
+            <a href={`/api/invoices/${invoice.id}/peppol`} download className="rounded-md border border-indigo-300 px-3 py-2 text-sm text-indigo-700 hover:bg-indigo-50" title="Peppol(JP PINT)形式の XML">
+              デジタルインボイス(XML)
+            </a>
+          )}
           {!cancelled && <PrintButton />}
         </div>
       </div>

@@ -77,7 +77,7 @@ export function InboxView() {
       >
         <span className="text-base font-medium">{busy ? "AIが書類を読んでいます…" : "ここに書類をドラッグ、またはタップして選ぶ"}</span>
         <span className="text-xs text-slate-500">PDF・写真(JPEG/PNG)・1枚4MBまで・一度に10枚まで</span>
-        <input ref={input} type="file" multiple accept="application/pdf,image/*" disabled={busy} onChange={(e) => e.target.files && upload(e.target.files)} className="sr-only" />
+        <input ref={input} type="file" multiple accept="application/pdf,image/*,.xml,application/xml,text/xml" disabled={busy} onChange={(e) => e.target.files && upload(e.target.files)} className="sr-only" />
       </label>
 
       {errors.length > 0 && (

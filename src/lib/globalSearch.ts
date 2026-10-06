@@ -238,7 +238,7 @@ export async function runSearch(companyId: string, f: SearchFilters) {
     };
     jobs.push(
       prisma.invoice
-        .findMany({ where, include: { customer: { select: { name: true } }, vendor: { select: { name: true } } }, orderBy: [{ issueDate: "desc" }, { createdAt: "desc" }], take: PER_KIND })
+        .findMany({ where, include: { customer: { select: { name: true } }, vendor: { select: { name: true } }, _count: { select: { lines: true } } }, orderBy: [{ issueDate: "desc" }, { createdAt: "desc" }], take: PER_KIND })
         .then((rows) =>
           rows.map((r) => ({
             kind: "invoice" as const,
@@ -248,7 +248,8 @@ export async function runSearch(companyId: string, f: SearchFilters) {
             date: dateKey(r.issueDate ?? r.createdAt),
             amount: r.totalAmount,
             status: r.status,
-            href: `/invoices/${r.id}`,
+            // 発行した請求書(明細あり)は請求書の画面へ。受け取った請求書・読み取った請求書は一覧へ
+            href: r.direction === "ISSUED" && r._count.lines > 0 ? `/invoices/${r.id}/print` : "/invoices",
           })),
         ),
     );
@@ -323,7 +324,7 @@ export async function runSearch(companyId: string, f: SearchFilters) {
             date: dateKey(r.expenseDate),
             amount: r.amount,
             status: r.expenseReport.status,
-            href: `/expenses/${r.expenseReport.id}`,
+            href: `/expenses/${r.expenseReport.id}/print`,
           })),
         ),
     );
