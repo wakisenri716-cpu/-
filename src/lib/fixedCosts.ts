@@ -227,7 +227,8 @@ export async function reviewFixedCosts(user: { id: string; companyId: string }) 
           const idx = Number(v.index);
           const item = Number.isInteger(idx) ? list[idx] : undefined;
           if (!item || typeof v.action !== "string" || !(v.action in ACTIONS)) continue;
-          const note = typeof v.note === "string" ? v.note.trim().slice(0, 160) : "";
+          // 画面で「AI:」を付けて出すので、AIが付けた「AI:」は外す
+          const note = typeof v.note === "string" ? v.note.trim().replace(/^AI\s*[:：]\s*/, "").slice(0, 160) : "";
           // 決まったルールで値上がり・重なりを見つけたものは、AIが「このまま」と言っても候補を残す
           if (!(v.action === "KEEP" && item.suggestion)) item.suggestion = v.action as FixedAction;
           if (note) item.aiNote = note;

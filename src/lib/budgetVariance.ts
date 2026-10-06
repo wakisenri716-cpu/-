@@ -291,7 +291,8 @@ export async function explainBudgetVariance(user: { id: string; companyId: strin
           const idx = Number(v.index);
           const item = Number.isInteger(idx) ? r.items[idx] : undefined;
           if (!item) continue;
-          const cause = String(v.cause ?? "").trim().slice(0, 240);
+          // 画面で「AIの見立て:」を付けて出すので、AIが付けた「AI:」は外す
+          const cause = String(v.cause ?? "").trim().replace(/^AI\s*[:：]\s*/, "").slice(0, 240);
           const action = String(v.action ?? "").trim().slice(0, 160);
           if (cause) item.aiCause = cause;
           if (action) item.aiAction = action;
