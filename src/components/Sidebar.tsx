@@ -69,6 +69,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/briefing", label: "AIの朝のまとめ", icon: SparkleIcon },
       { href: "/ai-watch", label: "AIの見張り", icon: SparkleIcon },
       { href: "/assistant", label: "AIアシスタント", icon: SparkleIcon },
+      { href: "/simulation", label: "もしもシミュレーション", icon: SparkleIcon },
       { href: "/ai-proposals", label: "AIからの下書き", icon: SparkleIcon },
       { href: "/inbox", label: "AI受付箱", icon: SparkleIcon },
       {
@@ -579,7 +580,7 @@ export function MobileNav({ role }: { role: Role }) {
           <span className="h-[1.5px] w-4 rounded bg-slate-600" />
           <span className="h-[1.5px] w-4 rounded bg-slate-600" />
         </span>
-        <span className="max-w-[9rem] truncate">
+        <span className="max-w-[6.5rem] truncate sm:max-w-[9rem]">
           {current?.label ?? "メニュー"}
         </span>
       </button>

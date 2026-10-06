@@ -28,6 +28,7 @@ import { draftQuote } from "@/lib/quoteAssist";
 import { getDuplicateParties } from "@/lib/partyMerge";
 import { getYearEndChecklist } from "@/lib/yearEndClose";
 import { findAndExplainJournal } from "@/lib/journalExplain";
+import { runSimulation } from "@/lib/simulation";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
@@ -290,6 +291,21 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { year: { type: "integer", description: "年度の開始年(任意)" } }, additionalProperties: false },
   },
   {
+    name: "simulate_scenario",
+    description:
+      "もしもシミュレーション。「1人採用したら」「売上が10%減ったら」「200万円の設備を買ったら」「500万円借りたら」のとき、これから12か月の利益と現預金の見込みを、いまのままと比べて返す。条件が読み取れるなら revenuePct・items・oneTime を入れる(text だけでもよい)。",
+    input_schema: {
+      type: "object",
+      properties: {
+        text: { type: "string", description: "もしもの内容(文章)" },
+        revenuePct: { type: "number", description: "売上の増減(%)。10%減なら -10" },
+        items: { type: "array", description: "毎月の費用の増減(円/月、増えるなら正)。from は来月を1とした開始の月", items: { type: "object", properties: { label: { type: "string" }, monthly: { type: "integer" }, from: { type: "integer" } }, required: ["label", "monthly", "from"] } },
+        oneTime: { type: "array", description: "一度だけの出入り(出るなら正、入るなら負)。借入など利益に関係しないものは cashOnly を true", items: { type: "object", properties: { label: { type: "string" }, amount: { type: "integer" }, month: { type: "integer" }, cashOnly: { type: "boolean" } }, required: ["label", "amount", "month"] } },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "search_data",
     description: "会社のデータ(請求書・見積書・発注書・仕訳・経費・契約書・取引先・書類)をまとめて探す。「先月のA社の請求書」「10万円以上の経費」「家賃の仕訳」のような文をそのまま query に入れると、期間・金額・種類・言葉を読み取って探す。",
     input_schema: { type: "object", properties: { query: { type: "string", description: "探したいものを書いた文" } }, required: ["query"], additionalProperties: false },
@@ -550,6 +566,21 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_vendor_insights": {
       const r = await findVendorInsights(companyId);
       return { vendors: r.vendors, insights: r.insights.map((i) => ({ vendor: i.name, kind: VENDOR_INSIGHT_LABELS[i.kind], detail: i.detail, nextStep: i.action, link: `/vendors/vendor/${i.vendorId}` })), link: "/vendor-insights" };
+    }
+    case "simulate_scenario": {
+      const structured = input.revenuePct !== undefined || Array.isArray(input.items) || Array.isArray(input.oneTime);
+      const r = await runSimulation({ id: ctx.userId, companyId }, structured ? { scenario: { revenuePct: input.revenuePct ?? 0, items: input.items ?? [], oneTime: input.oneTime ?? [], notes: [] } } : { text: input.text });
+      return {
+        baseline: { monthlyRevenue: r.base.revenue, monthlyExpense: r.base.expense, cashNow: r.base.cash, basedOn: r.base.months },
+        scenario: r.scenario,
+        profit12Months: r.result.totals.profit,
+        profit12MonthsIfNoChange: r.result.totals.baseProfit,
+        cashIn12Months: r.result.totals.endCash,
+        cashIn12MonthsIfNoChange: r.result.totals.baseEndCash,
+        cashShortMonth: r.result.shortMonth,
+        comments: r.result.comments,
+        link: "/simulation",
+      };
     }
     case "search_data": {
       const filters = parseSearch(str(input.query));
