@@ -31,6 +31,7 @@ const SCREENS = [
   ["/sales-analysis", "売上分析"],
   ["/price-review", "値上げの検討"],
   ["/fixed-costs", "固定費・サブスクの見直し"],
+  ["/tax-forecast", "着地見込みと納税の目安"],
   ["/receivables", "売掛金・買掛金"],
   ["/invoices", "請求書"],
   ["/expenses", "経費精算"],
@@ -141,6 +142,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("simulate_scenario", { text: q })) as { comments?: string[]; error?: string };
     if (r.error) return { reply: r.error, tools: ["simulate_scenario"], mode: "simple" };
     return { reply: [...(r.comments ?? []), "[もしもシミュレーション](/simulation)"].join("\n"), tools: ["simulate_scenario"], mode: "simple" };
+  }
+  // 「今期の税金はいくら?」「節税は?」→ 着地見込みと納税の目安
+  if (/節税|納税|着地|税金はいくら|法人税はいくら|決算対策/.test(q)) {
+    const r = (await run("get_tax_forecast")) as { findings: string[] };
+    return { reply: [...r.findings, "[着地見込みと納税の目安](/tax-forecast)"].join("\n"), tools: ["get_tax_forecast"], mode: "simple" };
   }
   // 「固定費を減らしたい」「サブスクは?」→ 固定費・サブスクの見直し
   if (/固定費|サブスク|定額|節約|経費を減ら|コスト削減/.test(q)) {
