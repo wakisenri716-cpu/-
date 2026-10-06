@@ -9,8 +9,9 @@ import { createProduct, recordStockMovement } from "@/lib/accounting/inventory";
 import { createShift, createStaff } from "@/lib/shifts/service";
 import { createManual } from "@/lib/manuals";
 import { ensureBankAccounts } from "@/lib/bank/accounts";
+import { resolveFiscalYear } from "@/lib/accounting/monthly";
 
-// お試し用の会社: サンプルデータ(売上・経費・請求書・シフト・在庫・マニュアル・銀行明細)を入れた別の会社を作る。
+// お試し用の会社: サンプルデータ(売上・経費・予算・請求書・シフト・在庫・マニュアル・銀行明細)を入れた別の会社を作る。
 // 自分の会社のデータには一切さわらない。課金はしない(Company.isDemo)。
 
 const DEMO_NAME = "サンプル商店(お試し用)";
@@ -85,6 +86,19 @@ export async function createDemoCompany(userId: string) {
     await journal(dayOf(i, 25), "アルバイトの給料", "5110", "1020", 310_000 + k * 9_000);
     if (k % 2 === 0) await journal(dayOf(i, 15), "チラシの印刷", "5130", "1020", 45_000);
   }
+  await journal(dayOf(1, 18), "Web広告(キャンペーン)", "5130", "1020", 160_000);
+
+  // 今期の予算(予算の進み具合・予算と実績の差の原因を試せるように)
+  const { year } = await resolveFiscalYear(companyId, null);
+  const budgets: [string, number][] = [
+    ["4010", 19_800_000],
+    ["5000", 5_400_000],
+    ["5060", 3_360_000],
+    ["5070", 760_000],
+    ["5110", 4_000_000],
+    ["5130", 300_000],
+  ];
+  await prisma.budget.createMany({ data: budgets.map(([code, amount]) => ({ companyId, fiscalYear: year, accountId: id(code), amount })) });
 
   // 請求書(1件は入金済み、1件は期日前、1件は期日を過ぎて未入金)
   const lines = (desc: string, qty: number, price: number) => [{ description: desc, quantity: qty, unit: "式", unitPrice: price, taxRate: 10 }];

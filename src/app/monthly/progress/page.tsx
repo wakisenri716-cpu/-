@@ -135,7 +135,14 @@ export default async function BudgetProgressPage({ searchParams }: { searchParam
         </Link>
       </div>
 
-      {p.alerts > 0 && <p className="rounded-md bg-amber-50 px-4 py-2 text-sm text-amber-900">気をつけたい科目が {p.alerts}件 あります(下の表の「超えた」「超えそう」「届かなそう」)。</p>}
+      {p.alerts > 0 && (
+        <p className="rounded-md bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          気をつけたい科目が {p.alerts}件 あります(下の表の「超えた」「超えそう」「届かなそう」)。
+          <Link href={`/monthly/variance?fy=${p.year}`} className="ml-1 font-medium text-amber-900 underline">
+            差の原因を見る →
+          </Link>
+        </p>
+      )}
 
       {hasBoth && (
         <div className="grid gap-4 sm:grid-cols-3">

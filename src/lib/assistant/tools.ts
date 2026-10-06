@@ -30,6 +30,7 @@ import { getYearEndChecklist } from "@/lib/yearEndClose";
 import { findAndExplainJournal } from "@/lib/journalExplain";
 import { runSimulation } from "@/lib/simulation";
 import { getReorderSuggestions, reorderOptions } from "@/lib/reorder";
+import { getBudgetVariance } from "@/lib/budgetVariance";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
@@ -295,6 +296,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_reorder",
     description: "発注の提案。在庫が早くなくなる商品(在庫・1日に使う量・もつ日数・発注中の数)と、発注する数の目安・前回の発注先と単価を返す。「何を発注すればいい?」「在庫が切れそうなのは?」などに使う。",
     input_schema: { type: "object", properties: { leadDays: { type: "integer", description: "納品までの日数(既定7)" }, coverDays: { type: "integer", description: "何日分を頼むか(既定30)" } }, additionalProperties: false },
+  },
+  {
+    name: "get_budget_variance",
+    description: "予算と実績の差の原因。予算を超えた・超えそうな費用と届かなそうな売上について、月の予算から外れた月・記帳のない月・前年の同じ時期より増えた/減った取引・一度に大きな支払いを返す。「なぜ予算を超えた?」「売上が予算に届かない理由は?」などに使う。",
+    input_schema: { type: "object", properties: { year: { type: "integer", description: "年度の開始年(任意)" } }, additionalProperties: false },
   },
   {
     name: "simulate_scenario",
@@ -576,6 +582,25 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_reorder": {
       const r = await getReorderSuggestions(companyId, reorderOptions(input));
       return { needed: r.needed.map((x) => ({ name: x.name, onHand: `${x.onHand}${x.unit}`, dailyUse: x.dailyUse, daysLeft: x.daysLeft, onOrder: x.onOrder, suggested: `${x.suggested}${x.unit}`, unitPrice: x.unitPrice, vendor: x.vendorName, reasons: x.reasons })), checked: r.checked, link: "/reorder" };
+    }
+    case "get_budget_variance": {
+      const r = await getBudgetVariance(companyId, input.year ? String(input.year) : null);
+      return {
+        year: r.year,
+        elapsedMonths: r.elapsed,
+        items: r.items.map((i) => ({
+          account: i.name,
+          kind: i.kind === "EXPENSE" ? "費用" : "売上",
+          status: i.status,
+          budget: i.budget,
+          budgetSoFar: i.pace,
+          actual: i.actual,
+          forecast: i.forecast,
+          findings: i.findings,
+          drivers: i.drivers.slice(0, 3).map((d) => ({ label: d.label, current: d.current, previous: i.basis === "lastYear" ? d.previous : null, diff: i.basis === "lastYear" ? d.diff : null })),
+        })),
+        link: "/monthly/variance",
+      };
     }
     case "simulate_scenario": {
       const structured = input.revenuePct !== undefined || Array.isArray(input.items) || Array.isArray(input.oneTime);

@@ -26,6 +26,7 @@ const SCREENS = [
   ["/balance-sheet", "貸借対照表"],
   ["/monthly", "月次推移・予算"],
   ["/monthly/progress", "予算の進み具合"],
+  ["/monthly/variance", "予算と実績の差の原因"],
   ["/sales-analysis", "売上分析"],
   ["/receivables", "売掛金・買掛金"],
   ["/invoices", "請求書"],
@@ -137,6 +138,12 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("simulate_scenario", { text: q })) as { comments?: string[]; error?: string };
     if (r.error) return { reply: r.error, tools: ["simulate_scenario"], mode: "simple" };
     return { reply: [...(r.comments ?? []), "[もしもシミュレーション](/simulation)"].join("\n"), tools: ["simulate_scenario"], mode: "simple" };
+  }
+  // 「予算を超えた原因は?」→ 予算と実績の差の原因
+  if (/予算/.test(q) && /原因|なぜ|どうして|理由|差/.test(q)) {
+    const r = (await run("get_budget_variance")) as { items: { account: string; findings: string[] }[] };
+    if (!r.items.length) return { reply: "予算から大きく外れている科目はありません。\n[予算の進み具合](/monthly/progress)", tools: ["get_budget_variance"], mode: "simple" };
+    return { reply: [...r.items.slice(0, 3).flatMap((i) => [`【${i.account}】`, ...i.findings.map((f) => `・${f}`)]), "[予算と実績の差の原因](/monthly/variance)"].join("\n"), tools: ["get_budget_variance"], mode: "simple" };
   }
 
   if (/(請求書|仕訳|督促).*(作|発行|記帳|送)|契約.*(終了にして|解約して)|経費.*(入れて|入力して)|科目.*(にして|変えて)/.test(q)) {
