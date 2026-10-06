@@ -244,6 +244,7 @@ model Company {
   monthlyReports       MonthlyReport[]
   anomalyChecks        AnomalyCheck[]
   hrProcedureChecks    HrProcedureCheck[]
+  taxCalendarChecks    TaxCalendarCheck[]
   inboxItems           InboxItem[]
   dailyBriefings       DailyBriefing[]
   approvalChecks       ApprovalCheck[]
@@ -2298,4 +2299,16 @@ model HrProcedureCheck {
 
   @@unique([staffId, key])
   @@index([companyId])
+}
+
+// 税金・労務の年間カレンダーで「済み」にした期限(key は「種類:期間」)
+model TaxCalendarCheck {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  key       String
+  byName    String
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, key])
 }

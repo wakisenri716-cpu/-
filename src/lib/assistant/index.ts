@@ -36,6 +36,7 @@ const SCREENS = [
   ["/customer-profit", "顧客別の採算"],
   ["/policies", "社内規程の下書き(経費精算・在宅勤務・慶弔見舞金)"],
   ["/hr-procedures", "入社・退職の手続き(社会保険・雇用保険の届出の期限)"],
+  ["/tax-calendar", "税金・労務のカレンダー(申告・届出・納付の期限)"],
   ["/receivables", "売掛金・買掛金"],
   ["/invoices", "請求書"],
   ["/expenses", "経費精算"],
@@ -151,6 +152,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   if (/経営分析|会社の(状態|調子|健康)|つぶれ|倒産|自己資本|流動比率/.test(q)) {
     const r = (await run("get_business_analysis")) as { summary: string[]; concerns: { text: string; action: string }[] };
     return { reply: [...r.summary, ...r.concerns.slice(0, 3).map((c) => `・${c.text} ${c.action}`), "[経営分析](/analysis?preset=this-fy)"].join("\n"), tools: ["get_business_analysis"], mode: "simple" };
+  }
+  // 「今月の税金の期限は?」「年度更新はいつ?」→ 税金・労務のカレンダー
+  if (/(税金|納付|申告|届出|社会保険料).*(期限|いつ|締め切り|しめきり)|年度更新|算定基礎届|法定調書|償却資産申告|36協定|納期の特例/.test(q)) {
+    const r = (await run("get_tax_calendar")) as { findings: string[] };
+    return { reply: [...r.findings, "[税金・労務のカレンダー](/tax-calendar)"].join("\n"), tools: ["get_tax_calendar"], mode: "simple" };
   }
   // 「入社の手続きは?」「退職する人の届出は?」→ 入社・退職の手続き
   if (/(入社|退職|採用|辞める|やめる).*(手続|届|やること)|資格(取得|喪失)届|離職票/.test(q)) {

@@ -40,6 +40,7 @@ import { SAVING_OPTIONS } from "@/lib/taxSavingOptions";
 import { getLaborAnalysis } from "@/lib/laborAnalysis";
 import { getCustomerProfit } from "@/lib/customerProfit";
 import { getHrProcedures } from "@/lib/hrProcedures";
+import { getTaxCalendar } from "@/lib/taxCalendar";
 import { getAnalysis } from "@/lib/accounting/analysis";
 import { templateExplanation } from "@/lib/analysisExplain";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
@@ -346,6 +347,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_hr_procedures",
     description: "入社・退職の手続き。入社日・退職日が近いスタッフごとに、健康保険・厚生年金と雇用保険の資格取得届/喪失届、住民税の異動届、源泉徴収票、労働条件通知書、振込先の登録、備品の返却などを期限・済みかどうか付きで返す。「入社の手続きは?」「退職する人の届出は?」「離職票は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_tax_calendar",
+    description: "税金・労務のカレンダー。これから12か月の申告・届出・納付の期限(源泉所得税・住民税・社会保険料の納付、算定基礎届、労働保険の年度更新、36協定、年末調整、法定調書・給与支払報告書、償却資産申告、決算と中間申告)を、済み・期限切れ・2週間以内の印つきで返す。「今月の税金の期限は?」「年度更新はいつ?」「次の申告は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -735,6 +741,15 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         people: r.cases.map((c) => ({ name: c.name, kind: c.kind === "hire" ? "入社" : "退職", date: c.date, open: c.tasks.filter((t) => !t.done).map((t) => ({ task: t.label, due: t.due, dueNote: t.dueNote, status: t.status })) })),
         findings: r.findings,
         link: "/hr-procedures",
+      };
+    }
+    case "get_tax_calendar": {
+      const r = await getTaxCalendar(companyId);
+      return {
+        today: r.today,
+        events: r.events.slice(0, 40).map((e) => ({ title: e.title, due: e.due, start: e.start, category: e.category, status: e.status, note: e.note })),
+        findings: r.findings,
+        link: "/tax-calendar",
       };
     }
     case "get_business_analysis": {
