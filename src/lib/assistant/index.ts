@@ -132,6 +132,12 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   const preset = /先月/.test(q) ? "last-month" : /前期|去年|昨年/.test(q) ? "last-fy" : /今期|今年|年度/.test(q) ? "this-fy" : "this-month";
   const label = { "last-month": "先月", "last-fy": "前期", "this-fy": "今期", "this-month": "今月" }[preset];
   const run = (name: string, input: Record<string, unknown> = {}) => runAssistantTool({ companyId, userId: "" }, name, input) as Promise<Record<string, unknown>>;
+  // 「1人採用したらどうなる?」「売上が10%減ったら?」→ もしもシミュレーション
+  if (/もしも|採用したら|減ったら|増えたら|下がったら|上がったら|買ったら|購入したら|借りたら/.test(q)) {
+    const r = (await run("simulate_scenario", { text: q })) as { comments?: string[]; error?: string };
+    if (r.error) return { reply: r.error, tools: ["simulate_scenario"], mode: "simple" };
+    return { reply: [...(r.comments ?? []), "[もしもシミュレーション](/simulation)"].join("\n"), tools: ["simulate_scenario"], mode: "simple" };
+  }
 
   if (/(請求書|仕訳|督促).*(作|発行|記帳|送)|契約.*(終了にして|解約して)|経費.*(入れて|入力して)|科目.*(にして|変えて)/.test(q)) {
     return { reply: "請求書・仕訳・督促メール・契約の終了・経費の入力などの下書きを作るには、AIが使える状態([AIの設定](/ai-settings))が必要です。いまは各画面から作ってください。\n[請求書](/invoices) [仕訳帳](/journal) [ひとことで経費入力](/quick-expense) [契約書](/contracts)", tools: [], mode: "simple" };

@@ -11,6 +11,7 @@ const ALLOWED = [
   /^\/api\/welcome$/,
   /^\/api\/companies\/switch$/,
   /^\/api\/assistant$/,
+  /^\/api\/simulation$/,
   /^\/api\/journal\/[^/]+\/explain$/,
   /^\/api\/journal\/[^/]+\/comments$/,
   /^\/api\/support$/,

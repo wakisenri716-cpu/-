@@ -19,6 +19,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_todos: "やること",
   explain_journal: "仕訳の説明",
   search_data: "データの検索",
+  simulate_scenario: "もしもシミュレーション",
   get_anomalies: "いつもと違う動き",
   propose_invoice: "請求書の下書き",
   propose_journal: "仕訳の下書き",
