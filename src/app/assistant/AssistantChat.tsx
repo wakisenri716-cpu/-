@@ -18,6 +18,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_budget_progress: "予算",
   get_todos: "やること",
   explain_journal: "仕訳の説明",
+  search_data: "データの検索",
   get_anomalies: "いつもと違う動き",
   propose_invoice: "請求書の下書き",
   propose_journal: "仕訳の下書き",

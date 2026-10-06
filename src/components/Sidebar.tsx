@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CompanySwitcher } from "./CompanySwitcher";
@@ -341,13 +341,26 @@ function NavList({
   pathname,
   query,
   onNavigate,
+  dataSearch = false,
 }: {
   sections: NavSection[];
   pathname: string;
   query: string;
   onNavigate?: () => void;
+  dataSearch?: boolean;
 }) {
   const q = fold(query.trim());
+  // 管理者・経理担当は、メニューのほかに会社のデータ(請求書・仕訳など)からも探せる
+  const searchLink = dataSearch && query.trim() && (
+    <Link
+      href={`/search?q=${encodeURIComponent(query.trim())}`}
+      onClick={onNavigate}
+      className="mx-1 flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-2 text-[13px] font-medium text-indigo-800 hover:bg-indigo-100"
+    >
+      <SearchIcon className="h-4 w-4 shrink-0" />
+      <span className="min-w-0 truncate">「{query.trim()}」をデータから探す</span>
+    </Link>
+  );
   const filtered = q
     ? sections
         .map((s) => ({
@@ -360,12 +373,16 @@ function NavList({
     : sections;
   if (!filtered.length)
     return (
-      <p className="px-3 py-6 text-center text-xs text-slate-400">
-        「{query}」に合うメニューはありません
-      </p>
+      <>
+        {searchLink}
+        <p className="px-3 py-6 text-center text-xs text-slate-400">
+          「{query}」に合うメニューはありません
+        </p>
+      </>
     );
   return (
     <>
+      {searchLink}
       {filtered.map((section, i) => (
         <div key={section.title ?? i}>
           {section.title && (
@@ -394,12 +411,17 @@ function MenuSearch({
   onChange,
   inputRef,
   hint,
+  dataSearch = false,
+  onSubmit,
 }: {
   value: string;
   onChange: (v: string) => void;
   inputRef?: React.Ref<HTMLInputElement>;
   hint?: boolean;
+  dataSearch?: boolean;
+  onSubmit?: () => void;
 }) {
+  const router = useRouter();
   return (
     <label className="relative block">
       <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -407,9 +429,16 @@ function MenuSearch({
         ref={inputRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => e.key === "Escape" && onChange("")}
-        placeholder="メニューを探す"
-        aria-label="メニューを探す"
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onChange("");
+          // Enter で、データ(請求書・仕訳など)から探す画面へ
+          if (e.key === "Enter" && dataSearch && value.trim() && !e.nativeEvent.isComposing) {
+            router.push(`/search?q=${encodeURIComponent(value.trim())}`);
+            onSubmit?.();
+          }
+        }}
+        placeholder={dataSearch ? "メニュー・データを探す" : "メニューを探す"}
+        aria-label={dataSearch ? "メニュー・データを探す" : "メニューを探す"}
         className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pr-10 pl-8 text-sm placeholder:text-slate-400"
       />
       {hint && !value && (
@@ -481,7 +510,7 @@ export function Sidebar({
       </div>
       <div className="space-y-2 px-3 pb-3">
         <CompanySwitcher companies={companies} current={companyId} />
-        <MenuSearch value={query} onChange={setQuery} inputRef={search} hint />
+        <MenuSearch value={query} onChange={setQuery} inputRef={search} hint dataSearch={role !== "EMPLOYEE"} onSubmit={() => setQuery("")} />
       </div>
 
       <nav
@@ -493,6 +522,7 @@ export function Sidebar({
           pathname={pathname}
           query={query}
           onNavigate={() => setQuery("")}
+          dataSearch={role !== "EMPLOYEE"}
         />
       </nav>
 
@@ -581,7 +611,7 @@ export function MobileNav({ role }: { role: Role }) {
                 </button>
               </div>
               <div className="px-3 pb-3">
-                <MenuSearch value={query} onChange={setQuery} />
+                <MenuSearch value={query} onChange={setQuery} dataSearch={role !== "EMPLOYEE"} onSubmit={close} />
               </div>
               <nav className="flex-1 space-y-4 overflow-y-auto px-2 pb-4">
                 <NavList
@@ -589,6 +619,7 @@ export function MobileNav({ role }: { role: Role }) {
                   pathname={pathname}
                   query={query}
                   onNavigate={close}
+                  dataSearch={role !== "EMPLOYEE"}
                 />
               </nav>
               <div

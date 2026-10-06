@@ -275,6 +275,13 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
       mode: "simple",
     };
   }
+  // 「先月のA社の請求書を探して」→ すべてのデータから探す
+  if (/探して|さがして|検索|どこ(に|だ|\?|？)|見つけて/.test(q)) {
+    const r = (await run("search_data", { query: q })) as { error?: string; total?: number; results?: { kind: string; items: { title: string; detail: string; date: string | null; amount: number | null }[] }[]; link?: string };
+    if (r.error) return { reply: r.error, tools: ["search_data"], mode: "simple" };
+    const lines = (r.results ?? []).flatMap((g) => g.items.slice(0, 3).map((i) => `・${g.kind}: ${i.title}${i.detail ? `(${i.detail})` : ""}${i.date ? ` ${i.date}` : ""}${i.amount !== null ? ` ${formatYen(i.amount)}` : ""}`));
+    return { reply: [r.total ? `${r.total}件見つかりました:` : "見つかりませんでした。", ...lines.slice(0, 8), `[すべて見る](${r.link})`].join("\n"), tools: ["search_data"], mode: "simple" };
+  }
   return {
     reply: "いまは簡易モード(AIが使えない状態。[AIの設定](/ai-settings))のため、次のような質問に答えられます: 「今月の利益は?」「未入金は?」「督促が必要なのは?」「更新が近い契約は?」「資金は大丈夫?」「帳簿に問題はある?」「先月の締めは?」「やることは?」",
     tools: [],
