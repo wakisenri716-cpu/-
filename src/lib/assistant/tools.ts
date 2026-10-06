@@ -35,6 +35,8 @@ import { buildShiftDraft } from "@/lib/shiftDraft";
 import { getPriceReview } from "@/lib/priceReview";
 import { simulatePriceIncrease } from "@/lib/priceMath";
 import { findFixedCosts } from "@/lib/fixedCosts";
+import { getTaxForecast } from "@/lib/taxForecast";
+import { SAVING_OPTIONS } from "@/lib/taxSavingOptions";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
@@ -319,6 +321,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_fixed_costs",
     description: "固定費・サブスクの見直し。帳簿から毎月くり返している支払い(月と年間の金額・最近の金額・値上がり・同じ種類が複数・止まった支払い)と、毎月の支払いの合計・売上に対する割合を返す。「固定費を減らしたい」「サブスクは何がある?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_tax_forecast",
+    description: "今期の着地見込みと納税の目安。終わった月の実績と直近3か月の平均から期末の税引前利益を見込み、法人税等(標準税率の目安)・中間納付を引いた納付額・納付期限・いまの現預金と、決算までにできること(決算賞与・経営セーフティ共済・少額の備品・短期前払費用・処分)の一覧を返す。「今期の税金はいくら?」「節税は?」「決算対策は?」などに使う。税理士への確認を必ず勧める。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -662,6 +669,24 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         items: active.slice(0, 20).map((i) => ({ name: i.label, account: i.accountName, monthly: i.monthly, yearly: i.yearly, lastAmount: i.lastAmount, flags: i.flags, note: i.note })),
         stopped: r.items.filter((i) => i.status === "STOPPED").map((i) => ({ name: i.label, lastMonth: i.lastMonth })),
         link: "/fixed-costs",
+      };
+    }
+    case "get_tax_forecast": {
+      const r = await getTaxForecast(companyId);
+      return {
+        fiscalYear: `${r.from}〜${r.to}`,
+        remainingMonths: r.remaining,
+        actualPretaxSoFar: r.actual.pretax,
+        forecastPretax: r.ready ? r.forecast.pretax : null,
+        taxEstimate: r.ready ? r.result.total : null,
+        interimPaid: r.interim,
+        payable: r.ready ? r.payable : null,
+        deadline: r.deadline,
+        cash: r.cash,
+        findings: r.findings,
+        options: SAVING_OPTIONS.map((o) => ({ title: o.title, detail: o.detail, caution: o.caution })),
+        note: "標準税率での目安。実際の申告・節税は税理士に確認すること",
+        link: "/tax-forecast",
       };
     }
     case "simulate_scenario": {
