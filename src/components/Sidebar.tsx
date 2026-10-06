@@ -89,6 +89,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/requests", label: "申請・稟議", icon: StampIcon },
       { href: "/notices", label: "社内のお知らせ", icon: MegaphoneIcon },
       { href: "/manuals", label: "マニュアル", icon: NotebookIcon },
+      { href: "/policies", label: "社内規程の下書き", icon: SparkleIcon },
       { href: "/staff", label: "スタッフアプリ", icon: DashboardIcon },
       { href: "/files", label: "書類フォルダ", icon: FolderIcon },
     ],

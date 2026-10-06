@@ -34,6 +34,7 @@ const SCREENS = [
   ["/tax-forecast", "着地見込みと納税の目安"],
   ["/labor-analysis", "人件費の分析"],
   ["/customer-profit", "顧客別の採算"],
+  ["/policies", "社内規程の下書き(経費精算・在宅勤務・慶弔見舞金)"],
   ["/receivables", "売掛金・買掛金"],
   ["/invoices", "請求書"],
   ["/expenses", "経費精算"],
