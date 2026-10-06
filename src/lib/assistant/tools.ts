@@ -28,6 +28,7 @@ import { draftQuote } from "@/lib/quoteAssist";
 import { getDuplicateParties } from "@/lib/partyMerge";
 import { getYearEndChecklist } from "@/lib/yearEndClose";
 import { findAndExplainJournal } from "@/lib/journalExplain";
+import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
 // 書き換えは利用者が画面で「実行する」を押したときだけ行う。
@@ -289,6 +290,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { year: { type: "integer", description: "年度の開始年(任意)" } }, additionalProperties: false },
   },
   {
+    name: "search_data",
+    description: "会社のデータ(請求書・見積書・発注書・仕訳・経費・契約書・取引先・書類)をまとめて探す。「先月のA社の請求書」「10万円以上の経費」「家賃の仕訳」のような文をそのまま query に入れると、期間・金額・種類・言葉を読み取って探す。",
+    input_schema: { type: "object", properties: { query: { type: "string", description: "探したいものを書いた文" } }, required: ["query"], additionalProperties: false },
+  },
+  {
     name: "explain_journal",
     description: "仕訳1件が何の取引かを説明する(「この仕訳は何?」「3日の5万円の仕訳はなぜ前払費用?」など)。何が増えて何が減ったか、利益と現預金への影響、確かめた方がよい点を返す。摘要の言葉・日付・金額で探し、複数あれば候補を返すので entryId で選び直す。",
     input_schema: {
@@ -544,6 +550,17 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_vendor_insights": {
       const r = await findVendorInsights(companyId);
       return { vendors: r.vendors, insights: r.insights.map((i) => ({ vendor: i.name, kind: VENDOR_INSIGHT_LABELS[i.kind], detail: i.detail, nextStep: i.action, link: `/vendors/vendor/${i.vendorId}` })), link: "/vendor-insights" };
+    }
+    case "search_data": {
+      const filters = parseSearch(str(input.query));
+      if (!hasCondition(filters)) return { error: "探す言葉を入れてください" };
+      const r = await runSearch(companyId, filters);
+      return {
+        understood: filters,
+        total: r.total,
+        results: r.groups.map((g) => ({ kind: KIND_LABELS[g.kind], items: g.hits.slice(0, 10).map((h) => ({ title: h.title, detail: h.subtitle, date: h.date, amount: h.amount, link: h.href })) })),
+        link: `/search?q=${encodeURIComponent(str(input.query))}`,
+      };
     }
     case "explain_journal": {
       const user = (ctx.userId && (await prisma.user.findUnique({ where: { id: ctx.userId }, select: { id: true, name: true } }))) || { id: ctx.userId, name: "AIアシスタント" };

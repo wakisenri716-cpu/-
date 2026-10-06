@@ -120,6 +120,17 @@ export default function JournalPage() {
     loadTemplates();
   }, [loadTemplates]);
 
+  // 「すべてのデータから探す」から来たとき(/journal?q=...)は、その言葉で絞り込んで開く
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (!q) return;
+    const next = { q, accountId: "", min: "", max: "", source: "" };
+    // URL は最初の表示のあとでしか読めないので、ここで一度だけ検索条件に入れる
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSearch(next);
+    setApplied(next);
+  }, []);
+
   useEffect(() => {
     // Fetch-on-mount/month change: the resulting setState always lands after
     // the fetch's await, so the extra render this rule warns about never happens here.
