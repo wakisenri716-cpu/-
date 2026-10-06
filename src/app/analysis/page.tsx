@@ -1,3 +1,5 @@
+import { AnalysisExplain } from "./AnalysisExplain";
+import { aiEnabled } from "@/lib/ai/access";
 import { getAnalysis, type Metric } from "@/lib/accounting/analysis";
 import { requireCompanyId } from "@/lib/auth/session";
 import { formatYen } from "@/lib/format";
@@ -103,6 +105,8 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
           </div>
 
           {!analysis.hasPrior && <p className="text-xs text-slate-500">前年同期の記帳がないため、前年との比較は表示していません。</p>}
+
+          <AnalysisExplain key={`${analysis.from}-${analysis.to}`} from={analysis.from} to={analysis.to} ai={await aiEnabled(companyId)} />
 
           {groups.map((group) => (
             <section key={group} className="space-y-3">

@@ -145,6 +145,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     if (r.error) return { reply: r.error, tools: ["simulate_scenario"], mode: "simple" };
     return { reply: [...(r.comments ?? []), "[もしもシミュレーション](/simulation)"].join("\n"), tools: ["simulate_scenario"], mode: "simple" };
   }
+  // 「会社の状態は?」「経営分析して」→ 経営分析の解説
+  if (/経営分析|会社の(状態|調子|健康)|つぶれ|倒産|自己資本|流動比率/.test(q)) {
+    const r = (await run("get_business_analysis")) as { summary: string[]; concerns: { text: string; action: string }[] };
+    return { reply: [...r.summary, ...r.concerns.slice(0, 3).map((c) => `・${c.text} ${c.action}`), "[経営分析](/analysis?preset=this-fy)"].join("\n"), tools: ["get_business_analysis"], mode: "simple" };
+  }
   // 「儲かっている顧客は?」「採算の悪い取引先は?」→ 顧客別の採算
   if (/採算|儲かって|もうかって|赤字の(顧客|取引先)|粗利/.test(q) && !/案件/.test(q)) {
     const r = (await run("get_customer_profit")) as { findings: string[] };
