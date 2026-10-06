@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CompanySwitcher } from "./CompanySwitcher";
 import {
   ArchiveIcon,
@@ -53,7 +55,11 @@ import {
 import { LogoutButton } from "@/components/LogoutButton";
 import type { ComponentType, SVGProps } from "react";
 
-type NavItem = { href: string; label: string; icon: ComponentType<SVGProps<SVGSVGElement>> };
+type NavItem = {
+  href: string;
+  label: string;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+};
 type NavSection = { title?: string; items: NavItem[] };
 
 export const NAV_SECTIONS: NavSection[] = [
@@ -64,7 +70,11 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/ai-watch", label: "AIの見張り", icon: SparkleIcon },
       { href: "/assistant", label: "AIアシスタント", icon: SparkleIcon },
       { href: "/inbox", label: "AI受付箱", icon: SparkleIcon },
-      { href: "/reports/monthly", label: "AIの月次レポート", icon: SparkleIcon },
+      {
+        href: "/reports/monthly",
+        label: "AIの月次レポート",
+        icon: SparkleIcon,
+      },
       { href: "/anomalies", label: "いつもと違う動き", icon: SparkleIcon },
       { href: "/ai-learning", label: "AIが覚えたこと", icon: SparkleIcon },
       { href: "/book-check", label: "帳簿の健康診断", icon: SparkleIcon },
@@ -86,7 +96,11 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/invoices", label: "請求書", icon: DocumentIcon },
       { href: "/billing-gaps", label: "請求漏れのチェック", icon: SparkleIcon },
       { href: "/purchase-orders", label: "発注書", icon: CartIcon },
-      { href: "/po-matching", label: "発注書と請求書の突き合わせ", icon: CartIcon },
+      {
+        href: "/po-matching",
+        label: "発注書と請求書の突き合わせ",
+        icon: CartIcon,
+      },
       { href: "/contracts", label: "契約書の台帳", icon: NotebookIcon },
       { href: "/receivables", label: "売掛金・買掛金", icon: CoinsIcon },
       { href: "/collections", label: "督促・回収", icon: MailIcon },
@@ -108,7 +122,11 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/reimbursements", label: "立替経費の精算", icon: WalletIcon },
       { href: "/travel", label: "出張旅費・日当", icon: PlaneIcon },
       { href: "/transport", label: "交通費精算", icon: CashflowIcon },
-      { href: "/quick-expense", label: "ひとことで経費入力", icon: SparkleIcon },
+      {
+        href: "/quick-expense",
+        label: "ひとことで経費入力",
+        icon: SparkleIcon,
+      },
       { href: "/duplicates", label: "二重計上のチェック", icon: SearchIcon },
       { href: "/advances", label: "仮払金", icon: CoinsIcon },
       { href: "/bank", label: "銀行・カード明細", icon: BankIcon },
@@ -137,9 +155,17 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/leave", label: "有給・残業", icon: SunIcon },
       { href: "/payroll", label: "給与計算", icon: CoinsIcon },
       { href: "/bonus", label: "賞与", icon: CoinsIcon },
-      { href: "/payroll/standard", label: "算定基礎(標準報酬)", icon: ShieldIcon },
+      {
+        href: "/payroll/standard",
+        label: "算定基礎(標準報酬)",
+        icon: ShieldIcon,
+      },
       { href: "/year-end", label: "年末調整・源泉徴収票", icon: FileIcon },
-      { href: "/staff-records", label: "労働者名簿・賃金台帳", icon: ClipboardIcon },
+      {
+        href: "/staff-records",
+        label: "労働者名簿・賃金台帳",
+        icon: ClipboardIcon,
+      },
     ],
   },
   {
@@ -153,7 +179,11 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/departments", label: "部門別損益", icon: StoreIcon },
       { href: "/projects", label: "案件別損益", icon: BriefcaseIcon },
       { href: "/balance-sheet", label: "貸借対照表", icon: ClipboardIcon },
-      { href: "/cash-flow-statement", label: "キャッシュ・フロー計算書", icon: TrendIcon },
+      {
+        href: "/cash-flow-statement",
+        label: "キャッシュ・フロー計算書",
+        icon: TrendIcon,
+      },
       { href: "/financial-statements", label: "決算報告書", icon: FileIcon },
       { href: "/tax", label: "消費税集計", icon: PercentIcon },
       { href: "/tax/close", label: "消費税の決算整理", icon: PercentIcon },
@@ -184,7 +214,11 @@ const EMPLOYEE_SECTIONS: NavSection[] = [
     items: [
       { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
       { href: "/expenses", label: "経費精算", icon: ReceiptIcon },
-      { href: "/quick-expense", label: "ひとことで経費入力", icon: SparkleIcon },
+      {
+        href: "/quick-expense",
+        label: "ひとことで経費入力",
+        icon: SparkleIcon,
+      },
       { href: "/travel", label: "出張旅費・日当", icon: PlaneIcon },
       { href: "/transport", label: "交通費精算", icon: CashflowIcon },
       { href: "/worklogs", label: "日報(工数)", icon: NotebookIcon },
@@ -207,11 +241,27 @@ function sectionsFor(role: Role, operator = false): NavSection[] {
           ? []
           : [
               { href: "/accounts", label: "勘定科目", icon: BookIcon },
-              { href: "/opening-balances", label: "開始残高(乗り換え)", icon: ScaleIcon },
-              { href: "/monthly-close", label: "月次決算チェック", icon: ChecklistIcon },
+              {
+                href: "/opening-balances",
+                label: "開始残高(乗り換え)",
+                icon: ScaleIcon,
+              },
+              {
+                href: "/monthly-close",
+                label: "月次決算チェック",
+                icon: ChecklistIcon,
+              },
               { href: "/closing", label: "締め処理", icon: LockIcon },
-              { href: "/accountant-export", label: "税理士向けデータ", icon: FileIcon },
-              { href: "/backup", label: "データのバックアップ", icon: DownloadIcon },
+              {
+                href: "/accountant-export",
+                label: "税理士向けデータ",
+                icon: FileIcon,
+              },
+              {
+                href: "/backup",
+                label: "データのバックアップ",
+                icon: DownloadIcon,
+              },
               { href: "/email", label: "メール設定・送信履歴", icon: MailIcon },
             ]),
         ...(role === "ADMIN"
@@ -226,85 +276,331 @@ function sectionsFor(role: Role, operator = false): NavSection[] {
       ],
     },
     // このサービスの運営者だけ(OPERATOR_EMAILS)
-    ...(operator ? [{ title: "運営者", items: [{ href: "/operator", label: "運営者メニュー", icon: GaugeIcon }] }] : []),
+    ...(operator
+      ? [
+          {
+            title: "運営者",
+            items: [
+              { href: "/operator", label: "運営者メニュー", icon: GaugeIcon },
+            ],
+          },
+        ]
+      : []),
   ];
 }
 
-function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+function NavLink({
+  item,
+  active,
+  onNavigate,
+}: {
+  item: NavItem;
+  active: boolean;
+  onNavigate?: () => void;
+}) {
   const Icon = item.icon;
+  const ai = item.icon === SparkleIcon;
   return (
     <Link
       href={item.href}
-      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-        active ? "bg-indigo-50 text-indigo-700" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13.5px] font-medium ${
+        active
+          ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/80"
+          : "text-slate-600 hover:bg-white/70 hover:text-slate-900"
       }`}
     >
-      <Icon className={`h-5 w-5 shrink-0 ${active ? "text-indigo-600" : "text-slate-400"}`} />
-      {item.label}
+      {active && (
+        <span
+          className="absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-full bg-indigo-600"
+          aria-hidden
+        />
+      )}
+      <Icon
+        className={`h-[18px] w-[18px] shrink-0 ${active ? "text-indigo-600" : ai ? "text-indigo-400 group-hover:text-indigo-500" : "text-slate-400 group-hover:text-slate-500"}`}
+      />
+      <span className="truncate">{item.label}</span>
     </Link>
   );
 }
 
-export function Sidebar({ userName, role, companies, companyId, operator = false }: { userName: string; role: Role; companies: { id: string; name: string }[]; companyId: string; operator?: boolean }) {
+// メニューの言葉で絞り込む(ひらがな・カタカナ・全角半角の違いは気にしない)
+const fold = (s: string) =>
+  s
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[\u30a1-\u30f6]/g, (c) =>
+      String.fromCharCode(c.charCodeAt(0) - 0x60),
+    );
+
+function NavList({
+  sections,
+  pathname,
+  query,
+  onNavigate,
+}: {
+  sections: NavSection[];
+  pathname: string;
+  query: string;
+  onNavigate?: () => void;
+}) {
+  const q = fold(query.trim());
+  const filtered = q
+    ? sections
+        .map((s) => ({
+          ...s,
+          items: s.items.filter(
+            (i) => fold(i.label).includes(q) || fold(s.title ?? "").includes(q),
+          ),
+        }))
+        .filter((s) => s.items.length)
+    : sections;
+  if (!filtered.length)
+    return (
+      <p className="px-3 py-6 text-center text-xs text-slate-400">
+        「{query}」に合うメニューはありません
+      </p>
+    );
+  return (
+    <>
+      {filtered.map((section, i) => (
+        <div key={section.title ?? i}>
+          {section.title && (
+            <div className="px-3 pb-1 text-[11px] font-semibold tracking-wider text-slate-400">
+              {section.title}
+            </div>
+          )}
+          <div className="space-y-px">
+            {section.items.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                active={pathname === item.href}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function MenuSearch({
+  value,
+  onChange,
+  inputRef,
+  hint,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  inputRef?: React.Ref<HTMLInputElement>;
+  hint?: boolean;
+}) {
+  return (
+    <label className="relative block">
+      <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => e.key === "Escape" && onChange("")}
+        placeholder="メニューを探す"
+        aria-label="メニューを探す"
+        className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pr-10 pl-8 text-sm placeholder:text-slate-400"
+      />
+      {hint && !value && (
+        <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-slate-200 bg-slate-50 px-1.5 text-[10px] font-medium text-slate-400">
+          /
+        </kbd>
+      )}
+    </label>
+  );
+}
+
+function Brand() {
+  return (
+    <span className="flex items-center gap-2.5">
+      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-linear-to-br from-indigo-500 to-violet-600 text-[13px] font-bold text-white shadow-sm shadow-indigo-500/30">
+        AI
+      </span>
+      <span className="leading-tight">
+        <span className="block text-[13.5px] font-bold tracking-wide text-slate-900">
+          経理オートメーション
+        </span>
+        <span className="block text-[10.5px] font-medium text-slate-400">
+          AI-first back office
+        </span>
+      </span>
+    </span>
+  );
+}
+
+export function Sidebar({
+  userName,
+  role,
+  companies,
+  companyId,
+  operator = false,
+}: {
+  userName: string;
+  role: Role;
+  companies: { id: string; name: string }[];
+  companyId: string;
+  operator?: boolean;
+}) {
   const pathname = usePathname();
+  const [query, setQuery] = useState("");
+  const search = useRef<HTMLInputElement>(null);
+  // 「/」か Ctrl/⌘+K でメニューを探す
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing =
+        e.target instanceof HTMLElement &&
+        (e.target.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName));
+      if (
+        (e.key === "/" && !typing) ||
+        (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey))
+      ) {
+        e.preventDefault();
+        search.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r bg-white md:flex print:hidden">
-      <div className="flex items-center gap-2 px-5 py-4">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
-          AI
-        </span>
-        <span className="text-sm font-semibold text-slate-900">経理オートメーション</span>
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-slate-200/80 bg-slate-50/80 backdrop-blur md:flex print:hidden">
+      <div className="px-4 pt-4 pb-3">
+        <Brand />
       </div>
-      <div className="px-2 pb-2">
+      <div className="space-y-2 px-3 pb-3">
         <CompanySwitcher companies={companies} current={companyId} />
+        <MenuSearch value={query} onChange={setQuery} inputRef={search} hint />
       </div>
 
-      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-2">
-        {sectionsFor(role, operator).map((section, i) => (
-          <div key={section.title ?? i}>
-            {section.title && (
-              <div className="px-3 pb-1.5 text-xs font-semibold tracking-wide text-slate-400">{section.title}</div>
-            )}
-            <div className="space-y-0.5">
-              {section.items.map((item) => (
-                <NavLink key={item.href} item={item} active={pathname === item.href} />
-              ))}
-            </div>
-          </div>
-        ))}
+      <nav
+        className="flex-1 space-y-4 overflow-y-auto px-2 pt-1 pb-4"
+        aria-label="メニュー"
+      >
+        <NavList
+          sections={sectionsFor(role, operator)}
+          pathname={pathname}
+          query={query}
+          onNavigate={() => setQuery("")}
+        />
       </nav>
 
-      <div className="border-t px-4 py-3">
-        <div className="mb-2 truncate text-xs text-slate-500">{userName} さんとしてログイン中</div>
-        <LogoutButton />
+      <div className="flex items-center gap-2.5 border-t border-slate-200/80 px-4 py-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+          {userName.slice(0, 1)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-xs font-medium text-slate-700">
+            {userName}
+          </div>
+          <LogoutButton />
+        </div>
       </div>
     </aside>
   );
 }
 
+// スマホ: 上のバーの「メニュー」ボタンで、探せるメニューを横から開く
 export function MobileNav({ role }: { role: Role }) {
   const pathname = usePathname();
-  const allItems = sectionsFor(role).flatMap((s) => s.items);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const close = () => {
+    setOpen(false);
+    setQuery("");
+  };
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  const current = sectionsFor(role)
+    .flatMap((s) => s.items)
+    .find((i) => i.href === pathname);
 
   return (
-    <nav className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 text-sm md:hidden">
-      {allItems.map((item) => {
-        const Icon = item.icon;
-        const active = pathname === item.href;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 whitespace-nowrap ${
-              active ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"
-            }`}
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-xs"
+        aria-expanded={open}
+        aria-label="メニューを開く"
+      >
+        <span className="flex flex-col gap-[3px]" aria-hidden>
+          <span className="h-[1.5px] w-4 rounded bg-slate-600" />
+          <span className="h-[1.5px] w-4 rounded bg-slate-600" />
+          <span className="h-[1.5px] w-4 rounded bg-slate-600" />
+        </span>
+        <span className="max-w-[9rem] truncate">
+          {current?.label ?? "メニュー"}
+        </span>
+      </button>
+      {open &&
+        // 上のバー(ぼかし効果つき)の中に置くと画面いっぱいに広がらないので、body の直下に出す
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 md:hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label="メニュー"
           >
-            <Icon className="h-3.5 w-3.5 shrink-0" />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
+            <button
+              className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px]"
+              onClick={close}
+              aria-label="メニューを閉じる"
+            />
+            <div
+              className="absolute inset-y-0 left-0 flex w-[86%] max-w-xs flex-col bg-slate-50 shadow-lg"
+              style={{ paddingTop: "env(safe-area-inset-top)" }}
+            >
+              <div className="flex items-center justify-between px-4 pt-4 pb-3">
+                <Brand />
+                <button
+                  onClick={close}
+                  className="rounded-lg p-2 text-slate-500 hover:bg-slate-200/60"
+                  aria-label="閉じる"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="px-3 pb-3">
+                <MenuSearch value={query} onChange={setQuery} />
+              </div>
+              <nav className="flex-1 space-y-4 overflow-y-auto px-2 pb-4">
+                <NavList
+                  sections={sectionsFor(role)}
+                  pathname={pathname}
+                  query={query}
+                  onNavigate={close}
+                />
+              </nav>
+              <div
+                className="border-t border-slate-200/80 px-4 py-3"
+                style={{
+                  paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+                }}
+              >
+                <LogoutButton />
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }

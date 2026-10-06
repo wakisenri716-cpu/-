@@ -12,7 +12,7 @@ export function LoginForm({ signupOpen = false }: { signupOpen?: boolean }) {
   );
 }
 
-const inputClass = "mt-1 w-full rounded-md border px-3 py-2 text-sm";
+const inputClass = "mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm";
 
 function LoginFormInner({ signupOpen }: { signupOpen: boolean }) {
   const router = useRouter();
@@ -52,12 +52,12 @@ function LoginFormInner({ signupOpen }: { signupOpen: boolean }) {
   }
 
   return (
-    <div className="mx-auto max-w-sm py-16">
-      <div className="mb-6 flex items-center gap-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">AI</span>
-        <span className="font-semibold">経理オートメーション</span>
+    <div className="w-full max-w-sm py-12 lg:py-0">
+      <div className="mb-8 flex items-center gap-2.5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-linear-to-br from-indigo-500 to-violet-600 text-sm font-bold text-white shadow-sm shadow-indigo-500/30">AI</span>
+        <span className="font-bold tracking-wide">経理オートメーション</span>
       </div>
-      <h1 className="text-xl font-semibold">ログイン</h1>
+      <h1 className="text-2xl font-bold">ログイン</h1>
       <p className="mt-1 text-sm text-slate-600">メールアドレスとパスワードを入力してください。</p>
 
       {credentials ? (
@@ -69,7 +69,7 @@ function LoginFormInner({ signupOpen }: { signupOpen: boolean }) {
             <input name="code" required autoFocus autoComplete="one-time-code" inputMode="numeric" className={`${inputClass} tracking-widest`} placeholder="123456" />
             <p className="mt-1 text-xs text-slate-500">スマホをなくしたときは、回復コード(例: abcd-efgh)も使えます。</p>
           </div>
-          <button type="submit" disabled={submitting} className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={submitting} className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 disabled:opacity-50">
             {submitting ? "確認中..." : "ログイン"}
           </button>
           <button
@@ -97,7 +97,7 @@ function LoginFormInner({ signupOpen }: { signupOpen: boolean }) {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+          className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 disabled:opacity-50"
         >
           {submitting ? "処理中..." : "ログイン"}
         </button>

@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { needsInitialSetup, signupOpen } from "@/lib/auth/setup";
 import { LoginForm } from "./LoginForm";
 import { SetupForm } from "./SetupForm";
+import { AuthShell } from "./AuthShell";
 
 export const dynamic = "force-dynamic";
 
@@ -23,5 +24,11 @@ export default async function LoginPage() {
     );
   }
   // まだ誰も登録していなければ新規登録(最初の管理者と会社の情報)、あとはログイン
-  return setup ? <SetupForm /> : <LoginForm signupOpen={signupOpen() && !nativeApp} />;
+  return setup ? (
+    <SetupForm />
+  ) : (
+    <AuthShell>
+      <LoginForm signupOpen={signupOpen() && !nativeApp} />
+    </AuthShell>
+  );
 }

@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { EMPLOYEE_PATHS, OPEN_PATHS, getCurrentUser } from "@/lib/auth/session";
 import { Sidebar, MobileNav } from "@/components/Sidebar";
 import { NativePush } from "@/components/NativePush";
-import { LogoutButton } from "@/components/LogoutButton";
 import { CompanySwitcher } from "@/components/CompanySwitcher";
 import { listMyCompanies } from "@/lib/auth/companies";
 import { BILLING_OPEN_PATHS, isFreeCompany } from "@/lib/billing";
@@ -16,6 +16,10 @@ import { ServiceNotices } from "@/components/ServiceNotices";
 import { DemoBanner } from "@/components/DemoControls";
 import { activeNotices } from "@/lib/support";
 
+// 欧文・数字は Inter、和文は Noto Sans JP(和文は文字数が多いので先読みしない)
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+const notoJp = Noto_Sans_JP({ subsets: ["latin"], variable: "--font-noto-jp", display: "swap", preload: false });
+
 export const metadata: Metadata = {
   title: "AI経理オートメーション",
   description: "経費精算・請求書処理をAIが半自動化する統合SaaS基盤",
@@ -25,7 +29,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#5b4ae6",
   // スマホアプリ(mobile/)・ホーム画面に追加したときに画面いっぱいに表示し、余白は safe-area で取る
   viewportFit: "cover",
 };
@@ -52,30 +56,27 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const staffApp = pathname === "/staff" || pathname.startsWith("/staff/");
 
   return (
-    <html lang="ja" className="h-full antialiased">
+    <html lang="ja" className={`h-full antialiased ${inter.variable} ${notoJp.variable}`}>
       <body className="min-h-full bg-slate-50 text-slate-900 print:bg-white">
         {user ? (
           <div className="flex min-h-screen">
             <Sidebar userName={user.name} role={user.role} companies={companies} companyId={user.companyId} operator={isOperator(user.email)} />
             <div className="flex min-w-0 flex-1 flex-col">
-              <header className={`border-b bg-white px-4 py-3 md:hidden print:hidden ${staffApp ? "hidden" : ""}`}>
+              <header className={`sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 px-4 py-2.5 backdrop-blur md:hidden print:hidden ${staffApp ? "hidden" : ""}`}>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-sm font-semibold whitespace-nowrap">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white">
+                  <span className="flex items-center gap-2 text-sm font-bold whitespace-nowrap text-slate-900">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-[9px] bg-linear-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white shadow-sm shadow-indigo-500/30">
                       AI
                     </span>
                     経理オートメーション
                   </span>
-                  <LogoutButton />
+                  <MobileNav role={user.role} />
                 </div>
                 {companies.length > 1 && (
                   <div className="mt-2">
                     <CompanySwitcher companies={companies} current={user.companyId} compact />
                   </div>
                 )}
-                <div className="mt-2">
-                  <MobileNav role={user.role} />
-                </div>
               </header>
               <main className={`mx-auto w-full max-w-5xl flex-1 px-4 sm:px-6 lg:px-8 print:max-w-none print:p-0 ${staffApp ? "pt-4 pb-24 md:py-6" : "py-6"}`}>
                 {user.mustSetup2fa && (
