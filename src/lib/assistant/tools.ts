@@ -29,6 +29,7 @@ import { getDuplicateParties } from "@/lib/partyMerge";
 import { getYearEndChecklist } from "@/lib/yearEndClose";
 import { findAndExplainJournal } from "@/lib/journalExplain";
 import { runSimulation } from "@/lib/simulation";
+import { getReorderSuggestions, reorderOptions } from "@/lib/reorder";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
@@ -289,6 +290,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_year_end",
     description: "決算の準備のチェックリスト(各月の締め・減価償却・棚卸・現金の実査・仮払金・未払/前払の計上・消費税の決算整理・法人税等・期末の締め)の済み/未と、期末までの日数・申告の期限を返す。「決算の準備は?」「決算までに何をすればいい?」などに使う。",
     input_schema: { type: "object", properties: { year: { type: "integer", description: "年度の開始年(任意)" } }, additionalProperties: false },
+  },
+  {
+    name: "get_reorder",
+    description: "発注の提案。在庫が早くなくなる商品(在庫・1日に使う量・もつ日数・発注中の数)と、発注する数の目安・前回の発注先と単価を返す。「何を発注すればいい?」「在庫が切れそうなのは?」などに使う。",
+    input_schema: { type: "object", properties: { leadDays: { type: "integer", description: "納品までの日数(既定7)" }, coverDays: { type: "integer", description: "何日分を頼むか(既定30)" } }, additionalProperties: false },
   },
   {
     name: "simulate_scenario",
@@ -566,6 +572,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_vendor_insights": {
       const r = await findVendorInsights(companyId);
       return { vendors: r.vendors, insights: r.insights.map((i) => ({ vendor: i.name, kind: VENDOR_INSIGHT_LABELS[i.kind], detail: i.detail, nextStep: i.action, link: `/vendors/vendor/${i.vendorId}` })), link: "/vendor-insights" };
+    }
+    case "get_reorder": {
+      const r = await getReorderSuggestions(companyId, reorderOptions(input));
+      return { needed: r.needed.map((x) => ({ name: x.name, onHand: `${x.onHand}${x.unit}`, dailyUse: x.dailyUse, daysLeft: x.daysLeft, onOrder: x.onOrder, suggested: `${x.suggested}${x.unit}`, unitPrice: x.unitPrice, vendor: x.vendorName, reasons: x.reasons })), checked: r.checked, link: "/reorder" };
     }
     case "simulate_scenario": {
       const structured = input.revenuePct !== undefined || Array.isArray(input.items) || Array.isArray(input.oneTime);

@@ -116,6 +116,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/letters", label: "宛名・送付状", icon: MailIcon },
       { href: "/pos", label: "POSレジ連携", icon: RegisterIcon },
       { href: "/inventory", label: "在庫管理", icon: BoxIcon },
+      { href: "/reorder", label: "発注の提案", icon: BoxIcon },
     ],
   },
   {
