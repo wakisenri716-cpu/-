@@ -1,5 +1,51 @@
 @import "tailwindcss";
 
+/* ── デザインの基本(色・文字・角丸・影) ──────────────────────────────
+   画面ごとのクラスはそのままで、ここで全体の見た目をそろえる。
+   文字は欧文・数字を Inter、和文を Noto Sans JP にする(layout.tsx で読み込む)。 */
+@theme inline {
+  --font-sans: var(--font-inter), var(--font-noto-jp), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
+}
+
+@theme {
+  /* 落ち着いた、少し青みのあるグレー */
+  --color-slate-50: #f7f8fa;
+  --color-slate-100: #eff1f5;
+  --color-slate-200: #e3e6ec;
+  --color-slate-300: #cdd2db;
+  --color-slate-400: #9aa2b1;
+  --color-slate-500: #6b7385;
+  --color-slate-600: #4f5668;
+  --color-slate-700: #3b4152;
+  --color-slate-800: #252a37;
+  --color-slate-900: #161a24;
+  --color-slate-950: #0c0f16;
+
+  /* ブランド色: 鮮やかな青紫 */
+  --color-indigo-50: #f3f3ff;
+  --color-indigo-100: #e7e7ff;
+  --color-indigo-200: #d2d1ff;
+  --color-indigo-300: #b1adff;
+  --color-indigo-400: #8d84fb;
+  --color-indigo-500: #6f63f4;
+  --color-indigo-600: #5b4ae6;
+  --color-indigo-700: #4c3ccb;
+  --color-indigo-800: #3f33a4;
+  --color-indigo-900: #352f82;
+  --color-indigo-950: #201b4d;
+
+  /* 角丸は少し大きく、影は薄く重ねてやわらかく */
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
+  --shadow-xs: 0 1px 2px 0 rgb(22 26 36 / 0.04);
+  --shadow-sm: 0 1px 2px 0 rgb(22 26 36 / 0.04), 0 1px 3px 0 rgb(22 26 36 / 0.05);
+  --shadow: 0 2px 4px -1px rgb(22 26 36 / 0.05), 0 4px 10px -2px rgb(22 26 36 / 0.06);
+  --shadow-md: 0 4px 8px -2px rgb(22 26 36 / 0.06), 0 8px 20px -4px rgb(22 26 36 / 0.08);
+  --shadow-lg: 0 12px 28px -6px rgb(22 26 36 / 0.12), 0 4px 10px -4px rgb(22 26 36 / 0.06);
+}
+
 /* Tailwind v4 defaults border color to currentColor, which made every bare
    `border`/`divide-y` (table rows, inputs) render as near-black lines. */
 @layer base {
@@ -13,11 +59,83 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  letter-spacing: 0.01em;
+  line-height: 1.65;
   /* iPhoneのノッチ・ステータスバーや、横向きの丸い角の下に中身が入らないようにする(スマホアプリ・ホーム画面に追加したとき) */
   padding-top: env(safe-area-inset-top);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+}
+
+/* 見出しは詰めて、和文の約物も詰める(palt) */
+h1,
+h2,
+h3 {
+  font-feature-settings: "palt";
+  letter-spacing: 0.02em;
+}
+h1 {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* 入力欄・ボタン: フォーカスをやわらかい光の輪で示し、色の変化をなめらかに */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+select,
+textarea {
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-indigo-400);
+  box-shadow: 0 0 0 3px rgb(111 99 244 / 0.16);
+}
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--color-indigo-600);
+}
+button,
+a {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    opacity 150ms ease;
+}
+button:not(:disabled):active {
+  transform: translateY(0.5px);
+}
+:focus-visible {
+  outline: 2px solid var(--color-indigo-400);
+  outline-offset: 2px;
+}
+
+/* 表: 見出しは小さく落ち着いた色に、数字は桁をそろえる */
+thead th {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* AIの機能のパネル(青紫の枠の白いカード)は、うっすら色を乗せて目印にする */
+.border-indigo-200.bg-white {
+  background-image: linear-gradient(135deg, rgb(243 243 255 / 0.9) 0%, rgb(255 255 255 / 0) 55%);
+}
+
+/* スクロールバーを細く目立たなく */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-slate-300) transparent;
 }
 
 /* Subtle row hover across every data table without touching every page. */
