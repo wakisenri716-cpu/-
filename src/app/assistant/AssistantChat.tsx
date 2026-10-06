@@ -27,6 +27,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_fixed_costs: "固定費の見直し",
   get_tax_forecast: "着地見込みと納税",
   get_labor_analysis: "人件費の分析",
+  get_customer_profit: "顧客別の採算",
   get_anomalies: "いつもと違う動き",
   propose_invoice: "請求書の下書き",
   propose_journal: "仕訳の下書き",

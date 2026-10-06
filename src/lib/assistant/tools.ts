@@ -38,6 +38,7 @@ import { findFixedCosts } from "@/lib/fixedCosts";
 import { getTaxForecast } from "@/lib/taxForecast";
 import { SAVING_OPTIONS } from "@/lib/taxSavingOptions";
 import { getLaborAnalysis } from "@/lib/laborAnalysis";
+import { getCustomerProfit } from "@/lib/customerProfit";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
@@ -333,6 +334,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_labor_analysis",
     description: "人件費の分析。直近6か月の売上・粗利・人件費・人件費率・労働分配率・勤務時間・人時売上高、指定の月(YYYY-MM、任意)のスタッフごとの勤務時間・残業(月45時間超の印)・深夜・支給額、曜日ごとの1時間あたりの売上を返す。「人件費は高い?」「残業が多い人は?」「何曜日が暇?」などに使う。",
     input_schema: { type: "object", properties: { month: { type: "string", description: "YYYY-MM(任意)" } }, additionalProperties: false },
+  },
+  {
+    name: "get_customer_profit",
+    description: "顧客別の採算。直近12か月の顧客ごとの売上(税抜)・案件に付いた原価と経費・日報の作業時間と人件費・粗利・粗利率・1時間あたりの粗利・入金の遅れと、赤字・粗利率が低い・手間のわりに粗利が少ない・入金が遅れがちの印を返す。「儲かっている顧客は?」「採算の悪い取引先は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
     name: "simulate_scenario",
@@ -698,6 +704,16 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_labor_analysis": {
       const r = await getLaborAnalysis(companyId, str(input.month) || null);
       return { months: r.months, staffMonth: r.month, staff: r.staff.map(({ staffId: _s, ...s }) => (void _s, s)), weekdays: r.weekdays, findings: r.findings, link: "/labor-analysis" };
+    }
+    case "get_customer_profit": {
+      const r = await getCustomerProfit(companyId);
+      return {
+        period: `${r.from}〜${r.to}`,
+        totalRevenue: r.totalRevenue,
+        customers: r.rows.slice(0, 20).map((c) => ({ name: c.name, revenue: c.revenue, share: c.share, cost: c.cost + c.laborCost, hours: c.hours, gross: c.gross, margin: c.margin, grossPerHour: c.grossPerHour, avgLateDays: c.avgLateDays, overdue: c.overdue, flags: c.flags })),
+        findings: r.findings,
+        link: "/customer-profit",
+      };
     }
     case "simulate_scenario": {
       const structured = input.revenuePct !== undefined || Array.isArray(input.items) || Array.isArray(input.oneTime);

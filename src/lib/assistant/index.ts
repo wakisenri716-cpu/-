@@ -33,6 +33,7 @@ const SCREENS = [
   ["/fixed-costs", "固定費・サブスクの見直し"],
   ["/tax-forecast", "着地見込みと納税の目安"],
   ["/labor-analysis", "人件費の分析"],
+  ["/customer-profit", "顧客別の採算"],
   ["/receivables", "売掛金・買掛金"],
   ["/invoices", "請求書"],
   ["/expenses", "経費精算"],
@@ -143,6 +144,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("simulate_scenario", { text: q })) as { comments?: string[]; error?: string };
     if (r.error) return { reply: r.error, tools: ["simulate_scenario"], mode: "simple" };
     return { reply: [...(r.comments ?? []), "[もしもシミュレーション](/simulation)"].join("\n"), tools: ["simulate_scenario"], mode: "simple" };
+  }
+  // 「儲かっている顧客は?」「採算の悪い取引先は?」→ 顧客別の採算
+  if (/採算|儲かって|もうかって|赤字の(顧客|取引先)|粗利/.test(q) && !/案件/.test(q)) {
+    const r = (await run("get_customer_profit")) as { findings: string[] };
+    return { reply: [...r.findings, "[顧客別の採算](/customer-profit)"].join("\n"), tools: ["get_customer_profit"], mode: "simple" };
   }
   // 「人件費は高い?」「残業は?」→ 人件費の分析
   if (/人件費|労働分配率|人時|残業/.test(q)) {
