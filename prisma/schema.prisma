@@ -243,6 +243,7 @@ model Company {
   assistantProposals   AssistantProposal[]
   monthlyReports       MonthlyReport[]
   anomalyChecks        AnomalyCheck[]
+  hrProcedureChecks    HrProcedureCheck[]
   inboxItems           InboxItem[]
   dailyBriefings       DailyBriefing[]
   approvalChecks       ApprovalCheck[]
@@ -833,6 +834,7 @@ model Staff {
   requests           ApprovalRequest[]
   yearEndAdjustments YearEndAdjustment[]
   shiftRequests      ShiftRequest[]
+  hrProcedureChecks  HrProcedureCheck[]
 
   @@unique([companyId, name])
   @@unique([companyId, userId])
@@ -2281,4 +2283,19 @@ model JournalComment {
 
   @@index([companyId, resolvedAt])
   @@index([journalEntryId])
+}
+
+// 入社・退職の手続きで「済み」にした項目(スタッフ × 手続きの種類)
+model HrProcedureCheck {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  key       String
+  byName    String
+  createdAt DateTime @default(now())
+
+  @@unique([staffId, key])
+  @@index([companyId])
 }

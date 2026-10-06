@@ -35,6 +35,7 @@ const SCREENS = [
   ["/labor-analysis", "人件費の分析"],
   ["/customer-profit", "顧客別の採算"],
   ["/policies", "社内規程の下書き(経費精算・在宅勤務・慶弔見舞金)"],
+  ["/hr-procedures", "入社・退職の手続き(社会保険・雇用保険の届出の期限)"],
   ["/receivables", "売掛金・買掛金"],
   ["/invoices", "請求書"],
   ["/expenses", "経費精算"],
@@ -150,6 +151,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   if (/経営分析|会社の(状態|調子|健康)|つぶれ|倒産|自己資本|流動比率/.test(q)) {
     const r = (await run("get_business_analysis")) as { summary: string[]; concerns: { text: string; action: string }[] };
     return { reply: [...r.summary, ...r.concerns.slice(0, 3).map((c) => `・${c.text} ${c.action}`), "[経営分析](/analysis?preset=this-fy)"].join("\n"), tools: ["get_business_analysis"], mode: "simple" };
+  }
+  // 「入社の手続きは?」「退職する人の届出は?」→ 入社・退職の手続き
+  if (/(入社|退職|採用|辞める|やめる).*(手続|届|やること)|資格(取得|喪失)届|離職票/.test(q)) {
+    const r = (await run("get_hr_procedures")) as { findings: string[] };
+    return { reply: [...r.findings, "[入社・退職の手続き](/hr-procedures)"].join("\n"), tools: ["get_hr_procedures"], mode: "simple" };
   }
   // 「儲かっている顧客は?」「採算の悪い取引先は?」→ 顧客別の採算
   if (/採算|儲かって|もうかって|赤字の(顧客|取引先)|粗利/.test(q) && !/案件/.test(q)) {
