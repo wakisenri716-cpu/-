@@ -34,6 +34,7 @@ import { getBudgetVariance } from "@/lib/budgetVariance";
 import { buildShiftDraft } from "@/lib/shiftDraft";
 import { getPriceReview } from "@/lib/priceReview";
 import { simulatePriceIncrease } from "@/lib/priceMath";
+import { findFixedCosts } from "@/lib/fixedCosts";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
@@ -314,6 +315,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_price_review",
     description: "値上げの検討。直近3か月の利益率と前の時期の比較、上がった費用、利益率を戻すのに必要な値上げの目安、品目ごとの売値と据え置き期間、値上げした場合の1か月の利益の増え方を返す。「値上げしたほうがいい?」「5%上げたらどうなる?」などに使う。",
     input_schema: { type: "object", properties: { raisePct: { type: "number", description: "値上げの割合(%、任意)" }, lossPct: { type: "number", description: "お客さまが減る割合(%、任意)" } }, additionalProperties: false },
+  },
+  {
+    name: "get_fixed_costs",
+    description: "固定費・サブスクの見直し。帳簿から毎月くり返している支払い(月と年間の金額・最近の金額・値上がり・同じ種類が複数・止まった支払い)と、毎月の支払いの合計・売上に対する割合を返す。「固定費を減らしたい」「サブスクは何がある?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
     name: "simulate_scenario",
@@ -643,6 +649,19 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         ifRaised: raise > 0 && raise <= 100 && loss >= 0 && loss <= 90 ? simulatePriceIncrease(r.monthly, raise, loss) : null,
         findings: r.findings,
         link: "/price-review",
+      };
+    }
+    case "get_fixed_costs": {
+      const r = await findFixedCosts(companyId);
+      const active = r.items.filter((i) => i.status === "ACTIVE");
+      return {
+        monthlyTotal: r.monthlyTotal,
+        yearlyTotal: r.yearlyTotal,
+        count: active.length,
+        ratioToRevenue: r.ratio === null ? null : `${Math.round(r.ratio * 1000) / 10}%`,
+        items: active.slice(0, 20).map((i) => ({ name: i.label, account: i.accountName, monthly: i.monthly, yearly: i.yearly, lastAmount: i.lastAmount, flags: i.flags, note: i.note })),
+        stopped: r.items.filter((i) => i.status === "STOPPED").map((i) => ({ name: i.label, lastMonth: i.lastMonth })),
+        link: "/fixed-costs",
       };
     }
     case "simulate_scenario": {
