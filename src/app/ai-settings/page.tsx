@@ -5,7 +5,8 @@ import Link from "next/link";
 import { formatDate } from "@/lib/format";
 
 type Mode = "INCLUDED" | "BYO";
-type Settings = { mode: Mode; modeName: string; hasKey: boolean; keyHint: string | null; keySetAt: string | null; serviceAi: boolean; locked: boolean; active: boolean };
+type McpToken = { id: string; name: string; prefix: string; createdAt: string; lastUsedAt: string | null; callsToday: number; createdBy: string };
+type Settings = { mode: Mode; modeName: string; hasKey: boolean; keyHint: string | null; keySetAt: string | null; serviceAi: boolean; locked: boolean; active: boolean; mcpTokens: McpToken[] };
 
 const MODES: { key: Mode; name: string; text: string }[] = [
   { key: "INCLUDED", name: "AI込み", text: "このサービスのAIをそのまま使います。キーの用意は要りません。AIの利用料は月額に含まれます。" },
@@ -18,6 +19,8 @@ export default function AiSettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [key, setKey] = useState("");
+  const [tokenName, setTokenName] = useState("");
+  const [created, setCreated] = useState<{ name: string; token: string } | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/ai-settings");
@@ -43,9 +46,15 @@ export default function AiSettingsPage() {
       setError(body.error || "保存できませんでした");
       return false;
     }
-    setData(body);
+    setData((prev) => (prev ? { ...prev, ...body } : body));
+    if (body.created) setCreated(body.created);
     setMessage(done);
     return true;
+  }
+
+  async function createToken(e: FormEvent) {
+    e.preventDefault();
+    if (await send({ action: "mcp-create", name: tokenName }, "つなぐための鍵を作りました。下の手順でAIに登録してください")) setTokenName("");
   }
 
   async function saveKey(e: FormEvent) {
@@ -159,6 +168,116 @@ export default function AiSettingsPage() {
         </form>
         <p className="text-xs text-slate-500">登録するときに、AIにつながるかを短く確かめます。AIの利用料は Anthropic から自社に請求されます。</p>
       </section>
+
+      <McpSection data={data} busy={busy} created={created} tokenName={tokenName} setTokenName={setTokenName} onCreate={createToken} onRevoke={(t) => confirm(`「${t.name}」の鍵を削除しますか?(このAIからはつなげなくなります)`) && send({ action: "mcp-revoke", id: t.id }, "鍵を削除しました")} onCloseCreated={() => setCreated(null)} />
     </div>
+  );
+}
+
+function Copy({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setDone(true);
+          setTimeout(() => setDone(false), 1500);
+        } catch {
+          // コピーできない環境では、表示した文字を手で選んでもらう
+        }
+      }}
+      className="shrink-0 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+    >
+      {done ? "コピーしました" : "コピー"}
+    </button>
+  );
+}
+
+function Snippet({ label, text }: { label: string; text: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-slate-600">{label}</p>
+      <div className="mt-1 flex items-start gap-2">
+        <code className="block min-w-0 flex-1 overflow-x-auto whitespace-pre rounded-md bg-slate-900 px-3 py-2 text-xs text-slate-100">{text}</code>
+        <Copy text={text} />
+      </div>
+    </div>
+  );
+}
+
+// 自分のAI(Claude など)からつなぐ(MCP)
+function McpSection(props: {
+  data: Settings;
+  busy: boolean;
+  created: { name: string; token: string } | null;
+  tokenName: string;
+  setTokenName: (v: string) => void;
+  onCreate: (e: FormEvent) => void;
+  onRevoke: (t: McpToken) => void;
+  onCloseCreated: () => void;
+}) {
+  const { data, busy, created } = props;
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const url = `${origin}/api/mcp`;
+  return (
+    <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div>
+        <h2 className="font-semibold">自分のAIからつなぐ(MCP)</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          ふだん使っているAI(Claude のアプリ・Claude Code など、MCP に対応したAI)から、この会社の数字を聞いたり、請求書・仕訳・経費の下書きを頼んだりできます。
+          AIが作った下書きは、
+          <Link href="/ai-proposals" className="mx-1 text-indigo-700 hover:underline">
+            AIからの下書き
+          </Link>
+          の画面で確かめて「実行する」を押したときだけ確定します。AIの利用料は、そのAIの契約先にお支払いいただきます。
+        </p>
+      </div>
+
+      {created && (
+        <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-medium text-amber-900">「{created.name}」の鍵です。この画面を閉じると二度と表示されません。いまAIに登録してください。</p>
+            <button type="button" onClick={props.onCloseCreated} className="shrink-0 text-xs text-amber-900 underline">
+              閉じる
+            </button>
+          </div>
+          <Snippet label="鍵" text={created.token} />
+          <Snippet label="Claude のアプリ(claude.ai・デスクトップ): 設定 → コネクタ → カスタムコネクタを追加 → このURLを貼る" text={`${url}/${created.token}`} />
+          <Snippet label="Claude Code: ターミナルで実行" text={`claude mcp add --transport http keiri ${url} --header "Authorization: Bearer ${created.token}"`} />
+          <Snippet label="そのほかのAI: URL と、ヘッダー Authorization: Bearer <鍵>" text={url} />
+          <p className="text-xs text-amber-900">鍵入りのURLや鍵は、パスワードと同じように扱ってください。人に知られたら、下の一覧から削除して作り直してください。</p>
+        </div>
+      )}
+
+      <form onSubmit={props.onCreate} className="flex flex-col gap-2 sm:flex-row">
+        <input value={props.tokenName} onChange={(e) => props.setTokenName(e.target.value)} maxLength={40} placeholder="つなぐAIの名前(例: 社長のClaude)" className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        <button type="submit" disabled={busy || !props.tokenName.trim()} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          つなぐための鍵を作る
+        </button>
+      </form>
+
+      {data.mcpTokens.length > 0 ? (
+        <ul className="divide-y rounded-lg border border-slate-200 text-sm">
+          {data.mcpTokens.map((t) => (
+            <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+              <div className="min-w-0">
+                <p className="font-medium">{t.name}</p>
+                <p className="text-xs text-slate-500">
+                  <span className="font-mono">{t.prefix}…</span> ・ {t.createdBy}が{formatDate(t.createdAt)}に作成 ・ {t.lastUsedAt ? `最後に使った日 ${formatDate(t.lastUsedAt)}(今日 ${t.callsToday}回)` : "まだ使われていません"}
+                </p>
+              </div>
+              <button type="button" disabled={busy} onClick={() => props.onRevoke(t)} className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                削除
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-slate-500">まだつないでいません。</p>
+      )}
+      <p className="text-xs text-slate-500">つないだAIは、鍵を作った管理者と同じようにデータを読めます。読むだけの道具と下書きを作る道具があり、お金の動く操作や送信は、この画面で人が確かめるまで行いません。</p>
+    </section>
   );
 }

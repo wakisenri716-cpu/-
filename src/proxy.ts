@@ -30,6 +30,9 @@ const PUBLIC_PATHS = [
   "/tokushoho",
   // Stripe からのお知らせ(署名で確かめる)
   "/api/stripe/webhook",
+  // 自分のAIからつなぐ入り口(MCP。会社ごとの鍵で確かめる)と、つなぐときにAIが探す案内(ないので 404 を返す)
+  "/api/mcp",
+  "/.well-known",
 ];
 
 const SAFE_METHODS = ["GET", "HEAD", "OPTIONS"];
@@ -51,7 +54,8 @@ function crossSite(request: NextRequest) {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (pathname.startsWith("/api") && !pathname.startsWith("/api/cron") && crossSite(request)) {
+  // MCP はクッキーを使わず鍵で確かめるので、ほかのサイト(ブラウザで動くAI)からも受け付ける
+  if (pathname.startsWith("/api") && !pathname.startsWith("/api/cron") && pathname !== "/api/mcp" && !pathname.startsWith("/api/mcp/") && crossSite(request)) {
     return NextResponse.json({ error: "ほかのサイトからの送信は受け付けていません" }, { status: 403 });
   }
   // レイアウトで役割ごとに見られる画面を判定できるよう、表示中のパスを渡す(ログインなしで開ける画面も同じ)

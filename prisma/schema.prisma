@@ -121,387 +121,389 @@ enum JournalEntryStatus {
 }
 
 model Company {
-  id               String   @id @default(cuid())
-  name             String
-  fiscalYearStartMonth Int  @default(4)
+  id                      String    @id @default(cuid())
+  name                    String
+  fiscalYearStartMonth    Int       @default(4)
   // 発行する請求書に載せる情報(適格請求書発行事業者の登録番号など)
-  registrationNumber String?
-  address          String?
-  phone            String?
-  bankAccount      String?
-  invoiceNote      String?
+  registrationNumber      String?
+  address                 String?
+  phone                   String?
+  bankAccount             String?
+  invoiceNote             String?
   // この日までの帳簿は締め済み(この日以前の日付の仕訳は、データベースのトリガーで追加・変更・削除できない)
-  booksClosedThrough DateTime?
+  booksClosedThrough      DateTime?
   // 経費精算を「申請→承認」してから精算する(オンにすると、承認されていない経費精算は精算できない)
-  expenseApprovalRequired Boolean @default(false)
+  expenseApprovalRequired Boolean   @default(false)
   // 消費税の計算方法: GENERAL(原則課税) / SIMPLIFIED(簡易課税) / TWENTY_PERCENT(2割特例)
-  consumptionTaxMethod  String  @default("GENERAL")
+  consumptionTaxMethod    String    @default("GENERAL")
   // 簡易課税の事業区分(1〜6種)
-  simplifiedBusinessType Int    @default(5)
+  simplifiedBusinessType  Int       @default(5)
   // 経費1件あたりの上限額(これを超える明細は精算・承認の画面で「上限超え」と表示する)。空なら上限なし
-  expenseItemLimit       Int?
+  expenseItemLimit        Int?
   // メールの返信先(請求書などを送るときの Reply-To と、本文の署名に使う)
-  email                  String?
+  email                   String?
   // 毎朝、管理者に「やること」をメールで知らせる
-  dailyDigest            Boolean @default(false)
+  dailyDigest             Boolean   @default(false)
   // AIの見張りで新しく「要確認」になったものを、管理者にメールとスマホで知らせる
-  watchAlerts            Boolean @default(true)
+  watchAlerts             Boolean   @default(true)
   // AIの使い方: INCLUDED(AI込み=サービスのAI) / BYO(AI持ち込み=会社のAIのキー。暗号化して保存し、画面には末尾4文字だけ出す)
-  aiMode     String    @default("INCLUDED")
-  aiKeyEnc   String?
-  aiKeyHint  String?
-  aiKeySetAt DateTime?
+  aiMode                  String    @default("INCLUDED")
+  aiKeyEnc                String?
+  aiKeyHint               String?
+  aiKeySetAt              DateTime?
   // 給与計算の保険料率(単位: 0.001%。9910 = 9.910%)。都道府県・年度で変わるので画面から直せる
-  payrollPrefecture      String  @default("東京都")
-  payrollHealthRate      Int     @default(9910)
-  payrollCareRate        Int     @default(1590)
-  payrollPensionRate     Int     @default(18300)
-  payrollEmploymentRate  Int     @default(550)
+  payrollPrefecture       String    @default("東京都")
+  payrollHealthRate       Int       @default(9910)
+  payrollCareRate         Int       @default(1590)
+  payrollPensionRate      Int       @default(18300)
+  payrollEmploymentRate   Int       @default(550)
   // 36協定: 起算月と、時間外労働の上限(時間)。原則は月45時間・年360時間
-  overtimeStartMonth     Int     @default(4)
-  overtimeMonthlyLimit   Int     @default(45)
-  overtimeYearlyLimit    Int     @default(360)
+  overtimeStartMonth      Int       @default(4)
+  overtimeMonthlyLimit    Int       @default(45)
+  overtimeYearlyLimit     Int       @default(360)
   // 安全の設定(会社ごと)
   // 全員に2段階認証を必須にする(設定していない人は、設定するまでアカウント画面しか使えない)
-  require2fa             Boolean @default(false)
+  require2fa              Boolean   @default(false)
   // 操作しないまま、この分数が過ぎたら自動でログアウトする(空なら30日)
-  sessionIdleMinutes     Int?
+  sessionIdleMinutes      Int?
   // この会社を開ける IP アドレス(1行に1つ、CIDR可。空なら制限なし)
-  allowedIps             String?
+  allowedIps              String?
   // 新しい端末からログインしたら、本人にメールで知らせる
-  loginAlert             Boolean @default(false)
+  loginAlert              Boolean   @default(false)
   // 振込データ(全銀フォーマット)の振込元: { requesterCode, requesterName, bankCode, bankName, branchCode, branchName, accountType, accountNumber }
-  transferSource         Json?
+  transferSource          Json?
   // 源泉所得税・住民税の納付: 給料を働いた月の翌月に払う / 納期の特例(源泉所得税は年2回、住民税は年2回)
-  salaryPaidNextMonth    Boolean @default(true)
-  withholdingSpecial     Boolean @default(false)
-  residentTaxSpecial     Boolean @default(false)
+  salaryPaidNextMonth     Boolean   @default(true)
+  withholdingSpecial      Boolean   @default(false)
+  residentTaxSpecial      Boolean   @default(false)
   // 労働条件通知書に入れる会社の決まり(就業の場所・休日・賃金の締切日と支払日・相談窓口など)
-  laborDefaults          Json?
+  laborDefaults           Json?
   // 月次決算チェックリストに会社で足した確認項目(文字列の配列)
-  closeChecklist         Json?
+  closeChecklist          Json?
   // 工数の標準の時間単価(円)。スタッフの時給がひも付いていない人の労務費に使う
-  laborCostRate          Int?
+  laborCostRate           Int?
   // シフト希望の提出締め切り(前月の何日まで。空なら締め切りなし)
-  shiftRequestDeadline   Int?
+  shiftRequestDeadline    Int?
   // 代表者名(書類に載せる)
-  representative         String?
+  representative          String?
   // 最初の会社情報の入力(ようこそ画面)を済ませた日時。null なら管理者のログイン時に入力を案内する
-  onboardedAt            DateTime?
+  onboardedAt             DateTime?
   // 有料プラン(Stripe)。plan は LIGHT / STANDARD。subscriptionStatus は Stripe の状態(active・past_due・canceled など)、未契約は null。
   // trialEndsAt が空なら、会社を作った日から30日が無料期間
-  plan                   String?
-  subscriptionStatus     String?
-  trialEndsAt            DateTime?
-  currentPeriodEnd       DateTime?
-  cancelAtPeriodEnd      Boolean   @default(false)
-  stripeCustomerId       String?   @unique
-  stripeSubscriptionId   String?   @unique
+  plan                    String?
+  subscriptionStatus      String?
+  trialEndsAt             DateTime?
+  currentPeriodEnd        DateTime?
+  cancelAtPeriodEnd       Boolean   @default(false)
+  stripeCustomerId        String?   @unique
+  stripeSubscriptionId    String?   @unique
   // 運営者が無料にした会社(招待した会社・取引先など)
-  billingFree            Boolean   @default(false)
+  billingFree             Boolean   @default(false)
   // お試し用にサンプルデータを入れた会社(課金しない・運営者メニューの数に入れない)
-  isDemo                 Boolean   @default(false)
-  createdAt        DateTime @default(now())
+  isDemo                  Boolean   @default(false)
+  createdAt               DateTime  @default(now())
 
-  users            User[]
-  accounts         Account[]
-  vendors          Vendor[]
-  customers        Customer[]
-  expenseReports   ExpenseReport[]
-  invoices         Invoice[]
-  payments         Payment[]
-  fixedAssets      FixedAsset[]
-  posSales         PosSale[]
-  products         Product[]
-  bankTransactions BankTransaction[]
-  staff            Staff[]
-  shifts           Shift[]
-  timeRecords      TimeRecord[]
-  payrollRuns      PayrollRun[]
-  journalEntries   JournalEntry[]
-  aiExtractions    AiExtraction[]
-  automationRules  AutomationRule[]
-  quotes           Quote[]
-  purchaseOrders   PurchaseOrder[]
-  budgets          Budget[]
-  recurringInvoices RecurringInvoice[]
-  departments      Department[]
-  costAllocations  CostAllocation[]
-  foreignTransactions ForeignTransaction[]
-  cashCounts       CashCount[]
-  travelPolicy     TravelPolicy?
-  travelTrips      TravelTrip[]
-  corporateTaxRuns CorporateTaxRun[]
-  standardReviews  StandardReview[]
+  users                User[]
+  accounts             Account[]
+  vendors              Vendor[]
+  customers            Customer[]
+  expenseReports       ExpenseReport[]
+  invoices             Invoice[]
+  payments             Payment[]
+  fixedAssets          FixedAsset[]
+  posSales             PosSale[]
+  products             Product[]
+  bankTransactions     BankTransaction[]
+  staff                Staff[]
+  shifts               Shift[]
+  timeRecords          TimeRecord[]
+  payrollRuns          PayrollRun[]
+  journalEntries       JournalEntry[]
+  aiExtractions        AiExtraction[]
+  automationRules      AutomationRule[]
+  quotes               Quote[]
+  purchaseOrders       PurchaseOrder[]
+  budgets              Budget[]
+  recurringInvoices    RecurringInvoice[]
+  departments          Department[]
+  costAllocations      CostAllocation[]
+  foreignTransactions  ForeignTransaction[]
+  cashCounts           CashCount[]
+  travelPolicy         TravelPolicy?
+  travelTrips          TravelTrip[]
+  corporateTaxRuns     CorporateTaxRun[]
+  standardReviews      StandardReview[]
   consumptionTaxCloses ConsumptionTaxClose[]
-  wageChanges      WageChange[]
-  transportRoutes  TransportRoute[]
-  duplicateDismissals DuplicateDismissal[]
-  assistantLogs    AssistantLog[]
-  assistantProposals AssistantProposal[]
-  monthlyReports   MonthlyReport[]
-  anomalyChecks    AnomalyCheck[]
-  inboxItems       InboxItem[]
-  dailyBriefings   DailyBriefing[]
-  approvalChecks   ApprovalCheck[]
-  closeReviews     MonthlyCloseReview[]
-  cashAdvices      CashAdvice[]
-  aiCorrections    AiCorrection[]
-  bookChecks       BookCheck[]
-  contracts        Contract[]
-  aiNotes          AiNote[]
-  projects         Project[]
-  cashAdvances     CashAdvance[]
-  announcements    Announcement[]
-  deals            Deal[]
-  equipment        Equipment[]
-  workLogs         WorkLog[]
-  yearEndAdjustments YearEndAdjustment[]
-  allocations      Allocation[]
-  loans            Loan[]
-  shiftRequests    ShiftRequest[]
-  manuals          Manual[]
-  monthlyCloseChecks MonthlyCloseCheck[]
-  journalTemplates JournalTemplate[]
-  emailLogs        EmailLog[]
-  bankAccounts     BankAccount[]
-  bankRules        BankRule[]
-  leaveGrants      LeaveGrant[]
-  leaveTaken       LeaveTaken[]
-  approvalRequests ApprovalRequest[]
-  approvalRoutes   ApprovalRoute[]
-  members          CompanyMember[]
-  taxRemittances   TaxRemittance[]
-  bonusRuns        BonusRun[]
-  folders          Folder[]
-  storedFiles      StoredFile[]
-  recurringEntries RecurringEntry[]
-  auditLogs        AuditLog[]
+  wageChanges          WageChange[]
+  transportRoutes      TransportRoute[]
+  duplicateDismissals  DuplicateDismissal[]
+  assistantLogs        AssistantLog[]
+  assistantProposals   AssistantProposal[]
+  monthlyReports       MonthlyReport[]
+  anomalyChecks        AnomalyCheck[]
+  inboxItems           InboxItem[]
+  dailyBriefings       DailyBriefing[]
+  approvalChecks       ApprovalCheck[]
+  closeReviews         MonthlyCloseReview[]
+  cashAdvices          CashAdvice[]
+  aiCorrections        AiCorrection[]
+  bookChecks           BookCheck[]
+  contracts            Contract[]
+  aiNotes              AiNote[]
+  projects             Project[]
+  cashAdvances         CashAdvance[]
+  announcements        Announcement[]
+  deals                Deal[]
+  equipment            Equipment[]
+  workLogs             WorkLog[]
+  yearEndAdjustments   YearEndAdjustment[]
+  allocations          Allocation[]
+  loans                Loan[]
+  shiftRequests        ShiftRequest[]
+  manuals              Manual[]
+  monthlyCloseChecks   MonthlyCloseCheck[]
+  journalTemplates     JournalTemplate[]
+  emailLogs            EmailLog[]
+  bankAccounts         BankAccount[]
+  bankRules            BankRule[]
+  leaveGrants          LeaveGrant[]
+  leaveTaken           LeaveTaken[]
+  approvalRequests     ApprovalRequest[]
+  approvalRoutes       ApprovalRoute[]
+  members              CompanyMember[]
+  taxRemittances       TaxRemittance[]
+  bonusRuns            BonusRun[]
+  folders              Folder[]
+  storedFiles          StoredFile[]
+  recurringEntries     RecurringEntry[]
+  auditLogs            AuditLog[]
+  mcpTokens            McpToken[]
 }
 
 model User {
-  id            String   @id @default(cuid())
-  companyId     String
-  company       Company  @relation(fields: [companyId], references: [id])
-  name          String
-  email         String   @unique
-  role          UserRole @default(EMPLOYEE)
-  passwordHash  String?
-  active        Boolean  @default(true)
-  failedLogins  Int      @default(0)
-  lockedUntil   DateTime?
+  id                String    @id @default(cuid())
+  companyId         String
+  company           Company   @relation(fields: [companyId], references: [id])
+  name              String
+  email             String    @unique
+  role              UserRole  @default(EMPLOYEE)
+  passwordHash      String?
+  active            Boolean   @default(true)
+  failedLogins      Int       @default(0)
+  lockedUntil       DateTime?
   // 2段階認証(認証アプリの6桁コード)。totpSecret は有効化済みの鍵、totpPendingSecret は設定途中の鍵(Base32)。
-  totpEnabled       Boolean  @default(false)
+  totpEnabled       Boolean   @default(false)
   totpSecret        String?
   totpPendingSecret String?
   // 同じコードを2回使わせないため、最後に受け付けた30秒区切りの番号
   totpLastStep      Int?
   // 回復コード(SHA-256 のハッシュを JSON 配列で保存。使ったものは消す)
   recoveryCodes     String?
-  createdAt     DateTime @default(now())
+  createdAt         DateTime  @default(now())
 
-  expenseReports ExpenseReport[]
-  cashAdvances   CashAdvance[]
+  expenseReports     ExpenseReport[]
+  cashAdvances       CashAdvance[]
   // 利用規約・プライバシーポリシーに同意した日時と、同意した版
-  termsAcceptedAt DateTime?
+  termsAcceptedAt    DateTime?
   // メールアドレスを確かめた日時(新規登録した人は、届いたメールのリンクを開くまで空)
-  emailVerifiedAt DateTime? @default(now())
+  emailVerifiedAt    DateTime?           @default(now())
   emailVerifications EmailVerification[]
-  termsVersion    String?
-  announcementReads AnnouncementRead[]
-  equipmentLoans  EquipmentLoan[]
-  workLogs        WorkLog[]
-  manualReads     ManualRead[]
-  pushDevices     PushDevice[]
-  sessions       Session[]
-  passwordResets PasswordReset[]
-  staffs         Staff[]
-  requests       ApprovalRequest[]
-  memberships    CompanyMember[]
+  termsVersion       String?
+  announcementReads  AnnouncementRead[]
+  equipmentLoans     EquipmentLoan[]
+  workLogs           WorkLog[]
+  manualReads        ManualRead[]
+  pushDevices        PushDevice[]
+  sessions           Session[]
+  passwordResets     PasswordReset[]
+  staffs             Staff[]
+  requests           ApprovalRequest[]
+  memberships        CompanyMember[]
+  mcpTokens          McpToken[]
 }
 
 // ログインセッション。ブラウザのクッキーには推測できないランダムなトークンだけを入れ、
 // データベースにはそのハッシュを保存する(DBが漏れてもセッションを乗っ取れないようにする)。
 model Session {
-  id        String   @id @default(cuid())
-  tokenHash String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   // このログインで開いている会社(空ならユーザーの最初の会社)
-  companyId String?
-  expiresAt DateTime
+  companyId  String?
+  expiresAt  DateTime
   // ログイン中の端末の一覧に出すための情報
   userAgent  String?
   lastSeenAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   @@index([userId])
 }
 
 model Account {
-  id            String          @id @default(cuid())
-  companyId     String
-  company       Company         @relation(fields: [companyId], references: [id])
-  code          String
-  name          String
-  category      AccountCategory
-  isTaxable     Boolean         @default(false)
+  id        String          @id @default(cuid())
+  companyId String
+  company   Company         @relation(fields: [companyId], references: [id])
+  code      String
+  name      String
+  category  AccountCategory
+  isTaxable Boolean         @default(false)
   // 使わなくなった科目は、仕訳の入力画面の選択肢から隠す(過去の仕訳・帳票には残る)
-  hidden        Boolean         @default(false)
-  createdAt     DateTime        @default(now())
+  hidden    Boolean         @default(false)
+  createdAt DateTime        @default(now())
 
-  expenseItems       ExpenseItem[]
-  journalLines       JournalLine[]
-  vendorsAsDefault   Vendor[]        @relation("VendorDefaultAccount")
-  budgets            Budget[]
-  recurringLines     RecurringLine[]
-  bankAccount        BankAccount?
+  expenseItems     ExpenseItem[]
+  journalLines     JournalLine[]
+  vendorsAsDefault Vendor[]        @relation("VendorDefaultAccount")
+  budgets          Budget[]
+  recurringLines   RecurringLine[]
+  bankAccount      BankAccount?
 
   @@unique([companyId, code])
 }
 
 model Vendor {
-  id                    String   @id @default(cuid())
-  companyId             String
-  company               Company  @relation(fields: [companyId], references: [id])
-  name                  String
+  id                      String               @id @default(cuid())
+  companyId               String
+  company                 Company              @relation(fields: [companyId], references: [id])
+  name                    String
   defaultExpenseAccountId String?
-  defaultExpenseAccount  Account? @relation("VendorDefaultAccount", fields: [defaultExpenseAccountId], references: [id])
+  defaultExpenseAccount   Account?             @relation("VendorDefaultAccount", fields: [defaultExpenseAccountId], references: [id])
   // 支払の振込先(形は Staff.payeeAccount と同じ)
-  payeeAccount          Json?
+  payeeAccount            Json?
   // 支払調書・宛名に使う住所
-  address               String?
+  address                 String?
   // 住所録(送付状・封筒・宛名ラベル、請求書などの宛先に使う)
-  postalCode            String?
-  department            String?
-  contactName           String?
+  postalCode              String?
+  department              String?
+  contactName             String?
   // 敬称: 御中 か 様(担当者名があるときは担当者に「様」)
-  honorific             String?
-  phone                 String?
+  honorific               String?
+  phone                   String?
   // インボイス(適格請求書発行事業者)の登録。null は未確認
-  invoiceStatus         VendorInvoiceStatus?
-  registrationNumber    String?
-  createdAt             DateTime @default(now())
+  invoiceStatus           VendorInvoiceStatus?
+  registrationNumber      String?
+  createdAt               DateTime             @default(now())
 
-  expenseItems  ExpenseItem[]
-  invoices      Invoice[]
+  expenseItems   ExpenseItem[]
+  invoices       Invoice[]
   purchaseOrders PurchaseOrder[]
 }
 
 model Customer {
-  id         String   @id @default(cuid())
-  companyId  String
-  company    Company  @relation(fields: [companyId], references: [id])
-  name       String
+  id               String    @id @default(cuid())
+  companyId        String
+  company          Company   @relation(fields: [companyId], references: [id])
+  name             String
   // 振込名義(銀行明細の摘要に出る名前)。入金を請求書と消込んだときに覚え、次からの消込の候補に使う
-  payerName  String?
+  payerName        String?
   // 請求書・見積書をメールで送るときの宛先(前回入力したものを覚えておく)
-  email      String?
-  address    String?
+  email            String?
+  address          String?
   // 住所録(送付状・封筒・宛名ラベル、請求書などの宛先に使う)
-  postalCode  String?
-  department  String?
-  contactName String?
+  postalCode       String?
+  department       String?
+  contactName      String?
   // 敬称: 御中 か 様(担当者名があるときは担当者に「様」)
-  honorific   String?
-  phone       String?
+  honorific        String?
+  phone            String?
   // 与信管理: 売掛金の上限(与信限度額)と、最後に見直した日・メモ
   creditLimit      Int?
   creditReviewedAt DateTime?
   creditNote       String?
-  createdAt  DateTime @default(now())
+  createdAt        DateTime  @default(now())
 
-  invoices   Invoice[]
-  quotes     Quote[]
+  invoices Invoice[]
+  quotes   Quote[]
 }
 
 model ExpenseReport {
-  id            String              @id @default(cuid())
-  companyId     String
-  company       Company             @relation(fields: [companyId], references: [id])
-  employeeId    String
-  employee      User                @relation(fields: [employeeId], references: [id])
-  status        ExpenseReportStatus @default(DRAFT)
-  totalAmount   Int                 @default(0)
-  submittedAt   DateTime?
+  id                   String              @id @default(cuid())
+  companyId            String
+  company              Company             @relation(fields: [companyId], references: [id])
+  employeeId           String
+  employee             User                @relation(fields: [employeeId], references: [id])
+  status               ExpenseReportStatus @default(DRAFT)
+  totalAmount          Int                 @default(0)
+  submittedAt          DateTime?
   // 立替えた本人へ精算(振込など)した日と、その「未払金 / 普通預金」の仕訳
   reimbursedAt         DateTime?
-  reimbursementEntryId String?       @unique
-  reimbursementEntry   JournalEntry? @relation("ExpenseReimbursement", fields: [reimbursementEntryId], references: [id])
+  reimbursementEntryId String?             @unique
+  reimbursementEntry   JournalEntry?       @relation("ExpenseReimbursement", fields: [reimbursementEntryId], references: [id])
   // 仮払金と相殺して精算したときの仮払金
   cashAdvance          CashAdvance?
   // 承認フロー: DRAFT(作成中) / SUBMITTED(申請中) / APPROVED(承認済み) / RETURNED(差戻し)
-  approvalStatus String    @default("DRAFT")
-  approvedAt     DateTime?
-  approvedByName String?
-  returnComment  String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  approvalStatus       String              @default("DRAFT")
+  approvedAt           DateTime?
+  approvedByName       String?
+  returnComment        String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 
-  items         ExpenseItem[]
+  items ExpenseItem[]
 }
 
 model ExpenseItem {
-  id               String        @id @default(cuid())
-  expenseReportId  String
-  expenseReport    ExpenseReport @relation(fields: [expenseReportId], references: [id])
-  description      String
-  amount           Int
-  expenseDate      DateTime
-  vendorId         String?
-  vendor           Vendor?       @relation(fields: [vendorId], references: [id])
-  accountId        String?
-  account          Account?      @relation(fields: [accountId], references: [id])
-  receiptImageUrl  String?
+  id              String        @id @default(cuid())
+  expenseReportId String
+  expenseReport   ExpenseReport @relation(fields: [expenseReportId], references: [id])
+  description     String
+  amount          Int
+  expenseDate     DateTime
+  vendorId        String?
+  vendor          Vendor?       @relation(fields: [vendorId], references: [id])
+  accountId       String?
+  account         Account?      @relation(fields: [accountId], references: [id])
+  receiptImageUrl String?
   // 登録したときのレシート画像の SHA-256(DBのトリガーで自動で入れる。改ざんチェックに使う)
-  receiptSha256    String?
-  aiExtractionId   String?       @unique
-  aiExtraction     AiExtraction? @relation(fields: [aiExtractionId], references: [id])
-  journalEntryId   String?       @unique
-  journalEntry     JournalEntry? @relation(fields: [journalEntryId], references: [id])
-  createdAt        DateTime      @default(now())
+  receiptSha256   String?
+  aiExtractionId  String?       @unique
+  aiExtraction    AiExtraction? @relation(fields: [aiExtractionId], references: [id])
+  journalEntryId  String?       @unique
+  journalEntry    JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  createdAt       DateTime      @default(now())
 }
 
 model Invoice {
-  id              String            @id @default(cuid())
-  companyId       String
-  company         Company           @relation(fields: [companyId], references: [id])
-  direction       InvoiceDirection
-  status          InvoiceStatus     @default(DRAFT)
-  invoiceNumber   String?
+  id                String           @id @default(cuid())
+  companyId         String
+  company           Company          @relation(fields: [companyId], references: [id])
+  direction         InvoiceDirection
+  status            InvoiceStatus    @default(DRAFT)
+  invoiceNumber     String?
   // メールで送った相手がログインせずに見られる共有リンクの鍵(送るときに作る)
-  shareToken      String?           @unique
+  shareToken        String?          @unique
   // 訂正版の請求書なら、訂正した元の請求書(元の請求書は「取消」になり、入金・共有リンクは訂正版に引き継ぐ)
-  correctsInvoiceId String?         @unique
-  correctsInvoice   Invoice?        @relation("InvoiceCorrection", fields: [correctsInvoiceId], references: [id])
-  correctedBy       Invoice?        @relation("InvoiceCorrection")
+  correctsInvoiceId String?          @unique
+  correctsInvoice   Invoice?         @relation("InvoiceCorrection", fields: [correctsInvoiceId], references: [id])
+  correctedBy       Invoice?         @relation("InvoiceCorrection")
   correctionReason  String?
-  vendorId        String?
-  vendor          Vendor?           @relation(fields: [vendorId], references: [id])
-  customerId      String?
-  customer        Customer?         @relation(fields: [customerId], references: [id])
-  issueDate       DateTime?
-  dueDate         DateTime?
-  subtotalAmount  Int               @default(0)
-  taxAmount       Int               @default(0)
-  totalAmount     Int               @default(0)
-  sourceFileUrl   String?
-  sourceSha256    String?
-  aiExtractionId  String?           @unique
-  aiExtraction    AiExtraction?     @relation(fields: [aiExtractionId], references: [id])
-  journalEntryId  String?           @unique
-  journalEntry    JournalEntry?     @relation(fields: [journalEntryId], references: [id])
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  vendorId          String?
+  vendor            Vendor?          @relation(fields: [vendorId], references: [id])
+  customerId        String?
+  customer          Customer?        @relation(fields: [customerId], references: [id])
+  issueDate         DateTime?
+  dueDate           DateTime?
+  subtotalAmount    Int              @default(0)
+  taxAmount         Int              @default(0)
+  totalAmount       Int              @default(0)
+  sourceFileUrl     String?
+  sourceSha256      String?
+  aiExtractionId    String?          @unique
+  aiExtraction      AiExtraction?    @relation(fields: [aiExtractionId], references: [id])
+  journalEntryId    String?          @unique
+  journalEntry      JournalEntry?    @relation(fields: [journalEntryId], references: [id])
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
-  payments         Payment[]
-  bankTransactions BankTransaction[]
-  lines            InvoiceLine[]
-  notes            String?
-  quote            Quote?
-  purchaseOrder    PurchaseOrder?
-  recurringTemplates RecurringInvoice[] @relation("RecurringInvoiceTemplate")
-  recurringRun     RecurringInvoiceRun?
+  payments           Payment[]
+  bankTransactions   BankTransaction[]
+  lines              InvoiceLine[]
+  notes              String?
+  quote              Quote?
+  purchaseOrder      PurchaseOrder?
+  recurringTemplates RecurringInvoice[]   @relation("RecurringInvoiceTemplate")
+  recurringRun       RecurringInvoiceRun?
 }
 
 // 毎月の定額請求。ひな形の請求書(宛先・明細・備考)を写した請求書を、毎月決まった日に作る。
@@ -521,7 +523,7 @@ model RecurringInvoice {
   active            Boolean  @default(true)
   createdAt         DateTime @default(now())
 
-  runs              RecurringInvoiceRun[]
+  runs RecurringInvoiceRun[]
 }
 
 model RecurringInvoiceRun {
@@ -556,15 +558,15 @@ model Quote {
   invoice        Invoice?    @relation(fields: [invoiceId], references: [id])
   createdAt      DateTime    @default(now())
 
-  lines          QuoteLine[]
+  lines QuoteLine[]
 
   @@unique([companyId, quoteNumber])
 }
 
 model QuoteLine {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   quoteId     String
-  quote       Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quote       Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   sortOrder   Int
   description String
   quantity    Float
@@ -596,7 +598,7 @@ model PurchaseOrder {
   invoice        Invoice?            @relation(fields: [invoiceId], references: [id])
   createdAt      DateTime            @default(now())
 
-  lines          PurchaseOrderLine[]
+  lines PurchaseOrderLine[]
 
   @@unique([companyId, orderNumber])
 }
@@ -642,58 +644,58 @@ model InvoiceLine {
 }
 
 model Payment {
-  id             String       @id @default(cuid())
-  companyId      String
-  company        Company      @relation(fields: [companyId], references: [id])
-  invoiceId      String
-  invoice        Invoice      @relation(fields: [invoiceId], references: [id])
-  amount         Int
-  paymentDate    DateTime
-  journalEntryId String?      @unique
-  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  id              String        @id @default(cuid())
+  companyId       String
+  company         Company       @relation(fields: [companyId], references: [id])
+  invoiceId       String
+  invoice         Invoice       @relation(fields: [invoiceId], references: [id])
+  amount          Int
+  paymentDate     DateTime
+  journalEntryId  String?       @unique
+  journalEntry    JournalEntry? @relation(fields: [journalEntryId], references: [id])
   // 報酬の源泉徴収(買掛金 / 預り金)。支払うお金ではないが、請求書の残りから差し引く
-  withholding     Boolean     @default(false)
+  withholding     Boolean       @default(false)
   // 源泉徴収の対象にした報酬の額(消費税が分かれていれば税抜)と、報酬の種類
   withholdingBase Int?
   feeCategory     String?
-  createdAt      DateTime     @default(now())
+  createdAt       DateTime      @default(now())
 }
 
 model FixedAsset {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   companyId       String
-  company         Company  @relation(fields: [companyId], references: [id])
+  company         Company       @relation(fields: [companyId], references: [id])
   name            String
   acquisitionDate DateTime
   acquisitionCost Int
-  residualValue   Int      @default(1)
+  residualValue   Int           @default(1)
   usefulLifeYears Int
   // 償却方法: STRAIGHT(定額法) / DECLINING(200%定率法)
-  method          String   @default("STRAIGHT")
-  journalEntryId  String?  @unique
+  method          String        @default("STRAIGHT")
+  journalEntryId  String?       @unique
   journalEntry    JournalEntry? @relation("FixedAssetAcquisition", fields: [journalEntryId], references: [id])
   // 除却・売却した日と売却額(除却なら0)、その仕訳
   disposedAt      DateTime?
   disposalPrice   Int?
-  disposalEntryId String?  @unique
+  disposalEntryId String?       @unique
   disposalEntry   JournalEntry? @relation("FixedAssetDisposal", fields: [disposalEntryId], references: [id])
   // 償却資産申告(固定資産税)の資産の種類: "1"〜"6"(構築物・機械及び装置・船舶・航空機・車両及び運搬具・工具器具備品)、
   // "EXCLUDED"(建物・自動車税の車・ソフトウェアなど対象外)。空は未分類
   taxAssetType    String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime      @default(now())
 
   depreciationEntries DepreciationEntry[]
 }
 
 model DepreciationEntry {
-  id             String       @id @default(cuid())
+  id             String        @id @default(cuid())
   fixedAssetId   String
-  fixedAsset     FixedAsset   @relation(fields: [fixedAssetId], references: [id])
+  fixedAsset     FixedAsset    @relation(fields: [fixedAssetId], references: [id])
   period         String
   amount         Int
-  journalEntryId String?      @unique
+  journalEntryId String?       @unique
   journalEntry   JournalEntry? @relation("DepreciationPosting", fields: [journalEntryId], references: [id])
-  createdAt      DateTime     @default(now())
+  createdAt      DateTime      @default(now())
 
   @@unique([fixedAssetId, period])
 }
@@ -736,7 +738,7 @@ model Product {
   reorderPoint   Int?
   createdAt      DateTime @default(now())
 
-  movements      StockMovement[]
+  movements StockMovement[]
 
   @@unique([companyId, name])
 }
@@ -789,45 +791,45 @@ model BankTransaction {
 
 // シフトに入るスタッフ。ログインするユーザーとは別で、アカウントを持たないアルバイトも登録できる。
 model Staff {
-  id          String   @id @default(cuid())
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
-  name        String
-  hourlyWage  Int
-  active      Boolean  @default(true)
+  id                  String    @id @default(cuid())
+  companyId           String
+  company             Company   @relation(fields: [companyId], references: [id])
+  name                String
+  hourlyWage          Int
+  active              Boolean   @default(true)
   // タイムカードの暗証番号(ハッシュ)。設定されていれば打刻のたびに入力を求める。
-  pinHash     String?
-  pinFailures Int      @default(0)
-  pinLockedUntil DateTime?
+  pinHash             String?
+  pinFailures         Int       @default(0)
+  pinLockedUntil      DateTime?
   // 給与計算の設定(源泉所得税・社会保険料の控除に使う)
-  dependents          Int      @default(0)      // 扶養親族等の数(源泉所得税)
-  taxColumn           String   @default("KOU")  // KOU(甲欄: 扶養控除等申告書あり) / OTSU(乙欄)
-  socialInsurance     Boolean  @default(false)  // 健康保険・厚生年金に加入
-  careInsurance       Boolean  @default(false)  // 介護保険(40〜64歳)
-  employmentInsurance Boolean  @default(false)  // 雇用保険に加入
-  standardMonthly     Int?                      // 標準報酬月額(空なら毎月の支給額から目安で決める)
-  commuteAllowance    Int      @default(0)      // 通勤手当(月額・非課税)
-  residentTax         Int      @default(0)      // 住民税(特別徴収の月額)
+  dependents          Int       @default(0) // 扶養親族等の数(源泉所得税)
+  taxColumn           String    @default("KOU") // KOU(甲欄: 扶養控除等申告書あり) / OTSU(乙欄)
+  socialInsurance     Boolean   @default(false) // 健康保険・厚生年金に加入
+  careInsurance       Boolean   @default(false) // 介護保険(40〜64歳)
+  employmentInsurance Boolean   @default(false) // 雇用保険に加入
+  standardMonthly     Int? // 標準報酬月額(空なら毎月の支給額から目安で決める)
+  commuteAllowance    Int       @default(0) // 通勤手当(月額・非課税)
+  residentTax         Int       @default(0) // 住民税(特別徴収の月額)
   // 有給休暇の設定。入社日から法律どおりの日数を自動で付与する
-  hireDate            DateTime?                 // 入社日(空なら自動付与しない)
-  weeklyDays          Int      @default(5)      // 週の所定労働日数(4日以下なら比例付与)
-  scheduledMinutes    Int      @default(480)    // 1日の所定労働時間(分)。有給1日分の賃金に使う
-  createdAt   DateTime @default(now())
+  hireDate            DateTime? // 入社日(空なら自動付与しない)
+  weeklyDays          Int       @default(5) // 週の所定労働日数(4日以下なら比例付与)
+  scheduledMinutes    Int       @default(480) // 1日の所定労働時間(分)。有給1日分の賃金に使う
+  createdAt           DateTime  @default(now())
 
-  shifts      Shift[]
-  timeRecords TimeRecord[]
-  leaveGrants LeaveGrant[]
-  leaveTaken  LeaveTaken[]
+  shifts             Shift[]
+  timeRecords        TimeRecord[]
+  leaveGrants        LeaveGrant[]
+  leaveTaken         LeaveTaken[]
   // 労働者名簿・労働条件通知書のための情報(ふりがな・生年月日・住所・雇用形態・業務・勤務時間・退職日など)
-  profile     Json?
+  profile            Json?
   // 給与の振込先: { bankCode, bankName, branchCode, branchName, accountType, accountNumber, holder }(名前はすべて半角カナ)
-  payeeAccount Json?
+  payeeAccount       Json?
   // ログインユーザーとのひも付け(本人が有給の申請などをするため)
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
-  requests    ApprovalRequest[]
+  userId             String?
+  user               User?               @relation(fields: [userId], references: [id])
+  requests           ApprovalRequest[]
   yearEndAdjustments YearEndAdjustment[]
-  shiftRequests ShiftRequest[]
+  shiftRequests      ShiftRequest[]
 
   @@unique([companyId, name])
   @@unique([companyId, userId])
@@ -886,18 +888,18 @@ model PayrollRun {
 }
 
 model AiExtraction {
-  id                  String              @id @default(cuid())
-  companyId           String
-  company             Company             @relation(fields: [companyId], references: [id])
-  sourceType          SourceType
-  rawResponse         Json
-  confidence          Float
+  id                   String             @id @default(cuid())
+  companyId            String
+  company              Company            @relation(fields: [companyId], references: [id])
+  sourceType           SourceType
+  rawResponse          Json
+  confidence           Float
   suggestedAccountCode String?
-  status              AiExtractionStatus  @default(NEEDS_REVIEW)
-  createdAt           DateTime            @default(now())
+  status               AiExtractionStatus @default(NEEDS_REVIEW)
+  createdAt            DateTime           @default(now())
 
-  expenseItem  ExpenseItem?
-  invoice      Invoice?
+  expenseItem ExpenseItem?
+  invoice     Invoice?
 }
 
 model JournalEntry {
@@ -934,7 +936,7 @@ model JournalEntry {
   disposedAsset     FixedAsset?        @relation("FixedAssetDisposal")
   recurringPosting  RecurringPosting?
   allocationPosting AllocationPosting?
-  allocationOpening Allocation?       @relation("AllocationOpening")
+  allocationOpening Allocation?        @relation("AllocationOpening")
   loanPayment       LoanPayment?
   loanOpening       Loan?              @relation("LoanOpening")
 }
@@ -953,8 +955,8 @@ model RecurringEntry {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
-  lines       RecurringLine[]
-  postings    RecurringPosting[]
+  lines    RecurringLine[]
+  postings RecurringPosting[]
 }
 
 model RecurringLine {
@@ -1007,14 +1009,14 @@ model JournalLine {
 }
 
 model AutomationRule {
-  id             String     @id @default(cuid())
-  companyId      String
-  company        Company    @relation(fields: [companyId], references: [id])
-  sourceType     SourceType
-  minConfidence  Float      @default(0.9)
-  maxAutoAmount  Int?
-  enabled        Boolean    @default(true)
-  createdAt      DateTime   @default(now())
+  id            String     @id @default(cuid())
+  companyId     String
+  company       Company    @relation(fields: [companyId], references: [id])
+  sourceType    SourceType
+  minConfidence Float      @default(0.9)
+  maxAutoAmount Int?
+  enabled       Boolean    @default(true)
+  createdAt     DateTime   @default(now())
 
   @@unique([companyId, sourceType])
 }
@@ -1055,7 +1057,7 @@ model Equipment {
   notes        String?
   createdAt    DateTime        @default(now())
 
-  loans        EquipmentLoan[]
+  loans EquipmentLoan[]
 
   @@unique([companyId, code])
 }
@@ -1113,17 +1115,17 @@ model Deal {
 
 // 社内のお知らせ(全員が見る掲示板)。読んだ人を記録して、誰がまだ読んでいないかを確かめられる
 model Announcement {
-  id         String             @id @default(cuid())
+  id         String   @id @default(cuid())
   companyId  String
-  company    Company            @relation(fields: [companyId], references: [id])
+  company    Company  @relation(fields: [companyId], references: [id])
   title      String
   body       String
-  pinned     Boolean            @default(false)
+  pinned     Boolean  @default(false)
   authorName String
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  reads      AnnouncementRead[]
+  reads AnnouncementRead[]
 
   @@index([companyId, createdAt])
 }
@@ -1266,11 +1268,11 @@ model Folder {
 
 // フォルダに入れたファイル。中身は DB に保存する(1ファイル 4MB まで)。folderId が空ならいちばん上の階層。
 model StoredFile {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   companyId      String
-  company        Company  @relation(fields: [companyId], references: [id])
+  company        Company   @relation(fields: [companyId], references: [id])
   folderId       String?
-  folder         Folder?  @relation(fields: [folderId], references: [id], onDelete: Restrict)
+  folder         Folder?   @relation(fields: [folderId], references: [id], onDelete: Restrict)
   name           String
   mimeType       String
   size           Int
@@ -1280,7 +1282,7 @@ model StoredFile {
   uploadedByName String
   // 契約の満了日・更新日など(近づいたらダッシュボードとカレンダーでお知らせ)
   expiresOn      DateTime?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
   @@index([companyId, folderId])
 }
@@ -1589,9 +1591,9 @@ enum AllocationKind {
 
 // 期間按分: まとめて払った費用(前払費用)・まとめて受け取った売上(前受金)を、月割りで費用・売上にする
 model Allocation {
-  id             String        @id @default(cuid())
+  id             String         @id @default(cuid())
   companyId      String
-  company        Company       @relation(fields: [companyId], references: [id])
+  company        Company        @relation(fields: [companyId], references: [id])
   kind           AllocationKind
   name           String
   totalAmount    Int
@@ -1600,13 +1602,13 @@ model Allocation {
   // 毎月の按分で使う損益の科目(費用 or 売上)
   accountCode    String
   projectId      String?
-  project        Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  project        Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
   notes          String?
-  active         Boolean       @default(true)
+  active         Boolean        @default(true)
   // 登録と同時に作った支払・入金の仕訳(任意)
-  openingEntryId String?       @unique
-  openingEntry   JournalEntry? @relation("AllocationOpening", fields: [openingEntryId], references: [id])
-  createdAt      DateTime      @default(now())
+  openingEntryId String?        @unique
+  openingEntry   JournalEntry?  @relation("AllocationOpening", fields: [openingEntryId], references: [id])
+  createdAt      DateTime       @default(now())
 
   postings AllocationPosting[]
 
@@ -1633,9 +1635,9 @@ enum LoanMethod {
 
 // 借入金: 返済予定表(元利均等・元金均等)を作り、毎月の返済を 借入金・支払利息 / 預金 で記帳する
 model Loan {
-  id                String       @id @default(cuid())
+  id                String        @id @default(cuid())
   companyId         String
-  company           Company      @relation(fields: [companyId], references: [id])
+  company           Company       @relation(fields: [companyId], references: [id])
   name              String
   principal         Int
   // 年利(0.001%単位。1.5% → 1500)
@@ -1649,11 +1651,11 @@ model Loan {
   // 返済に使う口座の科目
   bankCode          String
   notes             String?
-  active            Boolean      @default(true)
+  active            Boolean       @default(true)
   // 借入の仕訳(預金 / 借入金。任意)
-  openingEntryId    String?      @unique
+  openingEntryId    String?       @unique
   openingEntry      JournalEntry? @relation("LoanOpening", fields: [openingEntryId], references: [id])
-  createdAt         DateTime     @default(now())
+  createdAt         DateTime      @default(now())
 
   payments LoanPayment[]
 
@@ -1797,14 +1799,14 @@ model SupportTicket {
 
 // 運営からのお知らせ(メンテナンス・新機能など)。表示期間のあいだ、ログインした全員の画面の上に出す
 model ServiceNotice {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   title     String
   body      String?
   // info(お知らせ) / warning(メンテナンス・障害)
-  level     String   @default("info")
-  startsAt  DateTime @default(now())
+  level     String    @default("info")
+  startsAt  DateTime  @default(now())
   endsAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([startsAt])
 }
@@ -1812,28 +1814,28 @@ model ServiceNotice {
 // 外貨建ての取引(外貨の売上=売掛金、外貨の仕入・経費=買掛金)。計上したときのレートで円にして記帳し、
 // 入金・支払いのときの円との差を為替差益・為替差損にする。金額は外貨の最小単位(USD ならセント)で持つ
 model ForeignTransaction {
-  id                 String    @id @default(cuid())
-  companyId          String
-  company            Company   @relation(fields: [companyId], references: [id])
+  id                   String    @id @default(cuid())
+  companyId            String
+  company              Company   @relation(fields: [companyId], references: [id])
   // SALE(売上・売掛金) / PURCHASE(仕入・経費・買掛金)
-  kind               String
-  partner            String
-  description        String
-  currency           String
-  amountMinor        BigInt
+  kind                 String
+  partner              String
+  description          String
+  currency             String
+  amountMinor          BigInt
   // 計上したときのレート(1通貨あたりの円)
-  rate               Decimal   @db.Decimal(14, 6)
-  jpyAmount          Int
+  rate                 Decimal   @db.Decimal(14, 6)
+  jpyAmount            Int
   // 売上・費用の科目
-  accountCode        String
-  date               DateTime
-  dueDate            DateTime?
-  journalEntryId     String?
+  accountCode          String
+  date                 DateTime
+  dueDate              DateTime?
+  journalEntryId       String?
   // 入金・支払い
-  settledAt          DateTime?
-  settledJpy         Int?
+  settledAt            DateTime?
+  settledJpy           Int?
   settleJournalEntryId String?
-  createdAt          DateTime  @default(now())
+  createdAt            DateTime  @default(now())
 
   @@index([companyId, settledAt])
 }
@@ -1859,19 +1861,19 @@ model CashCount {
 
 // 出張旅費規程: 日当と宿泊費の定額(円)。規程に沿った日当は、もらう人は非課税・会社は旅費交通費になる
 model TravelPolicy {
-  id                String   @id @default(cuid())
-  companyId         String   @unique
-  company           Company  @relation(fields: [companyId], references: [id])
+  id               String    @id @default(cuid())
+  companyId        String    @unique
+  company          Company   @relation(fields: [companyId], references: [id])
   // 日帰り出張の日当 / 宿泊を伴う出張の日当(1日あたり) / 宿泊費(1泊あたり)
-  dayTripAllowance  Int      @default(0)
-  dailyAllowance    Int      @default(0)
-  lodging           Int      @default(0)
+  dayTripAllowance Int       @default(0)
+  dailyAllowance   Int       @default(0)
+  lodging          Int       @default(0)
   // 海外出張
-  overseasDaily     Int      @default(0)
-  overseasLodging   Int      @default(0)
+  overseasDaily    Int       @default(0)
+  overseasLodging  Int       @default(0)
   // 規程の施行日(印刷する規程に載せる)
-  effectiveDate     DateTime?
-  updatedAt         DateTime @updatedAt
+  effectiveDate    DateTime?
+  updatedAt        DateTime  @updatedAt
 }
 
 // 出張(日当・宿泊費を計算して経費精算に入れる)
@@ -2013,6 +2015,9 @@ model AssistantProposal {
   summary    String
   payload    Json
   status     String    @default("PENDING")
+  // どこから来た下書きか: ASSISTANT(このサービスのAIアシスタント)/ MCP(会社が自分のAIからつないだもの。sourceName はつなぎ方の名前)
+  source     String    @default("ASSISTANT")
+  sourceName String?
   resultId   String?
   resultNote String?
   createdAt  DateTime  @default(now())
@@ -2023,15 +2028,15 @@ model AssistantProposal {
 
 // AIの月次レポート(月ごと)。集計した数字(facts)と、AIまたは決まった形で書いた文章(body)
 model MonthlyReport {
-  id         String   @id @default(cuid())
-  companyId  String
-  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  month      String
-  facts      Json
-  body       String
-  mode       String
-  createdBy  String
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  month     String
+  facts     Json
+  body      String
+  mode      String
+  createdBy String
+  createdAt DateTime @default(now())
 
   @@unique([companyId, month])
 }
@@ -2169,53 +2174,53 @@ model AiCorrection {
 
 // 帳簿の健康診断のAIの所見(会社・年度ごとに最新の1つ)
 model BookCheck {
-  id        String   @id @default(cuid())
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   // 年度の初日(YYYY-MM-DD)
-  period    String
-  score     Int
-  summary   String
+  period     String
+  score      Int
+  summary    String
   // [{ text, href }]
   priorities Json
-  mode      String
-  createdBy String
-  createdAt DateTime @default(now())
+  mode       String
+  createdBy  String
+  createdAt  DateTime @default(now())
 
   @@unique([companyId, period])
 }
 
 // 契約書の台帳(AIが契約書から読み取った内容。人が直せる)
 model Contract {
-  id           String    @id @default(cuid())
-  companyId    String
-  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id            String    @id @default(cuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   // 書類フォルダの契約書ファイル
-  fileId       String?
-  title        String
-  counterparty String?
+  fileId        String?
+  title         String
+  counterparty  String?
   // OUTSOURCING(業務委託) / LEASE(賃貸借・リース) / SERVICE(保守・サービス・利用) / SALES(売買・取引基本) / NDA(秘密保持) / EMPLOYMENT(雇用) / OTHER
-  kind         String    @default("OTHER")
-  startDate    DateTime?
-  endDate      DateTime?
-  autoRenew    Boolean   @default(false)
+  kind          String    @default("OTHER")
+  startDate     DateTime?
+  endDate       DateTime?
+  autoRenew     Boolean   @default(false)
   // 自動更新するときの更新期間(か月)
   renewalMonths Int?
   // 解約・更新しない旨を申し出る期限(満了日の何日前まで)
-  noticeDays   Int?
-  amount       Int?
+  noticeDays    Int?
+  amount        Int?
   // MONTHLY / YEARLY / ONCE
-  amountPeriod String?
-  paymentTerms String?
+  amountPeriod  String?
+  paymentTerms  String?
   // 気をつける条項(違約金・損害賠償・中途解約など)
-  keyPoints    Json      @default("[]")
-  summary      String?
+  keyPoints     Json      @default("[]")
+  summary       String?
   // ACTIVE / ENDED
-  status       String    @default("ACTIVE")
-  mode         String    @default("manual")
-  createdBy    String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  status        String    @default("ACTIVE")
+  mode          String    @default("manual")
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([companyId, status])
 }
@@ -2233,4 +2238,24 @@ model AiNote {
   createdAt DateTime @default(now())
 
   @@unique([companyId, kind, key])
+}
+
+// 会社が自分のAI(Claude など)からこのサービスにつなぐための鍵(MCP)。鍵そのものは保存せず、ハッシュだけを持つ。
+// つないだAIは、作った人(管理者)としてデータを読み、下書きを作れる(確定は画面で人が行う)。
+model McpToken {
+  id         String    @id @default(cuid())
+  companyId  String
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  tokenHash  String    @unique
+  prefix     String
+  lastUsedAt DateTime?
+  callDay    String?
+  callCount  Int       @default(0)
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([companyId])
 }

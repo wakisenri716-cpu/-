@@ -18,7 +18,8 @@ const TTL_MS = 24 * 3_600_000;
 export type ProposalKind = "INVOICE" | "JOURNAL" | "REMINDER" | "END_CONTRACT" | "LINK_PO" | "CANCEL_INVOICE" | "VENDOR_ACCOUNT" | "EXPENSE" | "FIX_ACCOUNT";
 export type ProposalView = { id: string; kind: ProposalKind; summary: string; details: string[]; status: string; resultNote: string | null };
 
-type Ctx = { companyId: string; userId: string };
+// source: MCP のときは、会社が自分のAIからつないで作った下書き(sourceName はつなぎ方の名前)
+type Ctx = { companyId: string; userId: string; source?: "ASSISTANT" | "MCP"; sourceName?: string };
 type Input = Record<string, unknown>;
 const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 const int = (v: unknown) => (typeof v === "number" ? v : Number(String(v ?? "").replace(/[,円¥\s]/g, "")));
@@ -29,8 +30,11 @@ function endOfNextMonth(today: string) {
 }
 
 async function save(ctx: Ctx, kind: ProposalKind, summary: string, payload: object, details: string[]) {
-  const p = await prisma.assistantProposal.create({ data: { companyId: ctx.companyId, userId: ctx.userId, kind, summary, payload: { ...payload, details } } });
-  return { proposalId: p.id, summary, details, note: "下書きを作りました。画面に表示された内容を利用者が確かめて「実行する」を押すと確定します(まだ確定していません)。" };
+  const p = await prisma.assistantProposal.create({
+    data: { companyId: ctx.companyId, userId: ctx.userId, kind, summary, payload: { ...payload, details }, source: ctx.source ?? "ASSISTANT", sourceName: ctx.sourceName ?? null },
+  });
+  const where = ctx.source === "MCP" ? "このサービスの「AIからの下書き」(/ai-proposals)の画面で" : "画面に表示された内容を";
+  return { proposalId: p.id, summary, details, note: `下書きを作りました。${where}利用者が確かめて「実行する」を押すと確定します(まだ確定していません。24時間で期限切れ)。` };
 }
 
 export async function proposeInvoice(ctx: Ctx, input: Input) {
@@ -208,6 +212,30 @@ const view = (p: { id: string; kind: string; summary: string; payload: unknown; 
   status: p.status,
   resultNote: p.resultNote,
 });
+
+// 「AIからの下書き」の画面: 確かめ待ちの下書きと、最近(7日)決めたもの
+export async function listRecentProposals(companyId: string) {
+  const since = new Date(Date.now() - 7 * 86_400_000);
+  const rows = await prisma.assistantProposal.findMany({
+    where: { companyId, OR: [{ status: "PENDING", createdAt: { gte: new Date(Date.now() - TTL_MS) } }, { status: { in: ["DONE", "CANCELLED"] }, decidedAt: { gte: since } }] },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+  const users = await prisma.user.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.userId))] } }, select: { id: true, name: true } });
+  const nameOf = new Map(users.map((u) => [u.id, u.name]));
+  return rows.map((p) => ({
+    ...view(p),
+    source: p.source === "MCP" ? ("MCP" as const) : ("ASSISTANT" as const),
+    sourceName: p.sourceName,
+    requestedBy: nameOf.get(p.userId) ?? null,
+    createdAt: p.createdAt,
+    expiresAt: new Date(p.createdAt.getTime() + TTL_MS),
+  }));
+}
+
+export async function countPendingProposals(companyId: string) {
+  return prisma.assistantProposal.count({ where: { companyId, status: "PENDING", createdAt: { gte: new Date(Date.now() - TTL_MS) } } });
+}
 
 export async function getProposals(companyId: string, ids: string[]) {
   if (!ids.length) return [];

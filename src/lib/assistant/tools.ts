@@ -308,7 +308,7 @@ async function findAccount(companyId: string, q: string) {
   return accounts.find((a) => a.code === q) ?? accounts.find((a) => a.name === q) ?? accounts.find((a) => a.name.includes(q)) ?? null;
 }
 
-export async function runAssistantTool(ctx: { companyId: string; userId: string }, name: string, input: Input): Promise<unknown> {
+export async function runAssistantTool(ctx: { companyId: string; userId: string; source?: "ASSISTANT" | "MCP"; sourceName?: string }, name: string, input: Input): Promise<unknown> {
   const { companyId } = ctx;
   switch (name) {
     case "propose_invoice":
