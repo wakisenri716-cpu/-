@@ -120,6 +120,9 @@ export async function createDemoCompany(userId: string) {
   const staff = [];
   for (const [name, wage] of staffNames) staff.push(await createStaff(companyId, { name, hourlyWage: wage }));
   const today = jstDateKey(new Date());
+  // 入社・退職の手続きナビ用: 高橋さんは3日前に入社、鈴木さんは3週間後に退職
+  await prisma.staff.update({ where: { id: staff[2].id }, data: { hireDate: new Date(`${addDays(today, -3)}T00:00:00+09:00`), socialInsurance: true, employmentInsurance: true } });
+  await prisma.staff.update({ where: { id: staff[1].id }, data: { employmentInsurance: true, profile: { retireDate: addDays(today, 21), retireReason: "自己都合" } } });
   for (let d = 0; d < 10; d++) {
     const date = addDays(today, d - 2);
     for (const [i, s] of staff.entries()) {

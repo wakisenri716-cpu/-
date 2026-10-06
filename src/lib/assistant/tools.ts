@@ -39,6 +39,7 @@ import { getTaxForecast } from "@/lib/taxForecast";
 import { SAVING_OPTIONS } from "@/lib/taxSavingOptions";
 import { getLaborAnalysis } from "@/lib/laborAnalysis";
 import { getCustomerProfit } from "@/lib/customerProfit";
+import { getHrProcedures } from "@/lib/hrProcedures";
 import { getAnalysis } from "@/lib/accounting/analysis";
 import { templateExplanation } from "@/lib/analysisExplain";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
@@ -340,6 +341,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_customer_profit",
     description: "顧客別の採算。直近12か月の顧客ごとの売上(税抜)・案件に付いた原価と経費・日報の作業時間と人件費・粗利・粗利率・1時間あたりの粗利・入金の遅れと、赤字・粗利率が低い・手間のわりに粗利が少ない・入金が遅れがちの印を返す。「儲かっている顧客は?」「採算の悪い取引先は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_hr_procedures",
+    description: "入社・退職の手続き。入社日・退職日が近いスタッフごとに、健康保険・厚生年金と雇用保険の資格取得届/喪失届、住民税の異動届、源泉徴収票、労働条件通知書、振込先の登録、備品の返却などを期限・済みかどうか付きで返す。「入社の手続きは?」「退職する人の届出は?」「離職票は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -720,6 +726,15 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         customers: r.rows.slice(0, 20).map((c) => ({ name: c.name, revenue: c.revenue, share: c.share, cost: c.cost + c.laborCost, hours: c.hours, gross: c.gross, margin: c.margin, grossPerHour: c.grossPerHour, avgLateDays: c.avgLateDays, overdue: c.overdue, flags: c.flags })),
         findings: r.findings,
         link: "/customer-profit",
+      };
+    }
+    case "get_hr_procedures": {
+      const r = await getHrProcedures(companyId);
+      return {
+        today: r.today,
+        people: r.cases.map((c) => ({ name: c.name, kind: c.kind === "hire" ? "入社" : "退職", date: c.date, open: c.tasks.filter((t) => !t.done).map((t) => ({ task: t.label, due: t.due, dueNote: t.dueNote, status: t.status })) })),
+        findings: r.findings,
+        link: "/hr-procedures",
       };
     }
     case "get_business_analysis": {
