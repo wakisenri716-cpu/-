@@ -22,6 +22,7 @@ const TOOL_LABEL: Record<string, string> = {
   simulate_scenario: "もしもシミュレーション",
   get_reorder: "発注の提案",
   get_budget_variance: "予算の差の原因",
+  get_shift_draft: "シフトの自動作成",
   get_anomalies: "いつもと違う動き",
   propose_invoice: "請求書の下書き",
   propose_journal: "仕訳の下書き",

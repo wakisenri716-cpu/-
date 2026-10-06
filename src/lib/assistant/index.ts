@@ -27,6 +27,7 @@ const SCREENS = [
   ["/monthly", "月次推移・予算"],
   ["/monthly/progress", "予算の進み具合"],
   ["/monthly/variance", "予算と実績の差の原因"],
+  ["/shifts/auto", "シフトの自動作成"],
   ["/sales-analysis", "売上分析"],
   ["/receivables", "売掛金・買掛金"],
   ["/invoices", "請求書"],
@@ -138,6 +139,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("simulate_scenario", { text: q })) as { comments?: string[]; error?: string };
     if (r.error) return { reply: r.error, tools: ["simulate_scenario"], mode: "simple" };
     return { reply: [...(r.comments ?? []), "[もしもシミュレーション](/simulation)"].join("\n"), tools: ["simulate_scenario"], mode: "simple" };
+  }
+  // 「来月のシフトは足りてる?」→ シフトの自動作成の下書き
+  if (/シフト/.test(q) && /作|足り|自動|組/.test(q)) {
+    const r = (await run("get_shift_draft")) as { month: string; draftShifts: number; shortages: unknown[]; notes: string[]; link: string };
+    return { reply: [`${Number(r.month.slice(5))}月のシフトの下書きは ${r.draftShifts}件 です(まだ作っていません)。`, ...r.notes.map((n) => `・${n}`), `[シフトの自動作成](${r.link})`].join("\n"), tools: ["get_shift_draft"], mode: "simple" };
   }
   // 「予算を超えた原因は?」→ 予算と実績の差の原因
   if (/予算/.test(q) && /原因|なぜ|どうして|理由|差/.test(q)) {

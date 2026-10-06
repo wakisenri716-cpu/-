@@ -91,6 +91,9 @@ export default function ShiftRequestsPage() {
           >
             希望からシフトを作る
           </button>
+          <Link href={`/shifts/auto?month=${data.month}`} className="rounded-md border border-indigo-300 bg-indigo-50 px-4 py-2 font-medium text-indigo-700 hover:bg-indigo-100">
+            人数を決めて自動で作る
+          </Link>
         </div>
       </div>
       {data.deadline && <p className="text-sm text-slate-600">{m}月分の締め切り: {data.deadline.replaceAll("-", "/")}</p>}
