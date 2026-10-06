@@ -26,6 +26,7 @@ import { getPaymentPlan, GROUP_LABELS } from "@/lib/paymentPlan";
 import { getBillingGaps, GAP_LABELS } from "@/lib/billingGaps";
 import { draftQuote } from "@/lib/quoteAssist";
 import { getDuplicateParties } from "@/lib/partyMerge";
+import { getYearEndChecklist } from "@/lib/yearEndClose";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
 // 書き換えは利用者が画面で「実行する」を押したときだけ行う。
@@ -282,6 +283,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
+    name: "get_year_end",
+    description: "決算の準備のチェックリスト(各月の締め・減価償却・棚卸・現金の実査・仮払金・未払/前払の計上・消費税の決算整理・法人税等・期末の締め)の済み/未と、期末までの日数・申告の期限を返す。「決算の準備は?」「決算までに何をすればいい?」などに使う。",
+    input_schema: { type: "object", properties: { year: { type: "integer", description: "年度の開始年(任意)" } }, additionalProperties: false },
+  },
+  {
     name: "get_todos",
     description: "いま会社でやるべきこと(レビュー待ち・承認待ち・期限切れの請求書・納付期限など)の一覧を返す。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
@@ -350,6 +356,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string 
       const user = await prisma.user.findUniqueOrThrow({ where: { id: ctx.userId }, select: { id: true, name: true } });
       const d = await draftQuote({ ...user, companyId }, input);
       return { lines: d.lines.map((l) => ({ description: l.description, quantity: l.quantity, unit: l.unit, unitPrice: l.unitPrice, taxRate: l.taxRate, pastPrices: l.history ? `${l.history.min}〜${l.history.max}円(${l.history.count}件)` : null, warning: l.priceWarning })), subtotal: d.subtotal, link: `/quotes/new?draft=${d.draftId}`, note: "下書きです。リンクを開いて内容を確かめ、見積書を作ってください。" };
+    }
+    case "get_year_end": {
+      const c = await getYearEndChecklist(companyId, input.year);
+      return { fiscalYear: `${c.from}〜${c.to}`, ended: c.ended, daysToEnd: c.daysToEnd, filingDeadline: c.filingDeadline, left: c.left, total: c.total, items: c.items.map((i) => ({ label: i.label, done: i.done, detail: i.detail })), screen: "/year-end-close" };
     }
     case "get_duplicate_parties": {
       const r = await getDuplicateParties(companyId);
