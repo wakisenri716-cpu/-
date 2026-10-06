@@ -200,6 +200,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/year-end-close", label: "決算の準備", icon: SparkleIcon },
       { href: "/analysis", label: "経営分析", icon: GaugeIcon },
       { href: "/sales-analysis", label: "売上分析(ABC)", icon: ChartIcon },
+      { href: "/labor-analysis", label: "人件費の分析", icon: ChartIcon },
       { href: "/documents", label: "証憑の検索", icon: SearchIcon },
       { href: "/compliance", label: "電子帳簿保存法", icon: ShieldIcon },
     ],
