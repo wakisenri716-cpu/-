@@ -196,8 +196,11 @@ async function factsOf(companyId: string): Promise<CalendarFacts> {
 
 // 過去2か月(済んでいないものを拾う。済んだものも戻せるように残す)〜これから12か月
 export async function getTaxCalendar(companyId: string, today = jstDateKey(new Date())) {
-  const facts = await factsOf(companyId);
-  const from = `${addMonth(monthOf(today), -2)}-01`;
+  const [facts, company] = await Promise.all([factsOf(companyId), prisma.company.findUniqueOrThrow({ where: { id: companyId }, select: { createdAt: true } })]);
+  // 使い始める前の期限は出さない
+  const twoMonthsAgo = `${addMonth(monthOf(today), -2)}-01`;
+  const started = jstDateKey(company.createdAt);
+  const from = started > twoMonthsAgo ? started : twoMonthsAgo;
   const endMonth = addMonth(monthOf(today), 12);
   const to = `${endMonth}-${pad(lastDay(Number(endMonth.slice(0, 4)), Number(endMonth.slice(5))))}`;
   const drafts = buildEvents(facts, from, to);
@@ -209,7 +212,9 @@ export async function getTaxCalendar(companyId: string, today = jstDateKey(new D
   const events: CalendarEvent[] = drafts
     .map((d) => {
       const check = checks.find((c) => c.key === d.key);
-      const done = (d.auto && paid.has(d.key)) || !!check;
+      // 社会保険料は口座振替なので、期限を過ぎたら引き落とし済みとみなす
+      const debited = d.kind === "social" && d.due < today;
+      const done = (d.auto && paid.has(d.key)) || debited || !!check;
       return { ...d, done, doneBy: check?.byName, status: statusOf(done, d.due, today) };
     });
   const overdue = events.filter((e) => e.status === "overdue");
@@ -388,4 +393,14 @@ export async function planCalendar(user: { id: string; companyId: string }) {
   }
   await prisma.assistantLog.create({ data: { companyId: user.companyId, userId: user.id, question: "税金・労務の段取り", tools: [], mode: `calendar-${result.mode}` } });
   return result;
+}
+
+// やることリスト用: 期限を過ぎた・7日以内の申告・届出(済んでいないもの)の数。
+// 源泉所得税・住民税の納付、償却資産申告、年末調整は、やることリストに別の項目があるので数えない
+const COVERED_ELSEWHERE = new Set(["incomeTax", "residentTax", "propertyTax", "yearEnd"]);
+export async function countTaxCalendarAlerts(companyId: string, now = new Date()) {
+  const today = jstDateKey(now);
+  const { events } = await getTaxCalendar(companyId, today);
+  const open = events.filter((e) => !e.done && !COVERED_ELSEWHERE.has(e.kind) && daysBetween(today, e.due) <= 7);
+  return { count: open.length, overdue: open.filter((e) => e.due < today).length, next: open[0]?.title ?? null };
 }

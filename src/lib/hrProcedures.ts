@@ -313,3 +313,11 @@ export async function draftGuide(user: { id: string; companyId: string }, input:
   await prisma.assistantLog.create({ data: { companyId: user.companyId, userId: user.id, question: `${c.kind === "hire" ? "入社" : "退職"}の案内文`, tools: [], mode: `hr-guide-${result.mode}` } });
   return result;
 }
+
+// やることリスト用: 期限を過ぎた・7日以内の手続き(済んでいないもの)の数
+export async function countHrProcedureAlerts(companyId: string, now = new Date()) {
+  const today = jstDateKey(now);
+  const { cases } = await getHrProcedures(companyId, today);
+  const open = cases.flatMap((c) => c.tasks).filter((t) => !t.done && t.due && daysBetween(today, t.due) <= 7);
+  return { count: open.length, overdue: open.filter((t) => t.due! < today).length };
+}

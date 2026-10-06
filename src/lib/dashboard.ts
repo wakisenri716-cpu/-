@@ -18,6 +18,8 @@ import { countDueLoanPayments } from "@/lib/accounting/loans";
 import { countOverLimit } from "@/lib/accounting/credit";
 import { propertyTaxReminder } from "@/lib/accounting/propertyTax";
 import { countRemittanceAlerts } from "@/lib/withholding/service";
+import { countHrProcedureAlerts } from "@/lib/hrProcedures";
+import { countTaxCalendarAlerts } from "@/lib/taxCalendar";
 import type { User } from "@prisma/client";
 import { jstDateKey } from "@/lib/jst";
 import { fiscalYearOf, getFiscalStartMonth } from "@/lib/accounting/period";
@@ -107,7 +109,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions, hrAlerts, calendarAlerts] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -147,6 +149,8 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     prisma.assistantProposal.count({ where: { companyId, source: "MCP", status: "PENDING", createdAt: { gte: new Date(now.getTime() - 24 * 3_600_000) } } }),
     // 税理士からの未解決の質問がある仕訳
     countOpenThreads(companyId),
+    countHrProcedureAlerts(companyId, now),
+    countTaxCalendarAlerts(companyId, now),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
@@ -193,6 +197,15 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
       href: "/payroll",
       tone: "amber",
     },
+    {
+      key: "taxCalendar",
+      label: "申告・届出の期限",
+      detail: calendarAlerts.next ? `${calendarAlerts.next}など、期限が7日以内か過ぎているものがあります(済んでいれば「済み」に)` : "期限が7日以内か過ぎている申告・届出があります",
+      count: calendarAlerts.count,
+      href: "/tax-calendar",
+      tone: calendarAlerts.overdue ? "rose" : "amber",
+    },
+    { key: "hrProcedures", label: "入社・退職の手続き", detail: "社会保険・雇用保険の届出などの期限が7日以内か、過ぎているものがあります", count: hrAlerts.count, href: "/hr-procedures", tone: hrAlerts.overdue ? "rose" : "amber" },
     { key: "remit", label: "源泉所得税・住民税の納付", detail: "納付の期限が10日以内か、過ぎているものがあります", count: remittances, href: "/withholding", tone: "rose" },
     { key: "overtime", label: "残業が上限に近い人", detail: "36協定の上限(原則 月45時間・年360時間)に近いか超えています", count: overtimeAlerts, href: "/leave", tone: "rose" },
     { key: "leave", label: "有給の年5日の取得が足りない人", detail: "期限まで90日以内です。有給を取れるよう日程を調整してください", count: leaveAlerts, href: "/leave", tone: "amber" },
