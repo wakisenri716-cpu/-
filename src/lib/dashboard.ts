@@ -20,6 +20,7 @@ import { propertyTaxReminder } from "@/lib/accounting/propertyTax";
 import { countRemittanceAlerts } from "@/lib/withholding/service";
 import { countHrProcedureAlerts } from "@/lib/hrProcedures";
 import { countTaxCalendarAlerts } from "@/lib/taxCalendar";
+import { countOpenMemos } from "@/lib/phoneMemos";
 import type { User } from "@prisma/client";
 import { jstDateKey } from "@/lib/jst";
 import { fiscalYearOf, getFiscalStartMonth } from "@/lib/accounting/period";
@@ -109,7 +110,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions, hrAlerts, calendarAlerts] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions, hrAlerts, calendarAlerts, memos] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -151,6 +152,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     countOpenThreads(companyId),
     countHrProcedureAlerts(companyId, now),
     countTaxCalendarAlerts(companyId, now),
+    countOpenMemos(companyId, user?.id),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
@@ -197,6 +199,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
       href: "/payroll",
       tone: "amber",
     },
+    { key: "phoneMemos", label: "伝言メモ", detail: memos.urgent ? `至急が${memos.urgent}件あります。折り返したら「対応済み」に` : "電話・来客の伝言があります。折り返したら「対応済み」に", count: memos.count, href: "/phone-memos", tone: memos.urgent ? "rose" : "amber" },
     {
       key: "taxCalendar",
       label: "申告・届出の期限",
