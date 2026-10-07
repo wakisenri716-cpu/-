@@ -39,6 +39,7 @@ const SCREENS = [
   ["/tax-calendar", "税金・労務のカレンダー(申告・届出・納付の期限)"],
   ["/minutes", "議事録(会議のメモをAIで整える)"],
   ["/entertainment", "交際費の管理(800万円の上限・1人1万円以下の飲食費)"],
+  ["/job-posting", "求人票の下書き(年齢・性別で限る言い方のチェック)"],
   ["/receivables", "売掛金・買掛金"],
   ["/invoices", "請求書"],
   ["/expenses", "経費精算"],
