@@ -245,6 +245,7 @@ model Company {
   anomalyChecks        AnomalyCheck[]
   hrProcedureChecks    HrProcedureCheck[]
   taxCalendarChecks    TaxCalendarCheck[]
+  minutes              Minutes[]
   inboxItems           InboxItem[]
   dailyBriefings       DailyBriefing[]
   approvalChecks       ApprovalCheck[]
@@ -2311,4 +2312,24 @@ model TaxCalendarCheck {
   createdAt DateTime @default(now())
 
   @@unique([companyId, key])
+}
+
+// 議事録。content は { agenda, discussion, decisions, actions: [{ task, owner, due }] }。元のメモも残す
+model Minutes {
+  id             String   @id @default(cuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title          String
+  heldOn         DateTime
+  place          String?
+  attendees      String[]
+  content        Json
+  notes          String
+  mode           String   @default("template") // template / claude
+  announcementId String?
+  createdByName  String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([companyId, heldOn])
 }

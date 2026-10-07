@@ -41,6 +41,7 @@ import { getLaborAnalysis } from "@/lib/laborAnalysis";
 import { getCustomerProfit } from "@/lib/customerProfit";
 import { getHrProcedures } from "@/lib/hrProcedures";
 import { getTaxCalendar } from "@/lib/taxCalendar";
+import { listMinutes } from "@/lib/minutes";
 import { getAnalysis } from "@/lib/accounting/analysis";
 import { templateExplanation } from "@/lib/analysisExplain";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
@@ -352,6 +353,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_tax_calendar",
     description: "税金・労務のカレンダー。これから12か月の申告・届出・納付の期限(源泉所得税・住民税・社会保険料の納付、算定基礎届、労働保険の年度更新、36協定、年末調整、法定調書・給与支払報告書、償却資産申告、決算と中間申告)を、済み・期限切れ・2週間以内の印つきで返す。「今月の税金の期限は?」「年度更新はいつ?」「次の申告は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_minutes",
+    description: "議事録。新しい順に最大10件の会議(日付・名前・出席者・決まったこと・やること(担当・期限))を返す。「この前の会議で決まったことは?」「会議の宿題は?」「○○さんの担当は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -750,6 +756,20 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         events: r.events.slice(0, 40).map((e) => ({ title: e.title, due: e.due, start: e.start, category: e.category, status: e.status, note: e.note })),
         findings: r.findings,
         link: "/tax-calendar",
+      };
+    }
+    case "get_minutes": {
+      const rows = (await listMinutes(companyId)).slice(0, 10);
+      const today = jstDateKey(new Date());
+      const actions = rows.flatMap((m) => m.content.actions.map((a) => ({ ...a, meeting: m.title })));
+      const late = actions.filter((a) => a.due && a.due < today);
+      const findings = rows.length
+        ? [`最近の会議は「${rows[0].title}」(${rows[0].heldOn.replaceAll("-", "/")})です。${rows[0].content.decisions.length ? `決まったこと: ${rows[0].content.decisions.slice(0, 3).join("/")}` : ""}`, ...(late.length ? [`期限を過ぎたやることが${late.length}件あります: ${late.slice(0, 3).map((a) => `${a.task}${a.owner ? `(${a.owner})` : ""}`).join("、")}`] : [])]
+        : ["まだ議事録はありません。"];
+      return {
+        meetings: rows.map((m) => ({ title: m.title, heldOn: m.heldOn, attendees: m.attendees, decisions: m.content.decisions, actions: m.content.actions, link: `/minutes/${m.id}` })),
+        findings,
+        link: "/minutes",
       };
     }
     case "get_business_analysis": {
