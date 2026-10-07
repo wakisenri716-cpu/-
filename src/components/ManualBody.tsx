@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 // マニュアルの本文を、かんたんな書き方で整えて表示する。
-//   # 見出し / ## 小見出し / - 箇条書き / 1. 手順 / **太字** / 「注意:」で始まる行は目立たせる
+//   # 見出し / ## 小見出し / - 箇条書き / 1. 手順 / **太字** / 「注意:」(英語版は「Caution:」)で始まる行は目立たせる
 // HTMLは使わない(Reactがすべてエスケープする)ので、書いた文字がそのまま安全に表示される。
 
 function inline(text: string): ReactNode[] {
@@ -37,7 +37,7 @@ function parse(body: string): Block[] {
       const last = blocks[blocks.length - 1];
       if (last?.kind === "ol") last.items.push(m[1]);
       else blocks.push({ kind: "ol", items: [m[1]] });
-    } else if (/^(注意|重要|NG)[:：]/.test(line.trim())) {
+    } else if (/^(注意|重要|NG|Caution|Important|Warning)[:：]/i.test(line.trim())) {
       flush();
       blocks.push({ kind: "note", text: line.trim() });
     } else para.push(line);
