@@ -176,12 +176,12 @@ export async function draftMailReply(user: { id: string; companyId: string; name
   if (!mail) throw new UserError("届いたメールの文面を貼り付けてください");
   const notes = String(raw.notes ?? "").trim().slice(0, 1000);
   const customerId = typeof raw.customerId === "string" && raw.customerId ? raw.customerId : null;
-  const subjectLine = mail.match(/^(?:件名|Subject)\s*[::]\s*(.+)$/im)?.[1]?.trim() ?? String(raw.subject ?? "").trim();
-  const fromLine = mail.match(/^(?:From|差出人|送信者)\s*[::].*$/im)?.[0] ?? "";
+  const subjectLine = mail.match(/^(?:件名|Subject)\s*[:\uFF1A]\s*(.+)$/im)?.[1]?.trim() ?? String(raw.subject ?? "").trim();
+  const fromLine = mail.match(/^(?:From|差出人|送信者)\s*[:\uFF1A].*$/im)?.[0] ?? "";
   const [found, company] = await Promise.all([findCustomer(user.companyId, `${fromLine}\n${mail}`, customerId), prisma.company.findUniqueOrThrow({ where: { id: user.companyId }, select: { name: true, address: true, phone: true, email: true } })]);
   if (customerId && !found.customer) throw new UserError("選んだ顧客が見つかりません");
   const facts = await customerFacts(user.companyId, found.customer?.id ?? null);
-  const intents = detectIntents(`${mail}\n${notes}`.replace(/^(?:From|差出人|送信者|To|宛先|Cc|件名|Subject)\s*[::].*$/gim, ""));
+  const intents = detectIntents(`${mail}\n${notes}`.replace(/^(?:From|差出人|送信者|To|宛先|Cc|件名|Subject)\s*[:\uFF1A].*$/gim, ""));
   const sender: Sender = { company: company.name, name: String(raw.sender ?? "").trim().slice(0, 60) || user.name, address: company.address, phone: company.phone, email: company.email };
   const to: Addressee = { name: found.customer?.name ?? null, department: found.customer?.department ?? null, contactName: found.customer?.contactName ?? null };
   const base = templateReply({ subject: subjectLine.slice(0, 120), intents, facts, to, sender });

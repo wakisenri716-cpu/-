@@ -26,14 +26,14 @@ export function templateDraft(notes: string, title: string) {
   const cautions: string[] = [];
   const list: string[] = [];
   for (const raw of notes.replace(/\r\n/g, "\n").split("\n")) {
-    const line = raw.replace(/^\s*(?:[・\-*•●○◯■◆▶→>]+\s*|[((]?\d{1,2}[.)、)．]\s*)+/, "").trim();
+    const line = raw.replace(/^\s*(?:[・\-*•●○◯■◆▶→>]+\s*|[(\uFF08]?\d{1,2}[.)、\uFF09．]\s*)+/, "").trim();
     if (!line) continue;
-    const m = line.match(/^(準備|用意|持ち物|必要なもの)\s*[::]\s*(.*)$/);
+    const m = line.match(/^(準備|用意|持ち物|必要なもの)\s*[:\uFF1A]\s*(.*)$/);
     if (m) {
-      prepare.push(...m[2].split(/[、,,]/).map((s) => s.trim()).filter(Boolean));
+      prepare.push(...m[2].split(/[、,\uFF0C]/).map((s) => s.trim()).filter(Boolean));
       continue;
     }
-    if (/^(注意|重要|NG|気をつけ)/.test(line) || /(してはいけない|しないこと|禁止)/.test(line)) cautions.push(line.replace(/^(注意|重要|NG)\s*[::]\s*/, ""));
+    if (/^(注意|重要|NG|気をつけ)/.test(line) || /(してはいけない|しないこと|禁止)/.test(line)) cautions.push(line.replace(/^(注意|重要|NG)\s*[:\uFF1A]\s*/, ""));
     else list.push(line);
   }
   const lines = [`# ${title || "手順"}`];
