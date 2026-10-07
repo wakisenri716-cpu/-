@@ -200,6 +200,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/tax", label: "消費税集計", icon: PercentIcon },
       { href: "/tax/close", label: "消費税の決算整理", icon: PercentIcon },
       { href: "/corporate-tax", label: "法人税等の計算", icon: PercentIcon },
+      { href: "/entertainment", label: "交際費の管理", icon: PercentIcon },
       { href: "/tax-forecast", label: "着地見込みと納税の目安", icon: PercentIcon },
       { href: "/tax-calendar", label: "税金・労務のカレンダー", icon: CalendarIcon },
       { href: "/year-end-close", label: "決算の準備", icon: SparkleIcon },

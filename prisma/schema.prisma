@@ -246,6 +246,7 @@ model Company {
   hrProcedureChecks    HrProcedureCheck[]
   taxCalendarChecks    TaxCalendarCheck[]
   minutes              Minutes[]
+  entertainmentRecords EntertainmentRecord[]
   inboxItems           InboxItem[]
   dailyBriefings       DailyBriefing[]
   approvalChecks       ApprovalCheck[]
@@ -2332,4 +2333,20 @@ model Minutes {
   updatedAt      DateTime @updatedAt
 
   @@index([companyId, heldOn])
+}
+
+// 交際費の記録(帳簿に書いておく相手・人数・目的)。1人あたり1万円以下の飲食費を交際費から除くのに使う
+model EntertainmentRecord {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  journalLineId String   @unique
+  kind          String   @default("MEAL") // MEAL(飲食) / GIFT(贈答) / OTHER
+  persons       Int?
+  guests        String? // 相手の会社名・氏名(関係)
+  purpose       String?
+  byName        String
+  updatedAt     DateTime @updatedAt
+
+  @@index([companyId])
 }

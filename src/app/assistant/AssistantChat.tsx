@@ -31,6 +31,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_hr_procedures: "入社・退職の手続き",
   get_tax_calendar: "税金・労務のカレンダー",
   get_minutes: "議事録",
+  get_entertainment: "交際費の管理",
   get_business_analysis: "経営分析",
   get_anomalies: "いつもと違う動き",
   propose_invoice: "請求書の下書き",
