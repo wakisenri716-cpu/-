@@ -114,7 +114,7 @@ export async function requireMember() {
   return user;
 }
 
-// 既定はこちら: 管理者・経理担当だけがデータに届く。従業員はスタッフアプリへ戻す。
+// 既定はこちら: 管理者・経理担当だけがデータに届く。従業員はClerkly従業員用へ戻す。
 export async function requireCompanyId(): Promise<string> {
   const user = await requireMember();
   if (user.role === "EMPLOYEE") redirect("/staff");

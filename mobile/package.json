@@ -2,7 +2,7 @@
   "name": "staff-app-mobile",
   "version": "1.0.0",
   "private": true,
-  "description": "スタッフアプリ(iPhone・Android)。本番のスタッフアプリ(/staff)を表示するネイティブアプリ",
+  "description": "Clerkly従業員用(iPhone・Android)。本番のClerkly従業員用(/staff)を表示するネイティブアプリ",
   "scripts": {
     "sync": "cap sync",
     "android": "cap open android",

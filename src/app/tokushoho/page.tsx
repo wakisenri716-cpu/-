@@ -38,7 +38,7 @@ export default function TokushohoPage() {
     ["お支払い時期", `お申し込み時にお支払いが確定し、以後は毎月同じ日に自動で更新・お支払いとなります。無料期間(登録から${TRIAL_DAYS}日間)中にお申し込みいただいた場合は、無料期間の終了時に初回のお支払いとなります。`],
     ["サービスの提供時期", "お支払いの手続きが完了した時点から、すぐにご利用いただけます。"],
     ["解約・返品について", "サービスの性質上、お支払い後の返金はいたしません。解約はいつでも「契約・お支払い」の画面からでき、解約後も契約期間の終わりまでご利用いただけます(日割りの返金はありません)。"],
-    ["動作環境", "最新版の Google Chrome・Microsoft Edge・Safari・Firefox。スマートフォンのスタッフアプリは iOS・Android に対応しています。"],
+    ["動作環境", "最新版の Google Chrome・Microsoft Edge・Safari・Firefox。スマートフォンアプリ「Clerkly従業員用」は iOS・Android に対応しています。"],
   ];
   return (
     <div className="mx-auto max-w-3xl space-y-4 py-6">

@@ -128,7 +128,7 @@ export default function ManualsAdminPage() {
         <div>
           <h1 className="text-2xl font-semibold">マニュアル</h1>
           <p className="mt-1 text-sm text-slate-600">
-            仕事の手順やルールを書いて、スタッフがスマホ(スタッフアプリの「マニュアル」)で読めるようにします。写真も付けられます。読んだら「読みました」を押してもらい、誰が読んだかを確かめられます。内容を直すと未読に戻ります。
+            仕事の手順やルールを書いて、スタッフがスマホ(Clerkly従業員用の「マニュアル」)で読めるようにします。写真も付けられます。読んだら「読みました」を押してもらい、誰が読んだかを確かめられます。内容を直すと未読に戻ります。
           </p>
         </div>
         <div className="flex gap-2">

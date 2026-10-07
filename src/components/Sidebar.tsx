@@ -91,7 +91,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/minutes", label: "議事録", icon: NotebookIcon },
       { href: "/manuals", label: "マニュアル", icon: NotebookIcon },
       { href: "/policies", label: "社内規程の下書き", icon: SparkleIcon },
-      { href: "/staff", label: "スタッフアプリ", icon: DashboardIcon },
+      { href: "/staff", label: "Clerkly従業員用", icon: DashboardIcon },
       { href: "/files", label: "書類フォルダ", icon: FolderIcon },
     ],
   },
@@ -218,7 +218,7 @@ type Role = "ADMIN" | "ACCOUNTANT" | "EMPLOYEE" | "ADVISOR";
 
 const EMPLOYEE_SECTIONS: NavSection[] = [
   {
-    title: "スタッフアプリ",
+    title: "Clerkly従業員用",
     items: [
       { href: "/staff", label: "ホーム", icon: DashboardIcon },
       { href: "/staff/shifts", label: "シフト提出・確認", icon: CalendarIcon },

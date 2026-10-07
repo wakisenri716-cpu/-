@@ -5,7 +5,7 @@ import { countUnreadManuals } from "@/lib/manuals";
 import { unreadAnnouncements } from "@/lib/announcements";
 import { listStock } from "@/lib/staffInventory";
 
-// スタッフアプリのホーム: これからのシフト・未読のマニュアルとお知らせ・在庫が少ない商品の数
+// Clerkly従業員用のホーム: これからのシフト・未読のマニュアルとお知らせ・在庫が少ない商品の数
 export async function GET() {
   const user = await requireMember();
   return respond(async () => {

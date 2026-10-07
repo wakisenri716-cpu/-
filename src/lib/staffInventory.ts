@@ -3,7 +3,7 @@ import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { recordStockMovement } from "@/lib/accounting/inventory";
 
-// スタッフアプリの在庫: 在庫数の確認と、出庫・棚卸(実際に数えた数)の記録。金額は見せない。
+// Clerkly従業員用の在庫: 在庫数の確認と、出庫・棚卸(実際に数えた数)の記録。金額は見せない。
 // 入荷(仕入)は単価・支払方法が要るので、管理者が「在庫管理」か発注書の検収で記録する。
 
 export async function listStock(companyId: string) {
@@ -40,7 +40,7 @@ export async function recordStaffMovement(companyId: string, user: { name: strin
     date: new Date(`${today}T00:00:00Z`),
     quantity,
     // 誰がスマホから記録したかを残す
-    memo: `スタッフアプリ(${user.name})${memo ? ` ${memo}` : ""}`,
+    memo: `Clerkly従業員用(${user.name})${memo ? ` ${memo}` : ""}`,
   });
   return { product: result.product, type, quantity };
 }

@@ -53,7 +53,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const nativeApp = (headerList.get("user-agent") ?? "").includes("StaffAppNative");
 
   const [companies, notices] = user ? await Promise.all([listMyCompanies(user.id), activeNotices()]) : [[], []];
-  // スタッフアプリ(/staff)はスマホでアプリのように使うので、上のヘッダーを出さず下のタブで移動する
+  // Clerkly従業員用(/staff)はスマホでアプリのように使うので、上のヘッダーを出さず下のタブで移動する
   const staffApp = pathname === "/staff" || pathname.startsWith("/staff/");
 
   return (

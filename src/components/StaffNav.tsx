@@ -14,12 +14,12 @@ const TABS = [
 
 const active = (pathname: string, href: string) => (href === "/staff" ? pathname === "/staff" : pathname === href || pathname.startsWith(`${href}/`));
 
-// スタッフアプリの移動: スマホは画面の下のタブ、パソコンは上のタブ
+// Clerkly従業員用の移動: スマホは画面の下のタブ、パソコンは上のタブ
 export function StaffNav() {
   const pathname = usePathname();
   return (
     <>
-      <nav className="mb-4 hidden gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm md:flex print:hidden" aria-label="スタッフアプリ">
+      <nav className="mb-4 hidden gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm md:flex print:hidden" aria-label="Clerkly従業員用">
         {TABS.map((t) => (
           <Link key={t.href} href={t.href} className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm ${active(pathname, t.href) ? "bg-indigo-600 font-medium text-white" : "text-slate-600 hover:bg-slate-50"}`}>
             <t.icon className="h-4 w-4" />
@@ -27,7 +27,7 @@ export function StaffNav() {
           </Link>
         ))}
       </nav>
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden print:hidden" aria-label="スタッフアプリ">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden print:hidden" aria-label="Clerkly従業員用">
         <ul className="mx-auto flex max-w-md">
           {TABS.map((t) => {
             const on = active(pathname, t.href);
