@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import ManualAssist from "./ManualAssist";
 import { ManualBody } from "@/components/ManualBody";
 
 type Person = { id: string; name: string };
@@ -17,7 +18,7 @@ type Manual = {
   readers: Person[];
   unread: Person[];
 };
-type Data = { members: Person[]; categories: string[]; manuals: Manual[] };
+type Data = { members: Person[]; categories: string[]; manuals: Manual[]; ai?: boolean };
 type Draft = { id?: string; title: string; category: string; body: string; pinned: boolean; published: boolean; notify?: boolean };
 
 const inputClass = "mt-1 w-full rounded-md border px-3 py-2 text-sm";
@@ -242,6 +243,19 @@ export default function ManualsAdminPage() {
               )}
               <p className="mt-1 text-xs text-slate-500">書き方: 「# 見出し」「## 小見出し」「1. 手順」「- 箇条書き」「**太字**」「注意: …」(目立つ枠になります)</p>
             </div>
+            <ManualAssist
+              ai={!!data.ai}
+              title={draft.title}
+              body={draft.body}
+              onReplace={(title, body) => {
+                setDraft({ ...draft, title: draft.title || title, body });
+                setPreview(true);
+              }}
+              onCopyAsNew={(title, body) => {
+                setDraft({ title: title.slice(0, 80), category: draft.category, body, pinned: false, published: false });
+                setPreview(true);
+              }}
+            />
             <div className="flex flex-wrap gap-4 text-sm">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={draft.pinned} onChange={(e) => setDraft({ ...draft, pinned: e.target.checked })} />

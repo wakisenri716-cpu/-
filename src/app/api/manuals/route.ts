@@ -3,10 +3,11 @@ import { respond } from "@/lib/shifts/http";
 import { createManual, listManualsForAdmin } from "@/lib/manuals";
 import { audit } from "@/lib/audit";
 import { notifyManual } from "@/lib/push/events";
+import { aiEnabled } from "@/lib/ai/access";
 
 export async function GET() {
   const companyId = await requireCompanyId();
-  return respond(() => listManualsForAdmin(companyId));
+  return respond(async () => ({ ...(await listManualsForAdmin(companyId)), ai: await aiEnabled(companyId) }));
 }
 
 export async function POST(request: Request) {
