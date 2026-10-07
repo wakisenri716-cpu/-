@@ -42,6 +42,7 @@ import { getCustomerProfit } from "@/lib/customerProfit";
 import { getHrProcedures } from "@/lib/hrProcedures";
 import { getTaxCalendar } from "@/lib/taxCalendar";
 import { listMinutes } from "@/lib/minutes";
+import { getEntertainment, KIND_LABEL } from "@/lib/entertainment";
 import { getAnalysis } from "@/lib/accounting/analysis";
 import { templateExplanation } from "@/lib/analysisExplain";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
@@ -358,6 +359,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_minutes",
     description: "議事録。新しい順に最大10件の会議(日付・名前・出席者・決まったこと・やること(担当・期限))を返す。「この前の会議で決まったことは?」「会議の宿題は?」「○○さんの担当は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_entertainment",
+    description: "交際費の管理。今期の接待交際費の合計・1人1万円以下として除ける飲食費・1年のペース・損金の上限(中小法人は年800万円)と、明細(日付・内容・金額・種類・人数・相手・1人あたり・足りない記録)を返す。「交際費はあといくら使える?」「接待費は使いすぎ?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -770,6 +776,19 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         meetings: rows.map((m) => ({ title: m.title, heldOn: m.heldOn, attendees: m.attendees, decisions: m.content.decisions, actions: m.content.actions, link: `/minutes/${m.id}` })),
         findings,
         link: "/minutes",
+      };
+    }
+    case "get_entertainment": {
+      const r = await getEntertainment(companyId);
+      return {
+        period: `${r.fy.from}〜${r.fy.to}`,
+        used: r.used,
+        excludableUnder10k: r.excludable,
+        forecastYear: r.forecast,
+        limit: r.limit,
+        rows: r.rows.slice(-30).map((x) => ({ date: x.date, description: x.description, amount: x.amount, kind: KIND_LABEL[x.kind], persons: x.persons, guests: x.guests, perPerson: x.perPerson, missing: x.missing })),
+        findings: r.findings,
+        link: "/entertainment",
       };
     }
     case "get_business_analysis": {

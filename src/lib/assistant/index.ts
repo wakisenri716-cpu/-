@@ -38,6 +38,7 @@ const SCREENS = [
   ["/hr-procedures", "入社・退職の手続き(社会保険・雇用保険の届出の期限)"],
   ["/tax-calendar", "税金・労務のカレンダー(申告・届出・納付の期限)"],
   ["/minutes", "議事録(会議のメモをAIで整える)"],
+  ["/entertainment", "交際費の管理(800万円の上限・1人1万円以下の飲食費)"],
   ["/receivables", "売掛金・買掛金"],
   ["/invoices", "請求書"],
   ["/expenses", "経費精算"],
@@ -153,6 +154,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   if (/経営分析|会社の(状態|調子|健康)|つぶれ|倒産|自己資本|流動比率/.test(q)) {
     const r = (await run("get_business_analysis")) as { summary: string[]; concerns: { text: string; action: string }[] };
     return { reply: [...r.summary, ...r.concerns.slice(0, 3).map((c) => `・${c.text} ${c.action}`), "[経営分析](/analysis?preset=this-fy)"].join("\n"), tools: ["get_business_analysis"], mode: "simple" };
+  }
+  // 「交際費はあといくら使える?」→ 交際費の管理
+  if (/交際費|接待費|800万/.test(q)) {
+    const r = (await run("get_entertainment")) as { findings: string[] };
+    return { reply: [...r.findings, "[交際費の管理](/entertainment)"].join("\n"), tools: ["get_entertainment"], mode: "simple" };
   }
   // 「この前の会議で決まったことは?」「宿題は?」→ 議事録
   if (/議事録|会議で(決ま|話)|打ち合わせで(決ま|話)|会議の宿題/.test(q)) {
