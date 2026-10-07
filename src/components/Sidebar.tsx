@@ -110,6 +110,7 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: CartIcon,
       },
       { href: "/contracts", label: "契約書の台帳", icon: NotebookIcon },
+      { href: "/contracts/draft", label: "契約書のひな形", icon: SparkleIcon },
       { href: "/receivables", label: "売掛金・買掛金", icon: CoinsIcon },
       { href: "/collections", label: "督促・回収", icon: MailIcon },
       { href: "/customer-insights", label: "顧客の見守り", icon: SparkleIcon },
