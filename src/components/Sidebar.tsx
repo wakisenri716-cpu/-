@@ -177,6 +177,7 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: ClipboardIcon,
       },
       { href: "/hr-procedures", label: "入社・退職の手続き", icon: ChecklistIcon },
+      { href: "/job-posting", label: "求人票の下書き", icon: SparkleIcon },
     ],
   },
   {
