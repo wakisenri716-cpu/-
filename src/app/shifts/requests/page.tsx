@@ -53,7 +53,7 @@ export default function ShiftRequestsPage() {
           </Link>
           <h1 className="mt-1 text-2xl font-semibold">シフト希望</h1>
           <p className="mt-1 text-sm text-slate-600">
-            スタッフがスタッフアプリ(スマホ)から出した「出られる日・時間」と「休みたい日」を一覧にします。「希望からシフトを作る」で、時間のある希望をそのままシフトにできます(すでにシフトがある日は作りません)。
+            スタッフがClerkly従業員用(スマホ)から出した「出られる日・時間」と「休みたい日」を一覧にします。「希望からシフトを作る」で、時間のある希望をそのままシフトにできます(すでにシフトがある日は作りません)。
           </p>
         </div>
       </div>

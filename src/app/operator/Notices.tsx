@@ -53,7 +53,7 @@ export function Notices({ notices }: { notices: Notice[] }) {
         <button disabled={busy} className="rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           全員に出す
         </button>
-        <p className="text-xs text-slate-500">ログインしているすべての会社・ユーザー(スタッフアプリを含む)の画面の上に出ます。見た人は「×」で閉じられます。</p>
+        <p className="text-xs text-slate-500">ログインしているすべての会社・ユーザー(Clerkly従業員用を含む)の画面の上に出ます。見た人は「×」で閉じられます。</p>
       </form>
       <div className="divide-y overflow-hidden rounded-xl border border-slate-200 bg-white text-sm shadow-sm">
         {notices.map((n) => {

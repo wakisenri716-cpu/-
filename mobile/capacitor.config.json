@@ -1,6 +1,6 @@
 {
   "appId": "com.saaserp.staffapp",
-  "appName": "スタッフアプリ",
+  "appName": "Clerkly従業員用",
   "webDir": "www",
   "backgroundColor": "#EDEFF2",
   "appendUserAgent": "StaffAppNative/1.0",

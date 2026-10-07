@@ -13,12 +13,12 @@ const FAQ = [
     a: "メールアドレスとパスワードを確かめてください。パスワードを忘れたときは、ログイン画面の「パスワードを忘れた方」から再設定できます。アカウントは会社の管理者が作るので、まだアカウントがない方は会社の管理者に頼んでください。",
   },
   {
-    q: "スタッフアプリにシフトが出てきません",
+    q: "Clerkly従業員用にシフトが出てきません",
     a: "会社の管理者に、「シフト管理」でスタッフとして登録し、あなたのアカウントとひも付けてもらってください。",
   },
   {
     q: "カメラが使えません",
-    a: "iPhoneは「設定」→「スタッフアプリ」→「カメラ」、Androidは「設定」→「アプリ」→「スタッフアプリ」→「権限」で、カメラを許可してください。",
+    a: "iPhoneは「設定」→「Clerkly従業員用」→「カメラ」、Androidは「設定」→「アプリ」→「Clerkly従業員用」→「権限」で、カメラを許可してください。",
   },
   {
     q: "アカウントを削除したい",
@@ -38,7 +38,7 @@ export default async function SupportPage() {
     <div className="mx-auto max-w-2xl space-y-6 py-4">
       <div>
         <h1 className="text-2xl font-semibold">サポート・お問い合わせ</h1>
-        <p className="mt-1 text-sm text-slate-600">Clerkly(パソコン・スマホのスタッフアプリ)のサポート窓口です。</p>
+        <p className="mt-1 text-sm text-slate-600">Clerkly(パソコン、スマホアプリ「Clerkly従業員用」)のサポート窓口です。</p>
       </div>
 
       <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

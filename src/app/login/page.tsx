@@ -19,7 +19,7 @@ export default async function LoginPage() {
     return (
       <div className="mx-auto max-w-sm space-y-3 py-16 text-center">
         <h1 className="text-xl font-semibold">まだ利用が始まっていません</h1>
-        <p className="text-sm text-slate-600">会社の管理者がパソコンのブラウザで登録してから、スタッフアプリでログインしてください。</p>
+        <p className="text-sm text-slate-600">会社の管理者がパソコンのブラウザで登録してから、Clerkly従業員用でログインしてください。</p>
       </div>
     );
   }

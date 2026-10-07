@@ -24,10 +24,10 @@ export function plans() {
       name: "ライト",
       price: yen(process.env.PRICE_LIGHT_YEN, 2980),
       byoPrice: yen(process.env.PRICE_LIGHT_BYO_YEN, 1980),
-      // 管理者・経理担当の人数の上限(従業員=スタッフアプリ・経費精算・タイムカードを使う人は数えない)
+      // 管理者・経理担当の人数の上限(従業員=Clerkly従業員用・経費精算・タイムカードを使う人は数えない)
       seats: 2,
       summary: "ひとりで経理をする小さな会社・お店に",
-      features: ["会計・請求書・経費精算・給与など全機能", "管理者・経理担当 2人まで", "従業員(スタッフアプリ)は人数無制限", "メールサポート"],
+      features: ["会計・請求書・経費精算・給与など全機能", "管理者・経理担当 2人まで", "従業員(Clerkly従業員用)は人数無制限", "メールサポート"],
     },
     STANDARD: {
       key: "STANDARD" as const,
@@ -36,7 +36,7 @@ export function plans() {
       byoPrice: yen(process.env.PRICE_STANDARD_BYO_YEN, 4980),
       seats: null as number | null,
       summary: "複数人で経理をする会社・複数店舗に",
-      features: ["会計・請求書・経費精算・給与など全機能", "管理者・経理担当 人数無制限", "従業員(スタッフアプリ)は人数無制限", "メールサポート(優先)"],
+      features: ["会計・請求書・経費精算・給与など全機能", "管理者・経理担当 人数無制限", "従業員(Clerkly従業員用)は人数無制限", "メールサポート(優先)"],
     },
   } satisfies Record<PlanKey, { key: PlanKey; name: string; price: number; byoPrice: number; seats: number | null; summary: string; features: string[] }>;
 }

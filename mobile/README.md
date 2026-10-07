@@ -1,6 +1,6 @@
-# スタッフアプリ(iPhone・Android)
+# Clerkly従業員用(iPhone・Android)
 
-本番のスタッフアプリ(https://saas-erp-se-n.vercel.app/staff )を、スマホのアプリとして開くためのプロジェクトです。[Capacitor](https://capacitorjs.com/) で作っています。
+本番のClerkly従業員用(https://saas-erp-se-n.vercel.app/staff )を、スマホのアプリとして開くためのプロジェクトです。[Capacitor](https://capacitorjs.com/) で作っています。
 
 - 中身(画面)は本番のシステムをそのまま表示するので、**システムを直すとアプリにもすぐ反映されます**(アプリを作り直す必要はありません)
 - アプリを作り直すのは、アイコン・名前・カメラなどの権限を変えるときだけです
@@ -8,12 +8,12 @@
 
 ## Android で試す(いちばん早い方法)
 
-1. GitHub のこのリポジトリで「Actions」→「スタッフアプリ(スマホ)」を開く
+1. GitHub のこのリポジトリで「Actions」→「Clerkly従業員用(スマホ)」を開く
 2. いちばん新しい実行(緑のチェック)を開き、下の「Artifacts」から **staff-app-android** をダウンロード
 3. zip を開いて出てくる `app-debug.apk` をスマホに送る(メール・Googleドライブなど)
 4. スマホで `app-debug.apk` を開いてインストール(「提供元不明のアプリ」を許可する案内が出たら許可)
 
-※ 手動で作り直したいときは、「Actions」→「スタッフアプリ(スマホ)」→「Run workflow」を押します。
+※ 手動で作り直したいときは、「Actions」→「Clerkly従業員用(スマホ)」→「Run workflow」を押します。
 
 ## Google Play で公開する
 
@@ -45,7 +45,7 @@
 | 項目 | 今の値 | 説明 |
 | --- | --- | --- |
 | `appId` | `com.saaserp.staffapp` | アプリの識別子。ストアに初めて出す前に、会社のドメインを逆にした形(例: `jp.co.会社名.staff`)に変えてください。出したあとは変えられません |
-| `appName` | スタッフアプリ | ホーム画面に出る名前 |
+| `appName` | Clerkly従業員用 | ホーム画面に出る名前 |
 | `server.url` | 本番の `/staff` | アプリを開いたときに表示する画面。本番のURLが変わったらここと `allowNavigation` を直す |
 
 アイコン・起動画面を変えるときは、`assets/` の画像(アイコン 1024×1024、起動画面 2732×2732)を差し替えて `npm run icons` を実行します。

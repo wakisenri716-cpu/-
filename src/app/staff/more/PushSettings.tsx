@@ -39,7 +39,7 @@ export function PushSettings() {
     setBusy(true);
     const ok = await enablePush(platform).catch(() => false);
     setBusy(false);
-    if (!ok) setMessage({ ok: false, text: "通知が許可されませんでした。スマホの「設定」→「スタッフアプリ」→「通知」をオンにしてください" });
+    if (!ok) setMessage({ ok: false, text: "通知が許可されませんでした。スマホの「設定」→「Clerkly従業員用」→「通知」をオンにしてください" });
     await load();
   }
 
@@ -62,9 +62,9 @@ export function PushSettings() {
     <section className="space-y-2 rounded-2xl bg-white p-4 text-sm shadow-sm ring-1 ring-slate-200">
       <h2 className="font-semibold">通知</h2>
       <p className="text-slate-600">シフトが決まったとき・変わったとき、新しいマニュアルや社内のお知らせが出たとき、申請が承認・却下されたときに、スマホに通知が届きます。</p>
-      {device === "web" && <p className="text-slate-600">通知は、スマホのアプリ(スタッフアプリ)で受け取れます。アプリの入れ方は管理者に聞いてください。</p>}
+      {device === "web" && <p className="text-slate-600">通知は、スマホのアプリ(Clerkly従業員用)で受け取れます。アプリの入れ方は管理者に聞いてください。</p>}
       {device === "no-fcm" && <p className="text-amber-700">このアプリは通知の設定なしで作られています。管理者に、通知を使えるアプリを作り直してもらってください(mobile/PUSH.md)。</p>}
-      {device === "denied" && <p className="text-amber-700">通知がオフになっています。スマホの「設定」→「スタッフアプリ」→「通知」をオンにしてください。</p>}
+      {device === "denied" && <p className="text-amber-700">通知がオフになっています。スマホの「設定」→「Clerkly従業員用」→「通知」をオンにしてください。</p>}
       {(device === "prompt" || device === "granted") && (
         <button onClick={enable} disabled={busy} className="w-full rounded-full bg-vermilion-600 px-4 py-2.5 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
           通知を受け取る

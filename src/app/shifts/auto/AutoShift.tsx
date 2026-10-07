@@ -88,7 +88,7 @@ export default function AutoShift({ initialMonth, ai }: { initialMonth: string |
   async function create() {
     if (!data) return;
     const items = data.draft.filter((d) => !unchecked.has(d.staffId + d.date)).map(({ staffId, date, start, end }) => ({ staffId, date, start, end }));
-    if (!items.length || !confirm(`${items.length}件のシフトを作りますか?(スタッフアプリに通知されます)`)) return;
+    if (!items.length || !confirm(`${items.length}件のシフトを作りますか?(Clerkly従業員用に通知されます)`)) return;
     const json = await call({ action: "create", month: data.month, items });
     if (json) {
       setMessage({ ok: true, text: `${json.created}件のシフトを作りました${json.skipped ? `(すでにシフトがある・休みの希望の${json.skipped}件は作りませんでした)` : ""}` });
