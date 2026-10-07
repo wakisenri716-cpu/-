@@ -247,6 +247,7 @@ model Company {
   taxCalendarChecks    TaxCalendarCheck[]
   minutes              Minutes[]
   entertainmentRecords EntertainmentRecord[]
+  phoneMemos           PhoneMemo[]
   inboxItems           InboxItem[]
   dailyBriefings       DailyBriefing[]
   approvalChecks       ApprovalCheck[]
@@ -2349,4 +2350,30 @@ model EntertainmentRecord {
   updatedAt     DateTime @updatedAt
 
   @@index([companyId])
+}
+
+// 伝言メモ(電話・来客)。受けた人が書き、宛先の人のやることリストに「伝言」として出る。済んだら「対応済み」に
+model PhoneMemo {
+  id            String    @id @default(cuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  kind          String    @default("CALL") // CALL(電話) / VISIT(来客)
+  callerName    String?
+  callerCompany String?
+  callerPhone   String?
+  // 住所録の相手(顧客・仕入先)が分かれば
+  partyKind     String? // customer / vendor
+  partyId       String?
+  forUserId     String? // 宛先(null は「どなたか」)
+  forName       String?
+  message       String
+  action        String    @default("CALLBACK") // CALLBACK(折り返し希望) / WILL_CALL(また電話する) / FYI(伝言のみ)
+  urgent        Boolean   @default(false)
+  takenByName   String
+  status        String    @default("OPEN") // OPEN / DONE
+  doneAt        DateTime?
+  doneNote      String?
+  createdAt     DateTime  @default(now())
+
+  @@index([companyId, status])
 }

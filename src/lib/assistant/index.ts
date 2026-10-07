@@ -6,6 +6,7 @@ import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
 import { ASSISTANT_TOOLS, runAssistantTool } from "./tools";
 import { findDocTools } from "@/lib/docHub";
+import { countOpenMemos } from "@/lib/phoneMemos";
 import { getProposals, type ProposalView } from "./proposals";
 
 // AIアシスタント: 会社の帳簿・請求書・やることについての質問に、道具(tools.ts)で実際のデータを調べて日本語で答える。
@@ -39,6 +40,7 @@ const SCREENS = [
   ["/hr-procedures", "入社・退職の手続き(社会保険・雇用保険の届出の期限)"],
   ["/tax-calendar", "税金・労務のカレンダー(申告・届出・納付の期限)"],
   ["/minutes", "議事録(会議のメモをAIで整える)"],
+  ["/phone-memos", "伝言メモ(電話・来客の伝言を残す・折り返しの管理)"],
   ["/entertainment", "交際費の管理(800万円の上限・1人1万円以下の飲食費)"],
   ["/job-posting", "求人票の下書き(年齢・性別で限る言い方のチェック)"],
   ["/contracts/draft", "契約書のひな形(秘密保持・業務委託・取引基本)"],
@@ -151,6 +153,10 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   const preset = /先月/.test(q) ? "last-month" : /前期|去年|昨年/.test(q) ? "last-fy" : /今期|今年|年度/.test(q) ? "this-fy" : "this-month";
   const label = { "last-month": "先月", "last-fy": "前期", "this-fy": "今期", "this-month": "今月" }[preset];
   const run = (name: string, input: Record<string, unknown> = {}) => runAssistantTool({ companyId, userId: "" }, name, input) as Promise<Record<string, unknown>>;
+  if (/伝言|電話メモ|折り返し/.test(q)) {
+    const { count, urgent } = await countOpenMemos(companyId);
+    return { reply: `対応していない伝言が ${count}件${urgent ? `(うち至急 ${urgent}件)` : ""} あります。伝言を残す・折り返したら「対応済み」にするのは [伝言メモ](/phone-memos) で。`, tools: [], mode: "simple" };
+  }
   if (/名刺/.test(q)) return { reply: "名刺は [名刺の取り込み](/business-cards) で、写真からAIが読み取って顧客・仕入先に登録できます。もう登録されている相手なら、空いている担当者・電話・住所だけを埋めます。", tools: [], mode: "simple" };
   // 「契約書を作りたい」「お礼状を書いて」→ 書類を作る画面を案内する
   if (/作りたい|作って|作成し|書いて|書きたい|下書き|ひな形|ひながた|テンプレ/.test(q)) {
