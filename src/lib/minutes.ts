@@ -40,7 +40,7 @@ export function parseDue(text: string, heldOn: string): string | null {
 }
 
 // 行頭の記号・番号(「・」「- 」「1.」「(2)」など)を取る。「10月」のような数字は残す
-const clean = (s: string) => s.replace(/^\s*(?:[・\-*•●○◯■◆▶→>#]+\s*|[((]?\d{1,2}[.)、)]\s*)+/, "").trim();
+const clean = (s: string) => s.replace(/^\s*(?:[・\-*•●○◯■◆▶→>#]+\s*|[(\uFF08]?\d{1,2}[.)、\uFF09]\s*)+/, "").trim();
 const DUE_TEXT = /\s*(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\s*[/月]\s*\d{1,2}\s*日?)\s*(?:まで(?:に)?)?/g;
 // 「山田さんが作る」のように、人がこれからすることを書いた行
 const SOMEONE_WILL = /[^\s、,,]{1,10}さん(?:が|に)[^。]*(?:する|作る|やる|送る|調べる|まとめる|決める|頼む|手配|準備|連絡|確認|提出|用意)。?$/;
@@ -57,7 +57,7 @@ export function templateMinutes(notes: string, base: { title?: string; heldOn: s
   for (const raw of notes.replace(/\r\n/g, "\n").split("\n")) {
     const line = raw.trim();
     if (!line) continue;
-    const m = line.match(/^(?:[・\-*•]\s*)?(出席者?|参加者?|メンバー|場所|件名|会議名|議題|アジェンダ|決定事項?|決まった(?:こと)?|結論|TODO|ToDo|todo|やること|宿題|アクション|次回まで)\s*[::]\s*(.*)$/);
+    const m = line.match(/^(?:[・\-*•]\s*)?(出席者?|参加者?|メンバー|場所|件名|会議名|議題|アジェンダ|決定事項?|決まった(?:こと)?|結論|TODO|ToDo|todo|やること|宿題|アクション|次回まで)\s*[:\uFF1A]\s*(.*)$/);
     const head = m?.[1] ?? "";
     const body = clean(m ? m[2] : line);
     if (/^(出席|参加|メンバー)/.test(head)) {
@@ -75,12 +75,12 @@ export function templateMinutes(notes: string, base: { title?: string; heldOn: s
     if (!body) continue;
     if (/^(議題|アジェンダ)/.test(head) || /^#/.test(line)) agenda.push(body);
     else if (/^(決定|決まった|結論)/.test(head) || /^(→\s*)?決定[::\s]/.test(line) || /(に決定|と決定|で決まり|ことにする|することになった)。?$/.test(body)) decisions.push(body.replace(/^決定[::\s]*/, ""));
-    else if (/^(TODO|ToDo|todo|やること|宿題|アクション|次回まで)/.test(head) || /^(TODO|☐|□|\[ \])/i.test(body) || /@\S+|担当[::]|までに/.test(body) || SOMEONE_WILL.test(body) || (/まで/.test(body) && parseDue(body, base.heldOn))) {
-      const ownerMatch = body.match(/@([^\s、,,()()]+)|担当[::]\s*([^\s、,,()()]+)|([一-龯々ァ-ヶーA-Za-z]{1,8})さん(?:が|に)/);
+    else if (/^(TODO|ToDo|todo|やること|宿題|アクション|次回まで)/.test(head) || /^(TODO|☐|□|\[ \])/i.test(body) || /@\S+|担当[:\uFF1A]|までに/.test(body) || SOMEONE_WILL.test(body) || (/まで/.test(body) && parseDue(body, base.heldOn))) {
+      const ownerMatch = body.match(/@([^\s、,\uFF0C()\uFF08\uFF09]+)|担当[:\uFF1A]\s*([^\s、,\uFF0C()\uFF08\uFF09]+)|([一-龯々ァ-ヶーA-Za-z]{1,8})さん(?:が|に)/);
       const owner = ownerMatch ? (ownerMatch[1] ?? ownerMatch[2] ?? ownerMatch[3]) : null;
       const task = body
         .replace(/^(TODO|☐|□|\[ \])\s*/i, "")
-        .replace(/[((]?\s*(@[^\s、,,()()]+|担当[::]\s*[^\s、,,()()]+)\s*[))]?/g, "")
+        .replace(/[(\uFF08]?\s*(@[^\s、,\uFF0C()\uFF08\uFF09]+|担当[:\uFF1A]\s*[^\s、,\uFF0C()\uFF08\uFF09]+)\s*[)\uFF09]?/g, "")
         .replace(DUE_TEXT, "")
         .trim();
       actions.push({ task: task || body, owner: owner ? owner.slice(0, LIMITS.owner) : null, due: parseDue(body, base.heldOn) });

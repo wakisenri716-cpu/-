@@ -123,12 +123,12 @@ export function parseCardText(text: string): CardFields {
     const email = l.match(EMAIL);
     if (email) {
       raw.email ??= email[0];
-      l = l.replace(email[0], "").replace(/(?:E-?mail|メール|Mail)\s*[::]?/i, "").trim();
+      l = l.replace(email[0], "").replace(/(?:E-?mail|メール|Mail)\s*[:\uFF1A]?/i, "").trim();
     }
     const url = l.match(/(?:https?:\/\/|www\.)\S+/i);
     if (url) {
       raw.website ??= url[0];
-      l = l.replace(url[0], "").replace(/(?:URL|HP|Web)\s*[::]?/i, "").trim();
+      l = l.replace(url[0], "").replace(/(?:URL|HP|Web)\s*[:\uFF1A]?/i, "").trim();
     }
     const postal = l.match(/〒\s*(\d{3}-?\d{4})|^(\d{3}-\d{4})(?![\d-])/);
     if (postal) {
