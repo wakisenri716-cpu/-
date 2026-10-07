@@ -5,6 +5,7 @@ import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
 import { ASSISTANT_TOOLS, runAssistantTool } from "./tools";
+import { findDocTools } from "@/lib/docHub";
 import { getProposals, type ProposalView } from "./proposals";
 
 // AIアシスタント: 会社の帳簿・請求書・やることについての質問に、道具(tools.ts)で実際のデータを調べて日本語で答える。
@@ -42,6 +43,7 @@ const SCREENS = [
   ["/job-posting", "求人票の下書き(年齢・性別で限る言い方のチェック)"],
   ["/contracts/draft", "契約書のひな形(秘密保持・業務委託・取引基本)"],
   ["/letters/greeting", "挨拶状・お礼状(年末年始の休業・移転・担当者交代・お詫び)"],
+  ["/ai-docs", "AIで書類を作る(書類づくりの画面のまとめ)"],
   ["/receivables", "売掛金・買掛金"],
   ["/invoices", "請求書"],
   ["/expenses", "経費精算"],
@@ -147,6 +149,12 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   const preset = /先月/.test(q) ? "last-month" : /前期|去年|昨年/.test(q) ? "last-fy" : /今期|今年|年度/.test(q) ? "this-fy" : "this-month";
   const label = { "last-month": "先月", "last-fy": "前期", "this-fy": "今期", "this-month": "今月" }[preset];
   const run = (name: string, input: Record<string, unknown> = {}) => runAssistantTool({ companyId, userId: "" }, name, input) as Promise<Record<string, unknown>>;
+  // 「契約書を作りたい」「お礼状を書いて」→ 書類を作る画面を案内する
+  if (/作りたい|作って|作成し|書いて|書きたい|下書き|ひな形|ひながた|テンプレ/.test(q)) {
+    const tools = findDocTools(q);
+    if (tools.length)
+      return { reply: [`「${tools[0].title}」の画面で作れます。${tools[0].description}`, ...tools.map((t) => `[${t.title}](${t.href})`), "ほかの書類は [AIで書類を作る](/ai-docs) にまとめています。"].join("\n"), tools: [], mode: "simple" };
+  }
   // 「1人採用したらどうなる?」「売上が10%減ったら?」→ もしもシミュレーション
   if (/もしも|採用したら|減ったら|増えたら|下がったら|上がったら|買ったら|購入したら|借りたら/.test(q)) {
     const r = (await run("simulate_scenario", { text: q })) as { comments?: string[]; error?: string };
