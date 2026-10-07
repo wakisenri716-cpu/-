@@ -54,6 +54,11 @@ export default function LettersPage() {
         <p className="mt-1 text-sm text-slate-600">
           顧客・取引先の住所録です。住所と宛名を入れておくと、送付状(書類に添える案内状)・封筒(長形3号)・宛名ラベル(A4 12面)を印刷でき、請求書・見積書・発注書の宛先にも住所が載ります。
         </p>
+        <p className="mt-2 text-sm">
+          <Link href="/letters/greeting" className="text-indigo-700 hover:underline">
+            挨拶状・お礼状を作る(お礼・年末年始の休業・移転・担当者の交代・お詫び・新しいご案内)→
+          </Link>
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
