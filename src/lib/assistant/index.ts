@@ -73,6 +73,7 @@ const SCREENS = [
   ["/payment-plan", "支払計画"],
   ["/billing-gaps", "請求漏れのチェック"],
   ["/quotes/ai", "AI見積アシスト"],
+  ["/business-cards", "名刺の取り込み(名刺の写真から顧客・仕入先に登録)"],
   ["/party-duplicates", "取引先の重複"],
   ["/year-end-close", "決算の準備"],
   ["/transfers", "振込データ"],
@@ -149,6 +150,7 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   const preset = /先月/.test(q) ? "last-month" : /前期|去年|昨年/.test(q) ? "last-fy" : /今期|今年|年度/.test(q) ? "this-fy" : "this-month";
   const label = { "last-month": "先月", "last-fy": "前期", "this-fy": "今期", "this-month": "今月" }[preset];
   const run = (name: string, input: Record<string, unknown> = {}) => runAssistantTool({ companyId, userId: "" }, name, input) as Promise<Record<string, unknown>>;
+  if (/名刺/.test(q)) return { reply: "名刺は [名刺の取り込み](/business-cards) で、写真からAIが読み取って顧客・仕入先に登録できます。もう登録されている相手なら、空いている担当者・電話・住所だけを埋めます。", tools: [], mode: "simple" };
   // 「契約書を作りたい」「お礼状を書いて」→ 書類を作る画面を案内する
   if (/作りたい|作って|作成し|書いて|書きたい|下書き|ひな形|ひながた|テンプレ/.test(q)) {
     const tools = findDocTools(q);
