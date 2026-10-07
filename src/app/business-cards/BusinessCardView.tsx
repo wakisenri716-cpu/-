@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { CardFields, CardMatch, PartyKind } from "@/lib/businessCards";
 
-type Item = { card: CardFields; matches: CardMatch[]; kind: PartyKind; target: string; overwrite: boolean; done: { name: string; created: boolean; filled: string[]; differs: string[] } | null; error: string | null; busy: boolean };
+type Item = { card: CardFields; matches: CardMatch[]; kind: PartyKind; target: string; overwrite: boolean; done: { id: string; name: string; created: boolean; filled: string[]; differs: string[] } | null; error: string | null; busy: boolean };
 
 const FIELDS: { key: keyof CardFields; label: string; wide?: boolean }[] = [
   { key: "company", label: "会社名" },
@@ -123,8 +123,8 @@ export default function BusinessCardView({ ai }: { ai: boolean }) {
                 {it.done.created ? `「${it.done.name}」を${KIND[it.kind]}として登録しました。` : `「${it.done.name}」に${it.done.filled.length ? `${it.done.filled.join("・")}を追加しました。` : "追加する項目はありませんでした。"}`}
               </p>
               {it.done.differs.length > 0 && <p className="mt-1 text-amber-800">登録済みの内容と違う項目({it.done.differs.join("・")})はそのままにしました。名刺が新しいときは取引先の画面で直してください。</p>}
-              <Link href="/vendors" className="mt-1 inline-block text-indigo-700 underline">
-                取引先・顧客を見る
+              <Link href={`/vendors/${it.target ? it.target.split(":")[0] : it.kind}/${it.done.id}`} className="mt-1 inline-block text-indigo-700 underline">
+                取引先カルテを見る
               </Link>
             </div>
           ) : (
