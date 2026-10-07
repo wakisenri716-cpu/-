@@ -18,6 +18,7 @@ export const DOC_CATEGORIES: Record<DocTool["category"], string> = { outside: "�
 
 export const DOC_TOOLS: DocTool[] = [
   { href: "/letters/greeting", title: "挨拶状・お礼状", description: "お礼・年末年始の休業・移転・担当者交代・お詫び・新しいご案内を、拝啓〜敬具の形で。", category: "outside", keywords: ["挨拶状", "お礼状", "お礼", "休業", "年末年始", "移転", "担当者", "お詫び", "詫び状", "案内状"], logPrefix: "greeting-", ai: true },
+  { href: "/mail-reply", title: "メールの返信", description: "届いたメールの用件を見分け、請求・入金・見積の状況をそろえた返信の下書き。", category: "outside", keywords: ["返信", "メール返信", "メールの返信", "返事", "問い合わせ"], logPrefix: "mail-reply-", ai: true },
   { href: "/letters", title: "送付状・封筒・宛名ラベル", description: "書類に添える送付状と、封筒(長形3号)・宛名ラベルの印刷。", category: "outside", keywords: ["送付状", "封筒", "宛名", "ラベル", "添え状"], ai: false },
   { href: "/contracts/draft", title: "契約書のひな形", description: "秘密保持・業務委託・取引基本契約。印紙・フリーランスへの委託のチェックつき。", category: "outside", keywords: ["契約書", "契約", "秘密保持", "NDA", "業務委託", "取引基本", "ひな形"], logPrefix: "contract-draft-", ai: true },
   { href: "/quotes/ai", title: "見積書(AI見積アシスト)", description: "やりたいことを書くと、過去の見積・請求から品目と金額の下書きを作る。", category: "outside", keywords: ["見積", "見積書", "見積もり"], logPrefix: "quote-", ai: true },
