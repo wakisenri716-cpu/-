@@ -12,6 +12,7 @@ type Memo = {
   callerName: string | null;
   callerPhone: string | null;
   partyKind: string | null;
+  partyId: string | null;
   forUserId: string | null;
   forName: string | null;
   message: string;
@@ -249,9 +250,9 @@ export default function PhoneMemoView({ initial, users, parties, viewerId, ai }:
                   {m.callerPhone}
                 </a>
               )}
-              {m.partyKind && (
-                <Link href="/vendors" className="text-xs text-slate-500 underline">
-                  住所録
+              {m.partyKind && m.partyId && (
+                <Link href={`/vendors/${m.partyKind}/${m.partyId}`} className="text-xs text-slate-500 underline">
+                  取引先カルテ
                 </Link>
               )}
               <span className="ml-auto flex gap-2">

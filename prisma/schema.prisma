@@ -248,6 +248,7 @@ model Company {
   minutes              Minutes[]
   entertainmentRecords EntertainmentRecord[]
   phoneMemos           PhoneMemo[]
+  partyNotes           PartyNote[]
   inboxItems           InboxItem[]
   dailyBriefings       DailyBriefing[]
   approvalChecks       ApprovalCheck[]
@@ -2376,4 +2377,18 @@ model PhoneMemo {
   createdAt     DateTime  @default(now())
 
   @@index([companyId, status])
+}
+
+// 取引先カルテのメモ(打ち合わせ・電話・訪問で話したこと)
+model PartyNote {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  partyKind String // customer / vendor
+  partyId   String
+  body      String
+  byName    String
+  createdAt DateTime @default(now())
+
+  @@index([companyId, partyKind, partyId])
 }

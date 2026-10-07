@@ -137,7 +137,9 @@ export default function MailReplyView({ customers, ai }: { customers: { id: stri
               <p className="font-medium text-slate-800">相手</p>
               {result.customer ? (
                 <p className="mt-1">
-                  {result.customer.name}
+                  <Link href={`/vendors/customer/${result.customer.id}`} className="text-indigo-700 hover:underline">
+                    {result.customer.name}
+                  </Link>
                   <span className="ml-1 text-xs text-slate-500">({result.customer.reason})</span>
                 </p>
               ) : (
