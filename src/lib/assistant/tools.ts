@@ -47,6 +47,7 @@ import { getHrProcedures } from "@/lib/hrProcedures";
 import { getTaxCalendar } from "@/lib/taxCalendar";
 import { listMinutes } from "@/lib/minutes";
 import { listTasks } from "@/lib/teamTasks";
+import { repeatLabel } from "@/lib/taskRepeat";
 import { getEntertainment, KIND_LABEL } from "@/lib/entertainment";
 import { getAnalysis } from "@/lib/accounting/analysis";
 import { templateExplanation } from "@/lib/analysisExplain";
@@ -383,7 +384,7 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   },
   {
     name: "get_tasks",
-    description: "社内のやること(タスク)。まだ済んでいないやること(内容・担当・期限・取引先)を期限の近い順に最大30件と、期限を過ぎた件数・今日が期限の件数を返す。mine=true なら聞いた人が担当(と担当なし)のものだけ。「今日のやることは?」「田中さんのタスクは?」「期限切れのやることは?」などに使う。",
+    description: "社内のやること(タスク)。まだ済んでいないやること(内容・担当・期限・取引先・繰り返し)を期限の近い順に最大30件と、期限を過ぎた件数・今日が期限の件数を返す。mine=true なら聞いた人が担当(と担当なし)のものだけ。「今日のやることは?」「田中さんのタスクは?」「期限切れのやることは?」などに使う。",
     input_schema: { type: "object", properties: { mine: { type: "boolean", description: "自分の担当だけ" }, owner: { type: "string", description: "担当の人の名前(一部でよい)" } }, additionalProperties: false },
   },
   {
@@ -853,7 +854,7 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         count: tasks.length,
         overdue: tasks.filter((t) => t.dueOn && t.dueOn < today).length,
         dueToday: tasks.filter((t) => t.dueOn === today).length,
-        tasks: tasks.slice(0, 30).map((t) => ({ title: t.title, owner: t.ownerName ?? "担当なし", due: t.dueOn, overdue: !!t.dueOn && t.dueOn < today, party: t.partyName })),
+        tasks: tasks.slice(0, 30).map((t) => ({ title: t.title, owner: t.ownerName ?? "担当なし", due: t.dueOn, overdue: !!t.dueOn && t.dueOn < today, party: t.partyName, repeat: repeatLabel(t.repeat) })),
         link: "/tasks",
       };
     }
