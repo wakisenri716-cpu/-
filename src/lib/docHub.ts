@@ -19,6 +19,7 @@ export const DOC_CATEGORIES: Record<DocTool["category"], string> = { outside: "�
 export const DOC_TOOLS: DocTool[] = [
   { href: "/letters/greeting", title: "挨拶状・お礼状", description: "お礼・年末年始の休業・移転・担当者交代・お詫び・新しいご案内を、拝啓〜敬具の形で。", category: "outside", keywords: ["挨拶状", "お礼状", "お礼", "休業", "年末年始", "移転", "担当者", "お詫び", "詫び状", "案内状"], logPrefix: "greeting-", ai: true },
   { href: "/mail-reply", title: "メールの返信", description: "届いたメールの用件を見分け、請求・入金・見積の状況をそろえた返信の下書き。", category: "outside", keywords: ["返信", "メール返信", "メールの返信", "返事", "問い合わせ"], logPrefix: "mail-reply-", ai: true },
+  { href: "/scheduling", title: "日程調整メール", description: "営業日(祝日を除く)から打ち合わせの候補日時を出し、日程のご相談メールを作る。", category: "outside", keywords: ["日程調整", "日程", "候補日", "打ち合わせ", "アポ", "スケジュール"], logPrefix: "scheduling-", ai: true },
   { href: "/proofread", title: "送る前の文章チェック", description: "日付と曜日の食い違い・二重敬語・宛名の重ね・ら抜き言葉などを送る前に確かめる。", category: "outside", keywords: ["文章チェック", "校正", "誤字", "敬語", "文章の見直し", "添削"], logPrefix: "proofread-", ai: true },
   { href: "/letters", title: "送付状・封筒・宛名ラベル", description: "書類に添える送付状と、封筒(長形3号)・宛名ラベルの印刷。", category: "outside", keywords: ["送付状", "封筒", "宛名", "ラベル", "添え状"], ai: false },
   { href: "/contracts/draft", title: "契約書のひな形", description: "秘密保持・業務委託・取引基本契約。印紙・フリーランスへの委託のチェックつき。", category: "outside", keywords: ["契約書", "契約", "秘密保持", "NDA", "業務委託", "取引基本", "ひな形"], logPrefix: "contract-draft-", ai: true },
