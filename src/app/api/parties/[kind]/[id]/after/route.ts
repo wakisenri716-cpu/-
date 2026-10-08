@@ -24,5 +24,5 @@ export async function PUT(request: Request, { params }: Params) {
   const user = await requireMember();
   const { kind, id } = await params;
   const body = await request.json().catch(() => ({}));
-  return respond(async () => ({ note: await saveFollow({ companyId, name: user.name }, kindOf(kind), id, body ?? {}) }));
+  return respond(async () => saveFollow({ id: user.id, companyId, name: user.name }, kindOf(kind), id, body ?? {}));
 }

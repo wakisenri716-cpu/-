@@ -12,7 +12,8 @@ export default function AfterView({ kind, id, ai, today }: { kind: string; id: s
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState<number | false>(false);
+  const [toTasks, setToTasks] = useState(true);
   const [copied, setCopied] = useState(false);
 
   async function make(useAi: boolean) {
@@ -38,10 +39,10 @@ export default function AfterView({ kind, id, ai, today }: { kind: string; id: s
     setBusy("save");
     setError(null);
     try {
-      const res = await fetch(`/api/parties/${kind}/${id}/after`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ visitedOn, summary: result.summary, todos: result.todos }) });
+      const res = await fetch(`/api/parties/${kind}/${id}/after`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ visitedOn, summary: result.summary, todos: result.todos, toTasks }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "残せませんでした");
-      setSaved(true);
+      setSaved(data.tasks ?? 0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "残せませんでした");
     } finally {
@@ -115,17 +116,34 @@ export default function AfterView({ kind, id, ai, today }: { kind: string; id: s
                 <p className="mt-1 text-slate-500">見つかりませんでした(「〜までに」「送る」「確認する」などを書くと拾います)</p>
               )}
             </div>
-            {saved ? (
+            {saved !== false ? (
               <p className="rounded-md bg-emerald-50 px-3 py-2 text-emerald-800">
                 取引先カルテのメモに残しました。
+                {saved > 0 && (
+                  <>
+                    こちらのやること{saved}件を
+                    <Link href="/tasks" className="mx-1 underline">
+                      社内のやること
+                    </Link>
+                    に入れました。
+                  </>
+                )}
                 <Link href={`/vendors/${kind}/${id}`} className="ml-1 underline">
                   カルテを見る
                 </Link>
               </p>
             ) : (
-              <button onClick={save} disabled={!!busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
-                {busy === "save" ? "残しています…" : "カルテのメモに残す"}
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button onClick={save} disabled={!!busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
+                  {busy === "save" ? "残しています…" : "カルテのメモに残す"}
+                </button>
+                {result.todos.length > 0 && (
+                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" checked={toTasks} onChange={(e) => setToTasks(e.target.checked)} />
+                    こちらのやることを社内のやることにも入れる
+                  </label>
+                )}
+              </div>
             )}
           </section>
           <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:p-6">

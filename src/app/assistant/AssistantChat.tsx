@@ -34,6 +34,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_entertainment: "交際費の管理",
   get_party_status: "取引先カルテ",
   get_phone_memos: "伝言メモ",
+  get_tasks: "社内のやること",
   check_text: "文章チェック",
   get_business_analysis: "経営分析",
   get_anomalies: "いつもと違う動き",

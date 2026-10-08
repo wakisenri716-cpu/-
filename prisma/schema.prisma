@@ -249,6 +249,7 @@ model Company {
   entertainmentRecords EntertainmentRecord[]
   phoneMemos           PhoneMemo[]
   partyNotes           PartyNote[]
+  teamTasks            TeamTask[]
   inboxItems           InboxItem[]
   dailyBriefings       DailyBriefing[]
   approvalChecks       ApprovalCheck[]
@@ -2390,5 +2391,29 @@ model PartyNote {
   byName    String
   createdAt DateTime @default(now())
 
+  @@index([companyId, partyKind, partyId])
+}
+
+// 社内のやること(タスク)。ひとことで登録、議事録・訪問のあとでのやることからも入る。担当者のやることリストに出る
+model TeamTask {
+  id            String    @id @default(cuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title         String
+  ownerUserId   String? // 担当(null は「だれか」)
+  ownerName     String?
+  dueOn         String? // YYYY-MM-DD
+  partyKind     String? // customer / vendor
+  partyId       String?
+  partyName     String?
+  source        String    @default("MANUAL") // MANUAL / MINUTES / VISIT / ASSISTANT
+  sourceId      String?
+  status        String    @default("OPEN") // OPEN / DONE
+  doneAt        DateTime?
+  doneByName    String?
+  createdByName String
+  createdAt     DateTime  @default(now())
+
+  @@index([companyId, status])
   @@index([companyId, partyKind, partyId])
 }

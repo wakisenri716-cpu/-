@@ -41,6 +41,7 @@ const SCREENS = [
   ["/tax-calendar", "税金・労務のカレンダー(申告・届出・納付の期限)"],
   ["/minutes", "議事録(会議のメモをAIで整える)"],
   ["/phone-memos", "伝言メモ(電話・来客の伝言を残す・折り返しの管理)"],
+  ["/tasks", "社内のやること(担当・期限つきのタスク。ひとことで登録・議事録や訪問のあとでから入れる)"],
   ["/entertainment", "交際費の管理(800万円の上限・1人1万円以下の飲食費)"],
   ["/job-posting", "求人票の下書き(年齢・性別で限る言い方のチェック)"],
   ["/contracts/draft", "契約書のひな形(秘密保持・業務委託・取引基本)"],
@@ -155,6 +156,20 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   const preset = /先月/.test(q) ? "last-month" : /前期|去年|昨年/.test(q) ? "last-fy" : /今期|今年|年度/.test(q) ? "this-fy" : "this-month";
   const label = { "last-month": "先月", "last-fy": "前期", "this-fy": "今期", "this-month": "今月" }[preset];
   const run = (name: string, input: Record<string, unknown> = {}) => runAssistantTool({ companyId, userId: "" }, name, input) as Promise<Record<string, unknown>>;
+  if (/タスク|社内のやること|宿題|(自分|わたし|私|[^\s、]{1,6}さん)の(やること|担当)|期限(切れ|を過ぎた)の?やること/.test(q) && !/伝言|入社|退職/.test(q)) {
+    const owner = q.match(/([^\s、]{1,6})さんの/)?.[1];
+    const r = (await run("get_tasks", owner ? { owner } : {})) as { count: number; overdue: number; dueToday: number; tasks: { title: string; owner: string; due: string | null; overdue: boolean; party: string | null }[] };
+    if (!r.count) return { reply: `${owner ? `${owner}さんの` : ""}まだ済んでいないやることはありません。[社内のやること](/tasks)`, tools: ["get_tasks"], mode: "simple" };
+    return {
+      reply: [
+        `${owner ? `${owner}さんの` : ""}まだ済んでいないやることが ${r.count}件${r.overdue ? `(期限を過ぎたもの ${r.overdue}件)` : ""}${r.dueToday ? `、今日が期限 ${r.dueToday}件` : ""} あります:`,
+        ...r.tasks.slice(0, 8).map((t) => `・${t.overdue ? "【期限切れ】" : ""}${t.title}(${t.owner}${t.due ? `・${Number(t.due.slice(5, 7))}/${Number(t.due.slice(8, 10))}まで` : ""})`),
+        "[社内のやること](/tasks)",
+      ].join("\n"),
+      tools: ["get_tasks"],
+      mode: "simple",
+    };
+  }
   if (/伝言|電話メモ|折り返し/.test(q)) {
     const r = (await run("get_phone_memos")) as { count: number; urgent: number; memos: { from: string; for: string; message: string; action: string; urgent: boolean }[] };
     if (!r.count) return { reply: "対応していない伝言はありません。[伝言メモ](/phone-memos)", tools: ["get_phone_memos"], mode: "simple" };

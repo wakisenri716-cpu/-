@@ -6,6 +6,7 @@ import { jstDateKey } from "@/lib/jst";
 import { inventedNumbers } from "@/lib/ai/numberGuard";
 import { parseDue } from "@/lib/minutes";
 import { addPartyNote, type PartyKind } from "@/lib/partyKarte";
+import { createTasks, matchMember, stripDue, taskContext } from "@/lib/teamTasks";
 
 // 訪問のあとで: 打ち合わせ・訪問のメモ(走り書き)から、取引先カルテに残すまとめ・やること(担当・期限)・お礼メールの下書きを作る。
 // AIが使えるときは、まとめとお礼メールを読みやすく整える(メモにない金額・日付・約束は書かせない)。保存はカルテのメモとして残す。
@@ -137,12 +138,33 @@ export async function draftFollow(user: { id: string; companyId: string; name: s
   return result;
 }
 
-// カルテのメモとして残す(まとめ+やること)
-export async function saveFollow(user: { companyId: string; name: string }, kind: PartyKind, id: string, raw: { visitedOn?: unknown; summary?: unknown; todos?: unknown }) {
+// カルテのメモとして残す(まとめ+やること)。toTasks なら、こちらのやることを社内のやることリストにも入れる
+export async function saveFollow(user: { id: string; companyId: string; name: string }, kind: PartyKind, id: string, raw: { visitedOn?: unknown; summary?: unknown; todos?: unknown; toTasks?: unknown }) {
   const visitedOn = /^\d{4}-\d{2}-\d{2}$/.test(String(raw.visitedOn ?? "")) ? String(raw.visitedOn) : jstDateKey(new Date());
   const summary = (Array.isArray(raw.summary) ? raw.summary : []).filter((x): x is string => typeof x === "string" && !!x.trim()).slice(0, 10);
   const todos = (Array.isArray(raw.todos) ? raw.todos : []).map((t) => t as FollowTodo).filter((t) => t && typeof t.task === "string" && t.task.trim()).slice(0, 10);
   if (!summary.length && !todos.length) throw new UserError("残す内容がありません");
   const body = [`【${visitedOn} 打ち合わせ】`, ...summary.map((s) => `・${s}`), ...(todos.length ? ["やること:", ...todos.map((t) => `□ ${t.task}${t.owner ? `(${t.owner})` : ""}${t.due ? ` ${t.due}まで` : ""}`)] : [])].join("\n");
-  return addPartyNote(user, kind, id, body);
+  const note = await addPartyNote(user, kind, id, body);
+  let tasks = 0;
+  const ours = todos.filter((t) => !/先方|お客様|お客さま|相手|御社|貴社/.test(`${t.task} ${t.owner ?? ""}`));
+  if (raw.toTasks === true && ours.length) {
+    const ctx = await taskContext(user.companyId);
+    const created = await createTasks(
+      user,
+      {
+        source: "VISIT",
+        sourceId: note.id,
+        tasks: ours.map((t) => ({
+          title: stripDue(t.task.replace(/^[\p{sc=Han}\p{sc=Katakana}ー]{1,6}さんが/u, "").trim() || t.task),
+          ownerUserId: matchMember(ctx.users, t.owner ?? t.task.match(/^([\p{sc=Han}\p{sc=Katakana}ー]{1,6})さんが/u)?.[1])?.id ?? null,
+          due: typeof t.due === "string" ? t.due : null,
+          partyKind: kind,
+          partyId: id,
+        })),
+      },
+    );
+    tasks = created.tasks.length;
+  }
+  return { note, tasks };
 }

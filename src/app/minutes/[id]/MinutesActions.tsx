@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function MinutesActions({ id, posted }: { id: string; posted: boolean }) {
+export default function MinutesActions({ id, posted, actions }: { id: string; posted: boolean; actions: number }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [notify, setNotify] = useState(false);
@@ -34,6 +34,11 @@ export default function MinutesActions({ id, posted }: { id: string; posted: boo
     }
   }
 
+  async function toTasks() {
+    const data = await run(`/api/minutes/${id}/tasks`, "POST", { notify });
+    if (data) setMessage(data.tasks.length ? `やることリストに${data.tasks.length}件入れました${data.mailed ? `(${data.mailed}人にメール)` : ""}` : "もう全部入っています");
+  }
+
   async function remove() {
     if (!confirm("この議事録を削除しますか?")) return;
     if (await run(`/api/minutes/${id}`, "DELETE")) {
@@ -45,6 +50,11 @@ export default function MinutesActions({ id, posted }: { id: string; posted: boo
   return (
     <>
       {message && <span className="text-sm text-slate-700">{message}</span>}
+      {actions > 0 && (
+        <button onClick={toTasks} disabled={busy} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+          やることリストに入れる
+        </button>
+      )}
       {posted ? (
         <Link href="/notices" className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">
           お知らせ済み
