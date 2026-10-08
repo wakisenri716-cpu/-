@@ -6,6 +6,7 @@ import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
 import { buildCashFacts } from "@/lib/assistant/cashAdvice";
 import { getReceiptForecast } from "@/lib/receiptForecast";
+import { closedReason, prevBusinessDay } from "@/lib/holidays";
 
 // 支払計画: この先2週間の支払い(受け取った請求書)を、いまの現預金と入金予測で払えるか日ごとに確かめ、
 // 「支払う」「支払日をずらす相談をする」に分ける。
@@ -73,7 +74,13 @@ export async function buildPaymentPlan(companyId: string, bufferInput?: number |
 
   const receipts = forecast.rows.filter((r) => !r.risk && r.predictedDate <= horizon);
   type Event = { date: string; kind: "pay" | "receive"; amount: number; idx?: number };
-  const pays = inHorizon.map((x, idx) => ({ ...x, idx, payDate: !x.due || x.due < today ? today : x.due }));
+  // 期限が銀行の休業日なら、その前の営業日に払う(今日より前にはしない)
+  const payDay = (due: string | null) => {
+    if (!due || due < today) return today;
+    const prev = closedReason(due, "bank") ? prevBusinessDay(due, "bank") : due;
+    return prev < today ? today : prev;
+  };
+  const pays = inHorizon.map((x, idx) => ({ ...x, idx, payDate: payDay(x.due) }));
   const events: Event[] = [
     ...pays.map((p) => ({ date: p.payDate, kind: "pay" as const, amount: p.remaining, idx: p.idx })),
     ...receipts.map((r) => ({ date: r.predictedDate < today ? today : r.predictedDate, kind: "receive" as const, amount: r.remaining })),
@@ -100,10 +107,12 @@ export async function buildPaymentPlan(companyId: string, bufferInput?: number |
     const d = decided.get(p.idx)!;
     const group: PlanGroup = !p.due || p.due < today ? "OVERDUE" : p.due <= addDays(today, 7) ? "THIS_WEEK" : "NEXT_WEEK";
     const hasAccount = hasPayee(p.i.vendor?.payeeAccount);
+    const shifted = p.due && p.payDate !== p.due && p.due >= today ? `期限の${p.due.slice(5).replace("-", "/")}は銀行の休業日(${closedReason(p.due, "bank")})なので前の営業日に。` : "";
     const reason =
-      d.action === "PAY"
+      shifted +
+      (d.action === "PAY"
         ? `${p.payDate.slice(5).replace("-", "/")}に払っても、残高は ${formatYen(d.balanceAfter)} あります`
-        : `${p.payDate.slice(5).replace("-", "/")}に払うと残高が ${formatYen(d.balanceAfter - p.remaining)} になり、手元に残したい ${formatYen(buffer)} を下回ります`;
+        : `${p.payDate.slice(5).replace("-", "/")}に払うと残高が ${formatYen(d.balanceAfter - p.remaining)} になり、手元に残したい ${formatYen(buffer)} を下回ります`);
     return {
       invoiceId: p.i.id,
       invoiceNumber: p.i.invoiceNumber,
