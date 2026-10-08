@@ -176,6 +176,26 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("get_weekly_report", /先週/.test(q) ? { week: new Date(Date.parse(`${today}T00:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10) } : /今週/.test(q) ? { week: today } : {})) as { report: string };
     return { reply: `${r.report.replace(/^## /gm, "■ ")}\n[AIの週報](/reports/weekly)`, tools: ["get_weekly_report"], mode: "simple" };
   }
+  if (/祝日|営業日|休業日/.test(q)) {
+    const mm = q.match(/(\d{1,2})\s*月/);
+    const today = jstDateKey(new Date());
+    let month: string | undefined;
+    if (mm && Number(mm[1]) >= 1 && Number(mm[1]) <= 12) {
+      const y = Number(today.slice(0, 4)) + (Number(mm[1]) < Number(today.slice(5, 7)) - 6 ? 1 : 0);
+      month = `${y}-${String(Number(mm[1])).padStart(2, "0")}`;
+    } else if (/来月/.test(q)) month = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 1)).toISOString().slice(0, 7);
+    const r = (await run("get_business_calendar", month ? { month } : {})) as { month: string; holidays: { date: string; name: string }[]; businessDays: number; nextBusinessDay: string };
+    const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
+    return {
+      reply: [
+        `${Number(r.month.slice(5))}月の祝日: ${r.holidays.length ? r.holidays.map((h) => `${md(h.date)} ${h.name}`).join("、") : "ありません"}`,
+        `${Number(r.month.slice(5))}月の営業日: ${r.businessDays}日(土日・祝日・年末年始を除く)`,
+        `次の営業日: ${md(r.nextBusinessDay)}`,
+      ].join("\n"),
+      tools: ["get_business_calendar"],
+      mode: "simple",
+    };
+  }
   if (/伝言|電話メモ|折り返し/.test(q)) {
     const r = (await run("get_phone_memos")) as { count: number; urgent: number; memos: { from: string; for: string; message: string; action: string; urgent: boolean }[] };
     if (!r.count) return { reply: "対応していない伝言はありません。[伝言メモ](/phone-memos)", tools: ["get_phone_memos"], mode: "simple" };

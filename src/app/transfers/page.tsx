@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { formatDate, formatYen } from "@/lib/format";
+import { closedReason, nextBusinessDay as nextBankDay } from "@/lib/holidays";
+import { jstDateKey } from "@/lib/jst";
 
 type Account = { bankCode: string; bankName: string; branchCode: string; branchName: string; accountType: string; accountNumber: string; holder?: string };
 type Source = Account & { requesterCode: string; requesterName: string };
@@ -20,11 +22,9 @@ const inputClass = "mt-1 w-full rounded-md border px-3 py-2 text-sm";
 const TYPE: Record<string, string> = { "1": "普通", "2": "当座" };
 const accountText = (a: Account) => `${a.bankName} ${a.branchName} ${TYPE[a.accountType] ?? ""} ${a.accountNumber}${a.holder ? ` ${a.holder}` : ""}`;
 
+// 明日以降で最初の銀行の営業日(土日・祝日・12/31〜1/3を飛ばす)
 function nextBusinessDay() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return nextBankDay(jstDateKey(new Date(Date.now() + 86_400_000)), "bank");
 }
 
 export default function TransfersPage() {
@@ -255,6 +255,14 @@ export default function TransfersPage() {
             <label className="text-sm">
               <span className="text-slate-600">振込日</span>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputClass} w-auto`} />
+              {/^\d{4}-\d{2}-\d{2}$/.test(date) && closedReason(date, "bank") && (
+                <span className="mt-1 block text-xs text-rose-700">
+                  銀行の休業日({closedReason(date, "bank")})です。
+                  <button type="button" onClick={() => setDate(nextBankDay(date, "bank"))} className="ml-1 underline">
+                    次の営業日にする
+                  </button>
+                </span>
+              )}
             </label>
           </div>
 

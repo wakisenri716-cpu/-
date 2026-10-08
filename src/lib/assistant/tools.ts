@@ -47,6 +47,7 @@ import { getHrProcedures } from "@/lib/hrProcedures";
 import { getTaxCalendar } from "@/lib/taxCalendar";
 import { listMinutes } from "@/lib/minutes";
 import { listTasks } from "@/lib/teamTasks";
+import { holidaysOf, isBusinessDay, nextBusinessDay } from "@/lib/holidays";
 import { defaultWeek, mondayOf, templateWeekly, weeklyFacts } from "@/lib/weeklyReport";
 import { repeatLabel } from "@/lib/taskRepeat";
 import { getEntertainment, KIND_LABEL } from "@/lib/entertainment";
@@ -392,6 +393,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_weekly_report",
     description: "週報。1週間(月〜日)の済んだやること・日報の作業時間(人別・案件別)・請求書と入金・見積・受注・伝言、来週が期限のやること、期限を過ぎたやること・請求書をまとめた週報の本文と数字を返す。week を省くと、月〜水は先週・木〜日は今週。「今週はどうだった?」「先週の週報を作って」などに使う。",
     input_schema: { type: "object", properties: { week: { type: "string", description: "週のどこかの日 YYYY-MM-DD(任意)" } }, additionalProperties: false },
+  },
+  {
+    name: "get_business_calendar",
+    description: "営業日と祝日。指定した月(既定は今月)の祝日(振替休日・国民の休日を含む)、営業日の数(土日・祝日・年末年始を除く)、今日の次の営業日を返す。「11月の祝日は?」「今月の営業日は何日?」「次の営業日は?」などに使う。",
+    input_schema: { type: "object", properties: { month: { type: "string", description: "YYYY-MM(任意)" } }, additionalProperties: false },
   },
   {
     name: "check_text",
@@ -869,6 +875,20 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
       const week = /^\d{4}-\d{2}-\d{2}$/.test(str(input.week)) && mondayOf(str(input.week)) <= today ? str(input.week) : defaultWeek(today);
       const f = await weeklyFacts(companyId, week, today);
       return { from: f.from, to: f.to, tasksDone: f.tasksDone.length, workHours: Math.round((f.work.minutes / 60) * 10) / 10, sales: f.sales, quotes: f.quotes, dealsWon: f.deals.won.length, overdueTasks: f.tasksOverdue.length, lateInvoices: f.lateInvoices, report: templateWeekly(f), link: "/reports/weekly" };
+    }
+    case "get_business_calendar": {
+      const today = jstDateKey(new Date());
+      const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(str(input.month)) ? str(input.month) : today.slice(0, 7);
+      const [y, m] = month.split("-").map(Number);
+      const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      const days = Array.from({ length: last }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`);
+      return {
+        month,
+        holidays: [...holidaysOf(y)].filter(([k]) => k.startsWith(month)).map(([date, name]) => ({ date, name })),
+        businessDays: days.filter((d) => isBusinessDay(d)).length,
+        nextBusinessDay: nextBusinessDay(new Date(Date.parse(`${today}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)),
+        note: "営業日は土日・祝日・年末年始(12/29〜1/3)を除いた日",
+      };
     }
     case "check_text": {
       const text = str(input.text).slice(0, 8000);

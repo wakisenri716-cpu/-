@@ -4,6 +4,7 @@ import { UserError } from "@/lib/errors";
 import type { PayrollSheetRow } from "@/lib/payroll/service";
 import type { BonusRow } from "@/lib/payroll/bonus";
 import { buildZenginFile, isZenginKana, toZenginKana, type Account, type Source, type TransferKind } from "./zengin";
+import { closedReason, nextBusinessDay, prevBusinessDay } from "@/lib/holidays";
 
 // 振込データの作成: 給与振込(計上した給料の差引支給額)と総合振込(受け取った請求書の未払い分)。
 // 作ったファイルはネットバンキングの「振込データの取込」で読み込む。記帳は銀行明細の取り込みで行う(ここでは仕訳を作らない)。
@@ -163,6 +164,12 @@ export async function buildTransfer(companyId: string, input: { kind?: unknown; 
   if (!source?.requesterCode) throw new UserError("先に「振込元の口座」(委託者コード・口座)を登録してください");
   const date = String(input.date ?? "");
   if (!DATE.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) throw new UserError("振込日を正しく入力してください");
+  // 銀行の休業日(土日・祝日・12/31〜1/3)は振込日にできない
+  const closed = closedReason(date, "bank");
+  if (closed) {
+    const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
+    throw new UserError(`${md(date)}は銀行の休業日(${closed})です。前の営業日(${md(prevBusinessDay(date, "bank"))})か次の営業日(${md(nextBusinessDay(date, "bank"))})にしてください`);
+  }
   const { kind, lines } = await transferLines(companyId, input);
   const missing = lines.filter((l) => !l.account);
   if (missing.length) throw new UserError(`${missing.map((l) => l.name).join("・")}の振込先の口座が登録されていません`);

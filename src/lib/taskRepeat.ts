@@ -1,5 +1,7 @@
+import { isBusinessDay } from "@/lib/holidays";
+
 // 繰り返しのやること(毎日・毎週◯曜・毎月◯日・毎月末)。画面とサーバーの両方で使う
-// 形式: "DAILY"(平日毎日) / "WEEKLY:1"(0=日〜6=土) / "MONTHLY:25" / "MONTHLY:END"
+// 形式: "DAILY"(営業日の毎日。土日・祝日・年末年始は飛ばす) / "WEEKLY:1"(0=日〜6=土) / "MONTHLY:25" / "MONTHLY:END"
 
 const DAY = 86_400_000;
 const WEEK = "日月火水木金土";
@@ -23,7 +25,8 @@ export function validRepeat(v: unknown): v is string {
 export function nextDue(repeat: string, from: string): string {
   if (repeat === "DAILY") {
     let d = from;
-    while (weekday(d) === 0 || weekday(d) === 6) d = addDays(d, 1);
+    // 毎日は営業日だけ(土日・祝日・年末年始を飛ばす)
+    while (!isBusinessDay(d)) d = addDays(d, 1);
     return d;
   }
   const w = repeat.match(/^WEEKLY:([0-6])$/);

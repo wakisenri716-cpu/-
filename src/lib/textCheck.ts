@@ -3,9 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
+import { holidayName } from "@/lib/holidays";
 
 // 送る前の文章チェック: メール・お知らせ・案内文などを貼ると、送る前に直したい所を見つける。
-// 決まったルール(AIなし): 日付と曜日の食い違い・ありえない日付・二重敬語・「御中」と「様」の重ね・ら抜き言葉・同じ言葉の重なり・
+// 決まったルール(AIなし): 日付と曜日の食い違い・ありえない日付・祝日・二重敬語・「御中」と「様」の重ね・ら抜き言葉・同じ言葉の重なり・
 //   「拝啓」と「敬具」の対応・金額の桁区切り・全角と半角の数字の混在・「させていただく」の多用・長すぎる文。
 // AIが使えるときは、言い回しの直し(敬語・わかりやすさ・失礼に読める所)と直した全文も出す。直した全文で数字が変わっていたら使わない。
 
@@ -60,6 +61,8 @@ function dateIssues(text: string, today: string): TextIssue[] {
     }
     if (!m[1] && !m[2] && Date.UTC(year, month - 1, day) < Date.parse(`${today}T00:00:00Z`) - 183 * 86_400_000) year += 1;
     const actual = WEEK[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
+    const holiday = holidayName(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
+    if (holiday) out.push({ level: "info", kind: "祝日", excerpt: excerptAt(text, m.index!, m[0].length), message: `${year}年${month}月${day}日は祝日(${holiday})です。営業日のつもりなら日付を確かめてください`, suggestion: null });
     if (actual !== m[5]) {
       out.push({ level: "error", kind: "曜日", excerpt: excerptAt(text, m.index!, m[0].length), message: `${year}年${month}月${day}日は${actual}曜日です(${m[5]}と書いてあります)`, suggestion: m[0].replace(/[日月火水木金土](?=(?:曜日?)?\s*[)\uFF09])/, actual) });
     }

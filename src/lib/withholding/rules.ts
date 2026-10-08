@@ -1,3 +1,5 @@
+import { nextBusinessDay } from "@/lib/holidays";
+
 // 報酬の源泉徴収と、源泉所得税・住民税の納付期限のきまり。DB を使わない計算だけを置く。
 
 // 報酬の種類。士業の報酬だけは、給与と同じく源泉所得税の「納期の特例」(年2回払い)が使える
@@ -26,11 +28,9 @@ export const addMonth = (month: string, n: number) => {
   return monthKey(y, m + n);
 };
 
-// 期限が土日なら次の月曜日(祝日は考えない)
+// 期限が土日・祝日・年末年始(12/29〜1/3)なら次の営業日(国税通則法10条2項・地方税法20条の5と同じ考え方)
 export function businessDay(y: number, m: number, d: number) {
-  const date = new Date(Date.UTC(y, m - 1, d));
-  while (date.getUTCDay() === 0 || date.getUTCDay() === 6) date.setUTCDate(date.getUTCDate() + 1);
-  return date.toISOString().slice(0, 10);
+  return nextBusinessDay(new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10), "tax");
 }
 
 export type Period = { key: string; label: string; months: string[]; deadline: string };
