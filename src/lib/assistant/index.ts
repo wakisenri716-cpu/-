@@ -63,6 +63,7 @@ const SCREENS = [
   ["/requests", "申請・稟議"],
   ["/duplicates", "二重計上のチェック"],
   ["/anomalies", "いつもと違うお金の動き"],
+  ["/reports/weekly", "AIの週報(1週間の済んだやること・作業時間・請求と入金・来週の予定)"],
   ["/reports/monthly", "AIの月次レポート"],
   ["/collections", "督促・回収"],
   ["/contracts", "契約書の台帳"],
@@ -169,6 +170,11 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
       tools: ["get_tasks"],
       mode: "simple",
     };
+  }
+  if (/週報|(今週|先週)(は|って)?どう|(今週|先週)の(まとめ|ふりかえり|振り返り)/.test(q)) {
+    const today = jstDateKey(new Date());
+    const r = (await run("get_weekly_report", /先週/.test(q) ? { week: new Date(Date.parse(`${today}T00:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10) } : /今週/.test(q) ? { week: today } : {})) as { report: string };
+    return { reply: `${r.report.replace(/^## /gm, "■ ")}\n[AIの週報](/reports/weekly)`, tools: ["get_weekly_report"], mode: "simple" };
   }
   if (/伝言|電話メモ|折り返し/.test(q)) {
     const r = (await run("get_phone_memos")) as { count: number; urgent: number; memos: { from: string; for: string; message: string; action: string; urgent: boolean }[] };
