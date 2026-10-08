@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { inventedNumbers } from "@/lib/ai/numberGuard";
 import { prisma } from "@/lib/prisma";
 import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
@@ -218,7 +219,10 @@ export async function draftPolicy(user: { id: string; companyId: string }, body:
       // 附則(施行日)は入力した日のまま、いつも最後に置く
       articles.push(base.articles[base.articles.length - 1]);
       const checkpoints = (Array.isArray(raw.checkpoints) ? raw.checkpoints : []).filter((c): c is string => typeof c === "string" && !!c.trim()).map((c) => c.trim().slice(0, 200)).slice(0, 5);
-      if (articles.length >= 4) result = { articles, checkpoints: checkpoints.length ? checkpoints : base.checkpoints, mode: "claude" };
+      // 金額・日数・期限は入力とひな形にあるものだけ(条番号は除いて照らす)
+      const source = JSON.stringify({ inputs, effective, notes, staffCount, members, template: base.articles, checkpoints: base.checkpoints });
+      const text = articles.flatMap((a) => a.paragraphs).join(" ").replace(/第\d+条/g, "");
+      if (articles.length >= 4 && !inventedNumbers(`${text} ${checkpoints.join(" ")}`, source).length) result = { articles, checkpoints: checkpoints.length ? checkpoints : base.checkpoints, mode: "claude" };
     }
   } catch (error) {
     if (!(error instanceof Anthropic.APIError) && !(error instanceof SyntaxError)) throw error;

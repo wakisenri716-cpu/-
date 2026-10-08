@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { inventedNumbers } from "@/lib/ai/numberGuard";
 import { prisma } from "@/lib/prisma";
 import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
@@ -83,7 +84,8 @@ export async function writeReminderWithAi(user: { id: string; companyId: string 
       const subject = String(raw.subject ?? "").trim().slice(0, 120);
       const body = String(raw.body ?? "").trim().slice(0, 4000);
       // リンクと金額が入っていない文面は使わない(相手が請求書を開けない・金額がわからないため)
-      if (subject && body.includes(ctx.link) && body.includes(formatYen(ctx.remaining))) result = { subject, body, reason: String(raw.reason ?? "").trim().slice(0, 160) };
+      // 下書き・状況にない数字(日付・金額)を書いていたら使わない
+      if (subject && body.includes(ctx.link) && body.includes(formatYen(ctx.remaining)) && !inventedNumbers(`${subject} ${body}`, `${JSON.stringify(facts)} ${base.subject} ${base.body}`).length) result = { subject, body, reason: String(raw.reason ?? "").trim().slice(0, 160) };
     }
   } catch (error) {
     if (!(error instanceof Anthropic.APIError) && !(error instanceof SyntaxError)) throw error;
