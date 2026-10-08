@@ -79,6 +79,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/fixed-costs", label: "固定費の見直し", icon: SparkleIcon },
       { href: "/ai-proposals", label: "AIからの下書き", icon: SparkleIcon },
       { href: "/inbox", label: "AI受付箱", icon: SparkleIcon },
+      { href: "/reports/weekly", label: "AIの週報", icon: SparkleIcon },
       {
         href: "/reports/monthly",
         label: "AIの月次レポート",
