@@ -6,7 +6,7 @@ import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
 import { ASSISTANT_TOOLS, runAssistantTool } from "./tools";
 import { findDocTools } from "@/lib/docHub";
-import { countOpenMemos } from "@/lib/phoneMemos";
+import { findPartyInText } from "@/lib/partyKarte";
 import { getProposals, type ProposalView } from "./proposals";
 
 // AIアシスタント: 会社の帳簿・請求書・やることについての質問に、道具(tools.ts)で実際のデータを調べて日本語で答える。
@@ -155,8 +155,23 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
   const label = { "last-month": "先月", "last-fy": "前期", "this-fy": "今期", "this-month": "今月" }[preset];
   const run = (name: string, input: Record<string, unknown> = {}) => runAssistantTool({ companyId, userId: "" }, name, input) as Promise<Record<string, unknown>>;
   if (/伝言|電話メモ|折り返し/.test(q)) {
-    const { count, urgent } = await countOpenMemos(companyId);
-    return { reply: `対応していない伝言が ${count}件${urgent ? `(うち至急 ${urgent}件)` : ""} あります。伝言を残す・折り返したら「対応済み」にするのは [伝言メモ](/phone-memos) で。`, tools: [], mode: "simple" };
+    const r = (await run("get_phone_memos")) as { count: number; urgent: number; memos: { from: string; for: string; message: string; action: string; urgent: boolean }[] };
+    if (!r.count) return { reply: "対応していない伝言はありません。[伝言メモ](/phone-memos)", tools: ["get_phone_memos"], mode: "simple" };
+    return {
+      reply: [`対応していない伝言が ${r.count}件${r.urgent ? `(うち至急 ${r.urgent}件)` : ""} あります:`, ...r.memos.slice(0, 5).map((m) => `・${m.urgent ? "【至急】" : ""}${m.from} → ${m.for}: ${m.message}(${m.action})`), "[伝言メモ](/phone-memos)"].join("\n"),
+      tools: ["get_phone_memos"],
+      mode: "simple",
+    };
+  }
+  // 「この文章をチェックして(改行のあとに文章)」「『…』を確かめて」→ 送る前の文章チェック
+  if (/(文章|メール|文面|曜日|敬語).{0,10}(チェック|確認|見直|確かめ)|(チェック|見直)して/.test(q)) {
+    // 文章は正規化前のまま(全角・半角の混在も見るため)
+    const body = (question.match(/[「『]([\s\S]+)[」』]/)?.[1] ?? question.split("\n").slice(1).join("\n")).trim();
+    if (body) {
+      const r = (await run("check_text", { text: body })) as { count: number; issues: { kind: string; message: string; suggestion: string | null }[] };
+      return { reply: [r.count ? `気になる所が ${r.count}件 あります:` : "決まったルールでは気になる所は見つかりませんでした。", ...r.issues.slice(0, 8).map((i) => `・${i.kind}: ${i.message}${i.suggestion ? ` → ${i.suggestion}` : ""}`), "[送る前の文章チェック](/proofread)"].join("\n"), tools: ["check_text"], mode: "simple" };
+    }
+    return { reply: "確かめたい文章を、質問の次の行に貼り付けてください。言い回しまで見るときは [送る前の文章チェック](/proofread) で。", tools: [], mode: "simple" };
   }
   if (/名刺/.test(q)) return { reply: "名刺は [名刺の取り込み](/business-cards) で、写真からAIが読み取って顧客・仕入先に登録できます。もう登録されている相手なら、空いている担当者・電話・住所だけを埋めます。", tools: [], mode: "simple" };
   // 「契約書を作りたい」「お礼状を書いて」→ 書類を作る画面を案内する
@@ -164,6 +179,14 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const tools = findDocTools(q);
     if (tools.length)
       return { reply: [`「${tools[0].title}」の画面で作れます。${tools[0].description}`, ...tools.map((t) => `[${t.title}](${t.href})`), "ほかの書類は [AIで書類を作る](/ai-docs) にまとめています。"].join("\n"), tools: [], mode: "simple" };
+  }
+  // 「さくら商事との取引はどうなってる?」→ 取引先カルテ
+  if (/(状況|様子|どうなって|最近|いま|今|取引|カルテ|調子)/.test(q)) {
+    const found = await findPartyInText(companyId, q);
+    if (found.party) {
+      const r = (await run("get_party_status", { name: found.party.name })) as { party: string; status: string[]; cautions: string[]; next: string[]; link: string };
+      return { reply: [`【${r.party}】`, ...r.status, ...r.cautions.map((c) => `⚠ ${c}`), ...(r.next.length ? ["次にやること:", ...r.next.map((n) => `・${n}`)] : []), `[取引先カルテ](${r.link})`].join("\n"), tools: ["get_party_status"], mode: "simple" };
+    }
   }
   // 「1人採用したらどうなる?」「売上が10%減ったら?」→ もしもシミュレーション
   if (/もしも|採用したら|減ったら|増えたら|下がったら|上がったら|買ったら|購入したら|借りたら/.test(q)) {

@@ -1,5 +1,9 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { findPartyInText, getKarte, templateSummary } from "@/lib/partyKarte";
+import { listMemos, memoTitle } from "@/lib/phoneMemos";
+import { MEMO_ACTIONS, type MemoAction } from "@/lib/phoneMemoLabels";
+import { ruleCheck } from "@/lib/textCheck";
 import { jstDateKey } from "@/lib/jst";
 import { getIncomeStatement } from "@/lib/accounting/incomeStatement";
 import { getAccountBalances } from "@/lib/accounting/ledger";
@@ -365,6 +369,21 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_entertainment",
     description: "交際費の管理。今期の接待交際費の合計・1人1万円以下として除ける飲食費・1年のペース・損金の上限(中小法人は年800万円)と、明細(日付・内容・金額・種類・人数・相手・1人あたり・足りない記録)を返す。「交際費はあといくら使える?」「接待費は使いすぎ?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_party_status",
+    description: "取引先カルテ。名前で指定した顧客・仕入先の「いま」(直近12か月の取引額と前の12か月、最後の請求、入金待ち・支払予定、期限を過ぎた請求書、返事待ちの見積、進行中の商談、対応していない伝言、契約、最近のメモ)と、気をつけること・次にやること、最近のやりとり10件を返す。「さくら商事との取引はどうなってる?」「○○社に電話する前に状況を教えて」などに使う。",
+    input_schema: { type: "object", properties: { name: { type: "string", description: "取引先・顧客の名前(一部でよい)" } }, required: ["name"], additionalProperties: false },
+  },
+  {
+    name: "get_phone_memos",
+    description: "伝言メモ(電話・来客)。対応していない伝言(相手・宛先・用件・折り返しの要否・至急・受けた日時)を、至急・新しい順に最大20件返す。「伝言はある?」「折り返しが必要な電話は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "check_text",
+    description: "送る前の文章チェック(決まったルール)。渡した文章の、日付と曜日の食い違い・ありえない日付・二重敬語・「御中」と「様」の重ね・ら抜き言葉・同じ言葉の重なり・拝啓と敬具・金額の桁区切りなどを返す。「この文章をチェックして」「曜日は合ってる?」などに使う。",
+    input_schema: { type: "object", properties: { text: { type: "string", description: "確かめる文章(8000文字まで)" } }, required: ["text"], additionalProperties: false },
   },
   {
     name: "get_business_analysis",
@@ -790,6 +809,38 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         findings: r.findings,
         link: "/entertainment",
       };
+    }
+    case "get_party_status": {
+      const found = await findPartyInText(companyId, str(input.name));
+      if (!found.party) return { error: `「${str(input.name)}」という取引先・顧客は見つかりませんでした`, link: "/vendors" };
+      const k = await getKarte(companyId, found.party.kind, found.party.id);
+      const t = templateSummary(k.facts);
+      return {
+        party: found.party.name,
+        kind: k.facts.kind,
+        status: t.status,
+        cautions: t.cautions,
+        next: t.next,
+        facts: k.facts,
+        recent: k.events.slice(0, 10).map((e) => ({ date: e.at, type: e.type, title: e.title, detail: e.detail })),
+        otherCandidates: found.candidates.slice(1),
+        link: `/vendors/${found.party.kind}/${found.party.id}`,
+      };
+    }
+    case "get_phone_memos": {
+      const memos = (await listMemos(companyId, ctx.userId)).filter((m) => m.status === "OPEN").slice(0, 20);
+      return {
+        count: memos.length,
+        urgent: memos.filter((m) => m.urgent).length,
+        memos: memos.map((m) => ({ from: memoTitle(m), phone: m.callerPhone, for: m.forName ?? "どなたか", message: m.message, action: MEMO_ACTIONS[m.action as MemoAction] ?? m.action, urgent: m.urgent, at: jstDateKey(m.createdAt) })),
+        link: "/phone-memos",
+      };
+    }
+    case "check_text": {
+      const text = str(input.text).slice(0, 8000);
+      if (!text.trim()) return { error: "確かめる文章がありません" };
+      const issues = ruleCheck(text);
+      return { count: issues.length, issues: issues.slice(0, 20).map((i) => ({ level: i.level, kind: i.kind, message: i.message, excerpt: i.excerpt, suggestion: i.suggestion })), link: "/proofread" };
     }
     case "get_business_analysis": {
       const today = jstDateKey(new Date());
