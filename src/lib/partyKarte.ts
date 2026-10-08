@@ -196,3 +196,14 @@ export async function deletePartyNote(companyId: string, kind: PartyKind, id: st
   const { count } = await prisma.partyNote.deleteMany({ where: { id: noteId, companyId, partyKind: kind, partyId: id } });
   if (!count) throw new UserError("メモが見つかりません");
 }
+
+// 文の中に出てくる取引先・顧客(長い名前から当てる。会社の種類の書き方の違いは同じとみなす)
+export async function findPartyInText(companyId: string, text: string) {
+  const [customers, vendors] = await Promise.all([prisma.customer.findMany({ where: { companyId }, select: { id: true, name: true } }), prisma.vendor.findMany({ where: { companyId }, select: { id: true, name: true } })]);
+  const flat = normalizeName(text);
+  const hits = [...customers.map((c) => ({ kind: "customer" as PartyKind, ...c })), ...vendors.map((v) => ({ kind: "vendor" as PartyKind, ...v }))]
+    .map((p) => ({ ...p, key: normalizeName(p.name) }))
+    .filter((p) => p.key.length >= 2 && (flat.includes(p.key) || (flat.length >= 2 && p.key.includes(flat))))
+    .sort((a, b) => b.key.length - a.key.length);
+  return { party: hits[0] ? { kind: hits[0].kind, id: hits[0].id, name: hits[0].name } : null, candidates: hits.slice(0, 5).map((h) => h.name) };
+}
