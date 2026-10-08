@@ -4,6 +4,7 @@ import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { normalizeName } from "@/lib/partyMerge";
+import { inventedNumbers } from "@/lib/ai/numberGuard";
 
 // メールの返信アシスト: 取引先から届いたメールを貼ると、相手(顧客)と用件(見積・請求書・入金・支払の相談・日程・お詫び・注文・お礼)を見分け、
 // その顧客の請求・入金・見積の状況をそろえて、返信の下書きを作る。AIが使えるときは、メールの中身に合わせて自然な返信に書き直す。
@@ -158,7 +159,6 @@ const SCHEMA = {
   additionalProperties: false,
 } as const;
 
-const numbers = (s: string) => (s.normalize("NFKC").replace(/[,，]/g, "").match(/\d+/g) ?? []).filter((n) => n.length >= 2);
 
 export type MailReplyResult = {
   subject: string;
@@ -238,8 +238,7 @@ export async function draftMailReply(user: { id: string; companyId: string; name
       const body = typeof parsed.body === "string" ? parsed.body.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, 4000) : "";
       const cautions = (Array.isArray(parsed.cautions) ? parsed.cautions : []).filter((c): c is string => typeof c === "string" && !!c.trim()).map((c) => c.trim().slice(0, 200)).slice(0, 3);
       // 帳簿・メール・メモ・ひな形にない数字(金額・日付・番号)を書いていたら使わない
-      const allowed = new Set(numbers([mail, notes, templateBody, JSON.stringify(facts), today].join(" ")));
-      const invented = numbers(body).filter((n) => !allowed.has(n));
+      const invented = inventedNumbers(body, [mail, notes, templateBody, JSON.stringify(facts), today].join(" "));
       if (body && !invented.length) {
         result.body = `${body}\n\n${signature}`;
         result.cautions = [...cautions, ...(body.includes("【") ? ["【 】の所は、日付などを入れてから送ってください。"] : [])];
