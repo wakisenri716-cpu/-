@@ -9,7 +9,7 @@ type Preview = {
   errors: string[];
   total: number;
 };
-type Unsent = { id: string; invoiceNumber: string | null; customerName: string; email: string | null; issueDate: string | null; dueDate: string | null; total: number };
+type Unsent = { id: string; invoiceNumber: string | null; customerName: string; email: string | null; issueDate: string | null; dueDate: string | null; total: number; check: { errors: number; warns: number; first: string | null } | null };
 type SendResult = { sent: number; failed: number; results: { id: string; ok: boolean; message: string }[] };
 
 const slash = (d: string | null) => (d ? d.replaceAll("-", "/") : "-");
@@ -20,6 +20,7 @@ export function InvoiceImportView() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [unsent, setUnsent] = useState<Unsent[]>([]);
+  const [companyIssues, setCompanyIssues] = useState<{ level: string; message: string }[]>([]);
   const [mode, setMode] = useState("smtp");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
@@ -29,8 +30,10 @@ export function InvoiceImportView() {
     if (!res.ok) return;
     const json = await res.json();
     setUnsent(json.invoices);
+    setCompanyIssues(json.companyIssues ?? []);
     setMode(json.mode);
-    setSelected(new Set(json.invoices.filter((i: Unsent) => i.email).map((i: Unsent) => i.id)));
+    // 送る前チェックで「直してください」がある請求書は、はじめは選ばない
+    setSelected(new Set(json.invoices.filter((i: Unsent) => i.email && !i.check?.errors).map((i: Unsent) => i.id)));
   }, []);
 
   useEffect(() => {
@@ -58,7 +61,8 @@ export function InvoiceImportView() {
   }
 
   async function send() {
-    if (!confirm(`${selected.size}件の請求書をメールで送りますか?`)) return;
+    const withErrors = unsent.filter((u) => selected.has(u.id) && u.check?.errors).length;
+    if (!confirm(`${selected.size}件の請求書をメールで送りますか?${withErrors ? `\n(うち${withErrors}件は送る前のチェックで「直してください」があります)` : ""}`)) return;
     setBusy(true);
     setSendResult(null);
     const res = await fetch("/api/invoices/bulk-send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: [...selected] }) });
@@ -172,6 +176,19 @@ export function InvoiceImportView() {
               ))}
           </div>
         )}
+        {companyIssues.some((c) => c.level !== "info") && (
+          <div className="border-b bg-amber-50 px-4 py-2 text-xs text-amber-900">
+            {companyIssues.map((c) => (
+              <p key={c.message}>
+                ・{c.message}(
+                <Link href="/company" className="underline">
+                  会社情報
+                </Link>
+                )
+              </p>
+            ))}
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-50 text-left text-xs whitespace-nowrap text-slate-500">
@@ -213,6 +230,11 @@ export function InvoiceImportView() {
                     <span className="block text-xs text-slate-500">
                       {u.invoiceNumber} ・ {slash(u.issueDate)}
                     </span>
+                    {u.check && (u.check.errors > 0 || u.check.warns > 0) && (
+                      <Link href={`/invoices/${u.id}/print`} className={`mt-0.5 block text-xs hover:underline ${u.check.errors ? "text-rose-700" : "text-amber-800"}`}>
+                        {u.check.errors ? `直してください ${u.check.errors}件` : `確かめてください ${u.check.warns}件`}: {u.check.first}
+                      </Link>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-xs">
                     {u.email ?? (

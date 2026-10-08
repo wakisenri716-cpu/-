@@ -15,7 +15,8 @@ const DAILY_LIMIT = Number(process.env.ASSISTANT_DAILY_LIMIT || 100);
 const DAY = 86_400_000;
 
 export type CheckLevel = "error" | "warn" | "info";
-export type InvoiceIssue = { level: CheckLevel; message: string; fix: string | null; href: string | null };
+// scope: company は会社の設定(登録番号・振込先)で、どの請求書にも同じく出るもの
+export type InvoiceIssue = { level: CheckLevel; message: string; fix: string | null; href: string | null; scope?: "company" | "invoice" };
 
 const yen = (n: number) => `${n.toLocaleString("ja-JP")}円`;
 const key = (d: Date) => d.toISOString().slice(0, 10);
@@ -32,7 +33,7 @@ async function load(companyId: string, id: string) {
 export async function checkInvoice(companyId: string, id: string, today = jstDateKey(new Date())): Promise<InvoiceIssue[]> {
   const inv = await load(companyId, id);
   const issues: InvoiceIssue[] = [];
-  const add = (level: CheckLevel, message: string, fix: string | null = null, href: string | null = null) => issues.push({ level, message, fix, href });
+  const add = (level: CheckLevel, message: string, fix: string | null = null, href: string | null = null) => issues.push({ level, message, fix, href, scope: href === "/company" ? "company" : "invoice" });
   if (inv.status === "CANCELLED") return [{ level: "info", message: "取り消した請求書です。", fix: null, href: null }];
 
   // 会社・宛先
