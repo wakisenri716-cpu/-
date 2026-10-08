@@ -8,6 +8,7 @@ import {
   ROUTINE_EXAMPLES,
   repeatLabel,
 } from "@/lib/taskRepeat";
+import { holidayName } from "@/lib/holidays";
 
 type Task = {
   id: string;
@@ -187,7 +188,18 @@ export default function TaskView({
     (t) => mine(t) && t.dueOn && t.dueOn < today,
   ).length;
 
+  // 期限の日が祝日なら名前を添える(休みの日に期限を置いていないか気づけるように)
   function dueBadge(t: Task) {
+    const off = t.dueOn && t.status === "OPEN" ? holidayName(t.dueOn) : null;
+    return (
+      <>
+        {dueText(t)}
+        {off && <span className="text-xs text-rose-700">({off})</span>}
+      </>
+    );
+  }
+
+  function dueText(t: Task) {
     if (!t.dueOn)
       return <span className="text-xs text-slate-400">期限なし</span>;
     if (t.status === "DONE")

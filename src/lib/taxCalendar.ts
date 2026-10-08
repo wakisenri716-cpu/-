@@ -9,7 +9,7 @@ import { addMonth, businessDay, incomeTaxSpecialPeriod, monthlyPeriod, residentT
 // 税金・労務の年間カレンダー: 会社の設定(決算月・納期の特例・社会保険の加入者・固定資産など)から、
 // これから12か月の申告・届出・納付の期限を並べる。源泉所得税・住民税は「源泉徴収・納付」で納付済みにすると自動で「済み」。
 // ほかはチェックで「済み」にする。AI(またはひな形)が近い期限の段取りを書く。.ics でスマホのカレンダーにも入れられる。
-// 期限は一般的な目安(土日は次の月曜日。祝日は考えない)。
+// 期限は一般的な目安(土日・祝日・年末年始は次の営業日)。
 
 const MODEL = process.env.ANTHROPIC_ASSISTANT_MODEL || "claude-opus-5-5";
 const DAILY_LIMIT = Number(process.env.ASSISTANT_DAILY_LIMIT || 100);
@@ -38,7 +38,7 @@ const lastDay = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate
 const monthOf = (key: string) => key.slice(0, 7);
 const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 const shortDate = (key: string) => `${Number(key.slice(5, 7))}/${Number(key.slice(8, 10))}`;
-// 月末(土日なら次の月曜日)
+// 月末(土日・祝日なら次の営業日)
 const monthEnd = (y: number, m: number) => {
   const d = new Date(Date.UTC(y, m - 1, 1));
   return businessDay(d.getUTCFullYear(), d.getUTCMonth() + 1, lastDay(d.getUTCFullYear(), d.getUTCMonth() + 1));
