@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { inventedNumbers } from "@/lib/ai/numberGuard";
 import { prisma } from "@/lib/prisma";
 import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
@@ -182,7 +183,9 @@ export async function buildLoanApplication(user: { id: string; name: string; com
             .join(""),
         ) as Record<string, unknown>;
         const clean = (v: unknown) => String(v ?? "").trim().slice(0, 800);
-        if (clean(raw.overview) && clean(raw.purpose) && clean(raw.repayment)) {
+        const written = [raw.overview, raw.purpose, raw.repayment, raw.risks].map(clean).join(" ");
+        // facts・決まった文にない数字(金額・期間・倍率)を書いていたら使わない
+        if (clean(raw.overview) && clean(raw.purpose) && clean(raw.repayment) && !inventedNumbers(written, `${JSON.stringify(facts)} ${JSON.stringify(narrative)}`).length) {
           // 足りなくなる月があるときの注意は、AIの文に関係なく残す
           const ruleRisk = narrative.risks;
           narrative = { overview: clean(raw.overview), purpose: clean(raw.purpose), repayment: clean(raw.repayment), risks: [ruleRisk, clean(raw.risks)].filter(Boolean).join(" ") };

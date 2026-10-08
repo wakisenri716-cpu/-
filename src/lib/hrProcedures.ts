@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { inventedNumbers } from "@/lib/ai/numberGuard";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { aiFor } from "@/lib/ai/access";
@@ -305,7 +306,9 @@ export async function draftGuide(user: { id: string; companyId: string }, input:
       const body = typeof raw.body === "string" ? raw.body.trim().slice(0, 4000) : "";
       // 用意・返却の項目がひな形と同じだけ残っているときだけ使う
       const bullets = (t: string) => t.split("\n").filter((l) => l.trim().startsWith("・")).length;
-      if (subject && body && bullets(body) >= bullets(base.body)) result = { subject, body, mode: "claude" };
+      // 日付・金額はひな形・入力にあるものだけ
+      const source = `${base.subject} ${base.body} ${c.date} ${notes}`;
+      if (subject && body && bullets(body) >= bullets(base.body) && !inventedNumbers(`${subject} ${body}`, source).length) result = { subject, body, mode: "claude" };
     }
   } catch (error) {
     if (!(error instanceof Anthropic.APIError) && !(error instanceof SyntaxError)) throw error;

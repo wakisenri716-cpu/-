@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { inventedNumbers } from "@/lib/ai/numberGuard";
 import { prisma } from "@/lib/prisma";
 import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
@@ -259,9 +260,13 @@ export async function draftPriceLetter(user: { id: string; companyId: string }, 
         ) as { advice?: unknown; letter?: unknown };
         const l = typeof raw.letter === "string" ? raw.letter.trim().slice(0, 4000) : "";
         const a = typeof raw.advice === "string" ? raw.advice.trim().slice(0, 600) : "";
-        if (l) letter = l;
-        if (a) advice = a;
-        mode = "claude";
+        // 渡した数字(割合・価格・利益率・改定日)にない数字を書いた文は使わない
+        const source = JSON.stringify({ letter, today, effectiveDate, raisePct, note, margin: review.margin, neededPct: review.neededPct, costUps: review.costUps, items: items.map((i) => ({ ...i, newPrice: newPrice(i.price, raisePct) })), simulation: [0, 5, 10].map((loss) => simulatePriceIncrease(review.monthly, raisePct, loss)) });
+        if (l && !inventedNumbers(l, source).length) {
+          letter = l;
+          mode = "claude";
+        }
+        if (a && !inventedNumbers(a, source).length) advice = a;
       }
     } catch (error) {
       if (!(error instanceof Anthropic.APIError) && !(error instanceof SyntaxError)) throw error;
