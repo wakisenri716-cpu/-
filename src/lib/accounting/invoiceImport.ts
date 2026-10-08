@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { checkInvoice } from "@/lib/invoiceCheck";
 import { parseCsv } from "@/lib/csvParse";
 import { UserError } from "@/lib/errors";
 import { calcInvoice, issueInvoice, validDate, validateLines, type InvoiceLineInput } from "./issueInvoice";
@@ -140,15 +141,27 @@ export async function unsentInvoices(companyId: string) {
     orderBy: [{ issueDate: "desc" }, { invoiceNumber: "desc" }],
     take: 300,
   });
-  return invoices.map((i) => ({
+  // 送る前チェック(会社の設定の指摘はまとめて1回、請求書ごとの指摘は件数と最初の1つ)
+  // 多いときは新しい100件だけ確かめる(データベースへの問い合わせを一度に出しすぎないよう10件ずつ)
+  const checks: Awaited<ReturnType<typeof checkInvoice>>[] = [];
+  for (let n = 0; n < Math.min(invoices.length, 100); n += 10) checks.push(...(await Promise.all(invoices.slice(n, n + 10).map((i) => checkInvoice(companyId, i.id)))));
+  const companyIssues = (checks[0] ?? []).filter((x) => x.scope === "company").map((x) => ({ level: x.level, message: x.message }));
+  return { companyIssues, invoices: invoices.map((i, n) => ({
     id: i.id,
     invoiceNumber: i.invoiceNumber,
+    check: checks[n]
+      ? {
+          errors: checks[n].filter((x) => x.scope === "invoice" && x.level === "error").length,
+          warns: checks[n].filter((x) => x.scope === "invoice" && x.level === "warn").length,
+          first: checks[n].find((x) => x.scope === "invoice" && x.level !== "info")?.message ?? null,
+        }
+      : null,
     customerName: i.customer?.name ?? "",
     email: i.customer?.email ?? null,
     issueDate: i.issueDate ? i.issueDate.toISOString().slice(0, 10) : null,
     dueDate: i.dueDate ? i.dueDate.toISOString().slice(0, 10) : null,
     total: i.totalAmount,
-  }));
+  })) };
 }
 
 // 選んだ請求書を、いつもの文面(共有リンクつき)でまとめて送る。宛先のない請求書は飛ばす

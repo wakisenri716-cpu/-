@@ -16,6 +16,8 @@ export function SendMailButton({ kind, id, tone = "default" }: { kind: Kind; id:
   const [writing, setWriting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  // 請求書: 送る前チェックで「直してください」「確かめてください」の指摘
+  const [checks, setChecks] = useState<{ level: string; message: string }[]>([]);
 
   // 督促: AIが相手のふだんの払い方と督促の段階に合わせて書き直す(宛先はそのまま)
   async function aiWrite() {
@@ -34,8 +36,13 @@ export function SendMailButton({ kind, id, tone = "default" }: { kind: Kind; id:
     setOpen(true);
     setMessage(null);
     setAiNote(null);
-    const res = await fetch(`/api/mail/draft?kind=${kind}&id=${encodeURIComponent(id)}`);
+    const [res, check] = await Promise.all([
+      fetch(`/api/mail/draft?kind=${kind}&id=${encodeURIComponent(id)}`),
+      kind === "invoice" ? fetch(`/api/invoices/${encodeURIComponent(id)}/check`).catch(() => null) : Promise.resolve(null),
+    ]);
     const body = await res.json().catch(() => ({}));
+    const checked = check?.ok ? await check.json().catch(() => ({})) : {};
+    setChecks(((checked.issues ?? []) as { level: string; message: string }[]).filter((i) => i.level !== "info"));
     if (!res.ok) {
       setMessage({ ok: false, text: body.error || "送信の準備ができませんでした" });
       return;
@@ -82,6 +89,15 @@ export function SendMailButton({ kind, id, tone = "default" }: { kind: Kind; id:
             {!draft && !message && <p className="mt-4 text-sm text-slate-500">準備中...</p>}
             {draft && (
               <div className="mt-4 space-y-3">
+                {checks.length > 0 && (
+                  <div className={`rounded-md px-3 py-2 text-xs ${checks.some((c) => c.level === "error") ? "bg-rose-50 text-rose-800" : "bg-amber-50 text-amber-900"}`}>
+                    <p className="font-medium">送る前のチェックで気になる所があります</p>
+                    {checks.slice(0, 4).map((c) => (
+                      <p key={c.message}>・{c.message}</p>
+                    ))}
+                    {checks.length > 4 && <p>ほか{checks.length - 4}件(請求書の画面の「送る前のチェック」で見られます)</p>}
+                  </div>
+                )}
                 {draft.mode === "test" && (
                   <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
                     メール送信がまだ設定されていないため、テストモードです(送らずに送信履歴へ記録だけします)。

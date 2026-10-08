@@ -7,7 +7,7 @@ import { audit } from "@/lib/audit";
 // まだ送っていない請求書(確定のまま)
 export async function GET() {
   const companyId = await requireCompanyId();
-  return respond(async () => ({ invoices: await unsentInvoices(companyId), mode: mailMode() }));
+  return respond(async () => ({ ...(await unsentInvoices(companyId)), mode: mailMode() }));
 }
 
 // { ids } 選んだ請求書をまとめてメールで送る
