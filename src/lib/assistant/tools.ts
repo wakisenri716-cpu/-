@@ -46,6 +46,7 @@ import { getCustomerProfit } from "@/lib/customerProfit";
 import { getHrProcedures } from "@/lib/hrProcedures";
 import { getTaxCalendar } from "@/lib/taxCalendar";
 import { listMinutes } from "@/lib/minutes";
+import { listTasks } from "@/lib/teamTasks";
 import { getEntertainment, KIND_LABEL } from "@/lib/entertainment";
 import { getAnalysis } from "@/lib/accounting/analysis";
 import { templateExplanation } from "@/lib/analysisExplain";
@@ -379,6 +380,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_phone_memos",
     description: "伝言メモ(電話・来客)。対応していない伝言(相手・宛先・用件・折り返しの要否・至急・受けた日時)を、至急・新しい順に最大20件返す。「伝言はある?」「折り返しが必要な電話は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_tasks",
+    description: "社内のやること(タスク)。まだ済んでいないやること(内容・担当・期限・取引先)を期限の近い順に最大30件と、期限を過ぎた件数・今日が期限の件数を返す。mine=true なら聞いた人が担当(と担当なし)のものだけ。「今日のやることは?」「田中さんのタスクは?」「期限切れのやることは?」などに使う。",
+    input_schema: { type: "object", properties: { mine: { type: "boolean", description: "自分の担当だけ" }, owner: { type: "string", description: "担当の人の名前(一部でよい)" } }, additionalProperties: false },
   },
   {
     name: "check_text",
@@ -834,6 +840,21 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         urgent: memos.filter((m) => m.urgent).length,
         memos: memos.map((m) => ({ from: memoTitle(m), phone: m.callerPhone, for: m.forName ?? "どなたか", message: m.message, action: MEMO_ACTIONS[m.action as MemoAction] ?? m.action, urgent: m.urgent, at: jstDateKey(m.createdAt) })),
         link: "/phone-memos",
+      };
+    }
+    case "get_tasks": {
+      const today = jstDateKey(new Date());
+      const owner = str(input.owner).replace(/(さん|様)$/, "").trim();
+      const tasks = (await listTasks(companyId))
+        .filter((t) => t.status === "OPEN")
+        .filter((t) => (input.mine === true && ctx.userId ? t.ownerUserId === ctx.userId || t.ownerUserId === null : true))
+        .filter((t) => (owner ? (t.ownerName ?? "").replace(/\s/g, "").includes(owner.replace(/\s/g, "")) : true));
+      return {
+        count: tasks.length,
+        overdue: tasks.filter((t) => t.dueOn && t.dueOn < today).length,
+        dueToday: tasks.filter((t) => t.dueOn === today).length,
+        tasks: tasks.slice(0, 30).map((t) => ({ title: t.title, owner: t.ownerName ?? "担当なし", due: t.dueOn, overdue: !!t.dueOn && t.dueOn < today, party: t.partyName })),
+        link: "/tasks",
       };
     }
     case "check_text": {

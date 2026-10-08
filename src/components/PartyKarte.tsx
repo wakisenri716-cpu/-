@@ -16,6 +16,7 @@ const TYPE_STYLE: Record<string, string> = {
   電話: "bg-amber-50 text-amber-900",
   来客: "bg-amber-50 text-amber-900",
   メモ: "bg-vermilion-50 text-vermilion-800",
+  やること: "bg-emerald-50 text-emerald-800",
   商談: "bg-violet-50 text-violet-800",
   契約: "bg-slate-100 text-slate-700",
   メール: "bg-slate-100 text-slate-700",

@@ -38,6 +38,7 @@ export async function templatePrep(companyId: string, kind: PartyKind, id: strin
   const late = facts.open.filter((i) => i.overdueDays > 0);
   if (late.length && kind === "customer") agenda.push({ topic: "お支払いの確認", points: late.map((i) => `請求書 No.${i.number}(残り ${yen(i.remaining)}、期限から${i.overdueDays}日)の入金予定をうかがう`) });
   for (const m of facts.openMemos) agenda.push({ topic: "いただいていたご連絡への回答", points: [m] });
+  if (facts.openTasks.length) agenda.push({ topic: "お約束していたことの報告", points: facts.openTasks.slice(0, 3).map((t) => `${t.title}${t.due ? `(${t.due}まで)` : ""}の進み具合を伝える`) });
   if (!agenda.length) agenda.push({ topic: "近況のうかがい", points: ["最近の困りごと・これからの予定を聞く", "こちらからできることを伝える"] });
 
   const confirm: string[] = [];

@@ -27,7 +27,7 @@ export default async function MinutesDetailPage({ params }: { params: Promise<{ 
           ← 議事録
         </Link>
         <div className="flex flex-wrap items-center gap-2">
-          <MinutesActions id={m.id} posted={!!m.announcementId} />
+          <MinutesActions id={m.id} posted={!!m.announcementId} actions={m.content.actions.length} />
           <PrintButton variant="outline" />
         </div>
       </div>

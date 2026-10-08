@@ -32,7 +32,7 @@ export async function getKarte(companyId: string, kind: PartyKind, id: string, t
   const todayMs = Date.parse(`${today}T00:00:00Z`);
   const nameKey = normalizeName(party.name);
   const invoiceWhere = { companyId, ...(kind === "customer" ? { customerId: id, direction: "ISSUED" as const } : { vendorId: id, direction: "RECEIVED" as const }) };
-  const [invoices, payments, quotes, orders, memos, notes, deals, contracts] = await Promise.all([
+  const [invoices, payments, quotes, orders, memos, notes, deals, contracts, tasks] = await Promise.all([
     prisma.invoice.findMany({ where: { ...invoiceWhere, status: { notIn: ["DRAFT", "PENDING_REVIEW"] } }, include: { payments: { select: { amount: true } } }, orderBy: { issueDate: "desc" }, take: 60 }),
     prisma.payment.findMany({ where: { companyId, withholding: false, invoice: invoiceWhere }, include: { invoice: { select: { invoiceNumber: true } } }, orderBy: { paymentDate: "desc" }, take: 40 }),
     kind === "customer" ? prisma.quote.findMany({ where: { companyId, customerId: id }, orderBy: { issueDate: "desc" }, take: 20 }) : Promise.resolve([]),
@@ -41,6 +41,7 @@ export async function getKarte(companyId: string, kind: PartyKind, id: string, t
     prisma.partyNote.findMany({ where: { companyId, partyKind: kind, partyId: id }, orderBy: { createdAt: "desc" }, take: 50 }),
     kind === "customer" ? prisma.deal.findMany({ where: { companyId }, orderBy: { updatedAt: "desc" }, take: 300 }) : Promise.resolve([]),
     prisma.contract.findMany({ where: { companyId, counterparty: { not: null } }, orderBy: { createdAt: "desc" }, take: 300 }),
+    prisma.teamTask.findMany({ where: { companyId, partyKind: kind, partyId: id, OR: [{ status: "OPEN" }, { doneAt: { gte: new Date(todayMs - 90 * DAY) } }] }, orderBy: { createdAt: "desc" }, take: 30 }),
   ]);
   const myDeals = deals.filter((d) => normalizeName(d.customerName) === nameKey);
   const myContracts = contracts.filter((c) => c.counterparty && normalizeName(c.counterparty) === nameKey);
@@ -63,6 +64,7 @@ export async function getKarte(companyId: string, kind: PartyKind, id: string, t
   for (const n of notes) events.push({ at: key(n.createdAt), type: "メモ", title: `メモ(${n.byName})`, detail: n.body, href: null, noteId: n.id });
   for (const d of myDeals) events.push({ at: key(d.updatedAt), type: "商談", title: `商談「${d.title}」${STAGE[d.stage] ?? d.stage}`, detail: `${yen(d.amount)}${d.nextAction ? `・次: ${d.nextAction}${d.nextActionDate ? `(${key(d.nextActionDate)})` : ""}` : ""}`, href: "/deals" });
   for (const c of myContracts) events.push({ at: key(c.startDate ?? c.createdAt), type: "契約", title: `契約「${c.title}」`, detail: c.endDate ? `満了 ${key(c.endDate)}` : null, href: "/contracts" });
+  for (const t of tasks) events.push({ at: key(t.status === "DONE" && t.doneAt ? t.doneAt : t.createdAt), type: "やること", title: `${t.status === "DONE" ? "済んだ" : ""}やること「${t.title}」`, detail: `${t.ownerName ?? "担当なし"}${t.dueOn ? `・${t.dueOn}まで` : ""}${t.status === "DONE" ? "(済み)" : ""}`, href: "/tasks" });
   for (const m of mails) events.push({ at: key(m.createdAt), type: "メール", title: `メールを送信「${m.subject}」`, detail: `${m.to}(${m.sentByName})`, href: null });
   events.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
 
@@ -90,6 +92,7 @@ export async function getKarte(companyId: string, kind: PartyKind, id: string, t
     openMemos: memos.filter((m) => m.status === "OPEN").map((m) => m.message.slice(0, 80)),
     contracts: myContracts.filter((c) => c.status === "ACTIVE").map((c) => ({ title: c.title, endDate: c.endDate ? key(c.endDate) : null })),
     recentNotes: notes.slice(0, 5).map((n) => `${key(n.createdAt)} ${n.body.slice(0, 120)}`),
+    openTasks: tasks.filter((t) => t.status === "OPEN").map((t) => ({ title: t.title.slice(0, 80), owner: t.ownerName, due: t.dueOn })),
   };
   return { party: { id: party.id, name: party.name, kind }, events: events.slice(0, 80), facts };
 }
@@ -117,6 +120,7 @@ export function templateSummary(f: KarteFacts) {
   for (const q of f.openQuotes) next.push(`見積書 No.${q.number}(${yen(q.total)}、${q.validUntil}まで)の返事を確かめる`);
   for (const d of f.openDeals) next.push(`商談「${d.title}」(${d.stage})${d.nextAction ? `: ${d.nextAction}${d.nextActionDate ? `(${d.nextActionDate})` : ""}` : "の次の一手を決める"}`);
   for (const m of f.openMemos) next.push(`対応していない伝言: ${m}`);
+  for (const t of f.openTasks) next.push(`社内のやること: ${t.title}${t.owner || t.due ? `(${[t.owner, t.due ? `${t.due}まで` : null].filter(Boolean).join("・")})` : ""}`);
   for (const c of f.contracts) if (c.endDate && Date.parse(`${c.endDate}T00:00:00Z`) - Date.parse(`${f.today}T00:00:00Z`) < 90 * DAY) cautions.push(`契約「${c.title}」の満了が近づいています(${c.endDate})。`);
   return { status, cautions, next: next.slice(0, 6) };
 }
