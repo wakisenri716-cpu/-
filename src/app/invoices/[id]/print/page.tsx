@@ -9,6 +9,9 @@ import { PrintButton } from "@/components/PrintButton";
 import { BillingDocument } from "@/components/BillingDocument";
 import { CancelInvoiceButton } from "@/components/CancelInvoiceButton";
 import { SendMailButton } from "@/components/SendMailButton";
+import { InvoiceCheckPanel } from "@/components/InvoiceCheckPanel";
+import { checkInvoice } from "@/lib/invoiceCheck";
+import { aiEnabled } from "@/lib/ai/access";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +24,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
   const company = invoice.company;
   const paid = invoice.payments.reduce((s, p) => s + p.amount, 0);
   const cancelled = invoice.status === "CANCELLED";
+  const [issues, ai] = cancelled ? [[], false] : await Promise.all([checkInvoice(companyId, id), aiEnabled(companyId)]);
 
   return (
     <div className="space-y-4">
@@ -99,6 +103,8 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           )}
         </div>
       )}
+
+      {!cancelled && <InvoiceCheckPanel id={invoice.id} issues={issues} ai={ai} />}
 
       <BillingDocument
         kind="invoice"
