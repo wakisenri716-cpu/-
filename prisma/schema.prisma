@@ -2406,6 +2406,7 @@ model TeamTask {
   partyKind     String? // customer / vendor
   partyId       String?
   partyName     String?
+  repeat        String? // 繰り返し: DAILY / WEEKLY:0-6 / MONTHLY:1-31 / MONTHLY:END(済みにすると次の回が入る)
   source        String    @default("MANUAL") // MANUAL / MINUTES / VISIT / ASSISTANT
   sourceId      String?
   status        String    @default("OPEN") // OPEN / DONE

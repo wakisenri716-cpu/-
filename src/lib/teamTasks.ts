@@ -7,6 +7,13 @@ import { normalizeName } from "@/lib/partyMerge";
 import { inventedNumbers } from "@/lib/ai/numberGuard";
 import { parseDue } from "@/lib/minutes";
 import { MailError, appUrl, sendMail } from "@/lib/mail";
+import {
+  followingDue,
+  nextDue,
+  parseRepeat,
+  repeatLabel,
+  validRepeat,
+} from "@/lib/taskRepeat";
 
 // 社内のやること(タスク): 「明日までに田中さんがA社に見積を送る」のように1行に1つ書くと、やること・担当・期限・取引先に分けて登録する。
 // AIが使えるときは、メールや会議のメモの文章からやることを拾い出す(書いていない担当・期限は作らない)。
@@ -24,6 +31,7 @@ export type TaskDraft = {
   due: string | null;
   partyKind: "customer" | "vendor" | null;
   partyId: string | null;
+  repeat?: string | null;
 };
 type Member = { id: string; name: string; email: string | null };
 type Party = { kind: "customer" | "vendor"; id: string; name: string };
@@ -174,8 +182,11 @@ export function templateTask(
   today: string,
   me?: { id: string } | null,
 ): TaskDraft | null {
-  const t = clean(line.normalize("NFKC"));
-  if (!t) return null;
+  const cleaned = clean(line.normalize("NFKC"));
+  if (!cleaned) return null;
+  // 「毎月25日 給料を振り込む」のような繰り返し
+  const rp = parseRepeat(cleaned);
+  const t = rp?.rest || cleaned;
   let owner: Member | null = null;
   let title = t;
   const marked = t.match(/(?:@|担当\s*[:：]?\s*)([^\s、,()]{1,10})/u);
@@ -205,8 +216,8 @@ export function templateTask(
     owner = ctx.users.find((u) => u.id === me.id) ?? null;
     title = title.replace(/^(?:私|わたし|自分)(?:が|は)/, " ");
   }
-  const due = relativeDue(t, today);
-  if (due) title = title.replace(DUE_WORDS, " ");
+  const due = rp ? nextDue(rp.repeat, today) : relativeDue(t, today);
+  if (due && !rp) title = title.replace(DUE_WORDS, " ");
   title = title
     .replace(/\s+/g, " ")
     .replace(/^[\s、,。]+|[\s、,]+$/g, "")
@@ -219,6 +230,7 @@ export function templateTask(
     due,
     partyKind: party?.kind ?? null,
     partyId: party?.id ?? null,
+    repeat: rp?.repeat ?? null,
   };
 }
 
@@ -249,8 +261,13 @@ const SCHEMA = {
             type: ["string", "null"],
             description: "関わる取引先の名前(書いてあれば)",
           },
+          repeat: {
+            type: ["string", "null"],
+            description:
+              "繰り返し(「毎日」「毎週◯曜」「毎月◯日」「毎月末」と書いてあるときだけ。DAILY / WEEKLY:0〜6(0=日曜) / MONTHLY:1〜31 / MONTHLY:END)",
+          },
         },
-        required: ["title", "owner", "due", "party"],
+        required: ["title", "owner", "due", "party", "repeat"],
         additionalProperties: false,
       },
     },
@@ -339,6 +356,7 @@ export async function parseTasks(
           .join(""),
       ) as { tasks?: unknown };
       const hasDate = DATEISH.test(text.normalize("NFKC"));
+      const hasRepeat = /毎日|毎週|毎月|月末ごと/.test(text);
       const tasks = (Array.isArray(p.tasks) ? p.tasks : [])
         .map(
           (x) =>
@@ -347,6 +365,7 @@ export async function parseTasks(
               owner?: unknown;
               due?: unknown;
               party?: unknown;
+              repeat?: unknown;
             },
         )
         .filter((x) => typeof x.title === "string" && x.title.trim())
@@ -372,12 +391,15 @@ export async function parseTasks(
             ctx.parties,
             `${typeof x.party === "string" ? x.party : ""} ${title}`,
           );
+          // 繰り返しは文に「毎日・毎週・毎月」があるときだけ
+          const repeat = validRepeat(x.repeat) && hasRepeat ? x.repeat : null;
           return {
             title,
             ownerUserId: owner?.id ?? null,
-            due,
+            due: repeat ? (due ?? nextDue(repeat, today)) : due,
             partyKind: party?.kind ?? null,
             partyId: party?.id ?? null,
+            repeat,
           };
         });
       if (
@@ -436,7 +458,13 @@ export async function createTasks(
           : null;
       if (typeof t.ownerUserId === "string" && t.ownerUserId && !owner)
         throw new UserError("担当の人が見つかりません");
-      const due = typeof t.due === "string" && validDate(t.due) ? t.due : null;
+      const repeat = validRepeat(t.repeat) ? t.repeat : null;
+      const due =
+        typeof t.due === "string" && validDate(t.due)
+          ? t.due
+          : repeat
+            ? nextDue(repeat, jstDateKey(new Date()))
+            : null;
       const party =
         (t.partyKind === "customer" || t.partyKind === "vendor") &&
         typeof t.partyId === "string"
@@ -455,6 +483,7 @@ export async function createTasks(
           partyKind: party?.kind ?? null,
           partyId: party?.id ?? null,
           partyName: party?.name ?? null,
+          repeat,
           source,
           sourceId,
           createdByName: user.name,
@@ -463,8 +492,27 @@ export async function createTasks(
     })
     .filter((r): r is NonNullable<typeof r> => !!r);
   if (!rows.length) throw new UserError("登録するやることがありません");
+  // 同じ繰り返しのやること(内容・繰り返しが同じでまだ済んでいないもの)はもう一度入れない
+  const repeating = rows.filter((r) => r.data.repeat);
+  const open = repeating.length
+    ? await prisma.teamTask.findMany({
+        where: {
+          companyId: user.companyId,
+          status: "OPEN",
+          repeat: { in: repeating.map((r) => r.data.repeat!) },
+        },
+        select: { title: true, repeat: true },
+      })
+    : [];
+  const fresh = rows.filter(
+    (r) =>
+      !r.data.repeat ||
+      !open.some((o) => o.title === r.data.title && o.repeat === r.data.repeat),
+  );
+  const skipped = rows.length - fresh.length;
+  if (!fresh.length) return { tasks: [], mailed: 0, skipped };
   const created = await prisma.$transaction(
-    rows.map((r) => prisma.teamTask.create({ data: r.data })),
+    fresh.map((r) => prisma.teamTask.create({ data: r.data })),
   );
 
   // 自分以外の担当の人に、まとめて1通で知らせる
@@ -475,7 +523,7 @@ export async function createTasks(
       { member: Member; tasks: typeof created }
     >();
     created.forEach((task, i) => {
-      const m = rows[i].owner;
+      const m = fresh[i].owner;
       if (!m || !m.email || m.id === user.id) return;
       const g = byOwner.get(m.id) ?? { member: m, tasks: [] };
       g.tasks.push(task);
@@ -498,7 +546,7 @@ export async function createTasks(
       }
     }
   }
-  return { tasks: created, mailed };
+  return { tasks: created, mailed, skipped };
 }
 
 export const taskLine = (t: {
@@ -506,8 +554,9 @@ export const taskLine = (t: {
   dueOn: string | null;
   partyName: string | null;
   ownerName?: string | null;
+  repeat?: string | null;
 }) =>
-  `・${t.title}${t.partyName && !t.title.includes(t.partyName) ? `(${t.partyName})` : ""}${t.dueOn ? ` ${Number(t.dueOn.slice(5, 7))}/${Number(t.dueOn.slice(8, 10))}まで` : ""}`;
+  `・${t.title}${t.partyName && !t.title.includes(t.partyName) ? `(${t.partyName})` : ""}${t.dueOn ? ` ${Number(t.dueOn.slice(5, 7))}/${Number(t.dueOn.slice(8, 10))}まで` : ""}${t.repeat ? `(${repeatLabel(t.repeat)})` : ""}`;
 
 export async function listTasks(companyId: string) {
   const since = new Date(Date.now() - 14 * DAY);
@@ -527,11 +576,48 @@ export async function updateTask(
     where: { id, companyId: user.companyId },
   });
   if (!task) throw new UserError("やることが見つかりません");
-  if (raw.status === "DONE")
-    return prisma.teamTask.update({
+  if (raw.status === "DONE") {
+    const done = await prisma.teamTask.update({
       where: { id },
       data: { status: "DONE", doneAt: new Date(), doneByName: user.name },
     });
+    // 繰り返しのやることは、次の回を入れる(同じ回がもうあれば入れない)
+    let next = null;
+    if (task.repeat && validRepeat(task.repeat)) {
+      const dueOn = followingDue(
+        task.repeat,
+        task.dueOn,
+        jstDateKey(new Date()),
+      );
+      const exists = await prisma.teamTask.findFirst({
+        where: {
+          companyId: user.companyId,
+          title: task.title,
+          repeat: task.repeat,
+          dueOn,
+        },
+      });
+      next =
+        exists ??
+        (await prisma.teamTask.create({
+          data: {
+            companyId: user.companyId,
+            title: task.title,
+            ownerUserId: task.ownerUserId,
+            ownerName: task.ownerName,
+            dueOn,
+            partyKind: task.partyKind,
+            partyId: task.partyId,
+            partyName: task.partyName,
+            repeat: task.repeat,
+            source: task.source,
+            sourceId: task.sourceId,
+            createdByName: task.createdByName,
+          },
+        }));
+    }
+    return Object.assign(done, { next });
+  }
   if (raw.status === "OPEN")
     return prisma.teamTask.update({
       where: { id },
@@ -542,6 +628,7 @@ export async function updateTask(
     ownerUserId?: string | null;
     ownerName?: string | null;
     dueOn?: string | null;
+    repeat?: string | null;
   } = {};
   if (typeof raw.title === "string") {
     const title = raw.title.replace(/\s+/g, " ").trim().slice(0, 200);
@@ -568,6 +655,13 @@ export async function updateTask(
     if (raw.due && !(typeof raw.due === "string" && validDate(raw.due)))
       throw new UserError("期限の日付が正しくありません");
     data.dueOn = (raw.due as string) || null;
+  }
+  if ("repeat" in raw) {
+    if (raw.repeat && !validRepeat(raw.repeat))
+      throw new UserError("繰り返しの指定が正しくありません");
+    data.repeat = (raw.repeat as string) || null;
+    if (data.repeat && !task.dueOn && !("due" in raw))
+      data.dueOn = nextDue(data.repeat, jstDateKey(new Date()));
   }
   if (!Object.keys(data).length) throw new UserError("変更の内容がありません");
   return prisma.teamTask.update({ where: { id }, data });
@@ -651,7 +745,7 @@ export async function tasksFromMinutes(
     { tasks, source: "MINUTES", sourceId: m.id, notify },
     request,
   );
-  return { ...result, skipped: actions.length - tasks.length };
+  return { ...result, skipped: actions.length - result.tasks.length };
 }
 
 // 取引先のまだ済んでいないやること(カルテ・準備メモに出す)

@@ -3,6 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { TaskDraft } from "@/lib/teamTasks";
+import {
+  REPEAT_OPTIONS,
+  ROUTINE_EXAMPLES,
+  repeatLabel,
+} from "@/lib/taskRepeat";
 
 type Task = {
   id: string;
@@ -13,6 +18,7 @@ type Task = {
   partyKind: string | null;
   partyId: string | null;
   partyName: string | null;
+  repeat: string | null;
   source: string;
   sourceId: string | null;
   status: "OPEN" | "DONE";
@@ -102,7 +108,7 @@ export default function TaskView({
       const list = await call("/api/tasks", { method: "GET" });
       setTasks(list.tasks);
       setFlash(
-        `${data.tasks.length}件のやることを登録しました${data.mailed ? `(${data.mailed}人にメールで知らせました)` : ""}`,
+        `${data.tasks.length}件のやることを登録しました${data.mailed ? `(${data.mailed}人にメールで知らせました)` : ""}${data.skipped ? `。同じ繰り返しのやること${data.skipped}件はもう入っているので入れませんでした` : ""}`,
       );
       setDrafts(null);
       setText("");
@@ -121,7 +127,14 @@ export default function TaskView({
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      setTasks((prev) => prev.map((x) => (x.id === t.id ? data.task : x)));
+      const { next, ...task } = data.task;
+      setTasks((prev) => [
+        ...prev.map((x) => (x.id === t.id ? task : x)),
+        ...(next && !prev.some((x) => x.id === next.id) ? [next] : []),
+      ]);
+      setFlash(
+        next ? `済みにしました。次の回(${md(next.dueOn)})を入れました` : null,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "うまくいきませんでした");
     } finally {
@@ -218,6 +231,21 @@ export default function TaskView({
             className={`mt-1 ${input}`}
           />
         </label>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-slate-500">よくある定例の事務:</span>
+          {ROUTINE_EXAMPLES.map((ex) => (
+            <button
+              key={ex}
+              type="button"
+              onClick={() =>
+                setText((v) => (v.trim() ? `${v.trimEnd()}\n${ex}` : ex))
+              }
+              className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-slate-700 hover:bg-slate-50"
+            >
+              {ex}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => parse(false)}
@@ -248,7 +276,7 @@ export default function TaskView({
               {drafts.map((d, i) => (
                 <li
                   key={i}
-                  className="grid gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-[1fr_9rem_9rem_11rem_auto] sm:items-center"
+                  className="grid gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-[1fr_9rem_9rem_8rem_11rem_auto] sm:items-center"
                 >
                   <input
                     aria-label="やること"
@@ -280,6 +308,21 @@ export default function TaskView({
                     }
                     className={input}
                   />
+                  <select
+                    aria-label="繰り返し"
+                    value={d.repeat ?? ""}
+                    onChange={(e) =>
+                      setDraft(i, { repeat: e.target.value || null })
+                    }
+                    className={input}
+                  >
+                    <option value="">繰り返さない</option>
+                    {REPEAT_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
                   <select
                     aria-label="取引先"
                     value={d.partyId ? `${d.partyKind}:${d.partyId}` : ""}
@@ -417,6 +460,11 @@ export default function TaskView({
                   </p>
                   <p className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-slate-500">
                     {dueBadge(t)}
+                    {t.repeat && (
+                      <span className="text-indigo-700">
+                        🔁 {repeatLabel(t.repeat)}
+                      </span>
+                    )}
                     {t.partyKind && t.partyId && (
                       <Link
                         href={`/vendors/${t.partyKind}/${t.partyId}`}
