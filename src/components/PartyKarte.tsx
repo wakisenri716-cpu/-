@@ -89,6 +89,9 @@ export function PartyKarte({ kind, id, events, initialSummary, ai }: { kind: "cu
           <Link href={`/vendors/${kind}/${id}/after`} className="text-xs text-indigo-700 underline">
             訪問のあとで
           </Link>
+          <Link href={`/scheduling?kind=${kind}&id=${id}`} className="text-xs text-indigo-700 underline">
+            日程調整
+          </Link>
           {ai && (
             <button onClick={summarize} disabled={!!busy} className="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50">
               {busy === "ai" ? "AIがまとめています…" : summary.mode === "claude" ? "AIでまとめ直す" : "AIでまとめる"}
