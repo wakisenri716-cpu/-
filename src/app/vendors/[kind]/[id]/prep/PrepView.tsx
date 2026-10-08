@@ -43,6 +43,9 @@ export default function PrepView({ kind, id, initial, ai, today }: { kind: strin
           </button>
         )}
         <PrintButton variant="outline" />
+        <a href={`/vendors/${kind}/${id}/after`} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">
+          訪問のあとで
+        </a>
         {error && <p className="w-full rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</p>}
       </section>
 
