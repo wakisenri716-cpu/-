@@ -4,6 +4,7 @@ import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { normalizeName } from "@/lib/partyMerge";
+import { inventedNumbers } from "@/lib/ai/numberGuard";
 
 // 取引先カルテ: 取引先・顧客ごとに、やりとりの記録(請求書・入金・見積・発注・伝言・商談・契約・送ったメール・メモ)を時系列で並べ、
 // 「この相手のいま」(取引の状況・気をつけること・次にやること)をまとめる。AIが使えるときは、記録を読んで文章でまとめる。
@@ -131,7 +132,6 @@ const SCHEMA = {
   additionalProperties: false,
 } as const;
 
-const numbers = (s: string) => (s.normalize("NFKC").replace(/(\d),(?=\d{3})/g, "$1").match(/\d{2,}/g) ?? []);
 
 export async function summarizeKarte(user: { id: string; companyId: string }, kind: PartyKind, id: string, useAi: boolean) {
   const { facts } = await getKarte(user.companyId, kind, id);
@@ -174,8 +174,7 @@ export async function summarizeKarte(user: { id: string; companyId: string }, ki
       const cautions = list(p.cautions, 3);
       const next = list(p.next, 4);
       // 記録にない数字(金額・日付・番号)を書いていたら使わない
-      const allowed = new Set(numbers(JSON.stringify({ facts, base })));
-      const invented = numbers([summary, ...cautions, ...next].join(" ")).filter((n) => !allowed.has(n));
+      const invented = inventedNumbers([summary, ...cautions, ...next].join(" "), JSON.stringify({ facts, base }));
       if (summary && !invented.length) result = { status: base.status, cautions, next, summary, mode: "claude" };
     }
   } catch (error) {
