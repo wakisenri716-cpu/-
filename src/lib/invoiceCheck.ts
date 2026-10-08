@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
+import { closedReason, nextBusinessDay, prevBusinessDay } from "@/lib/holidays";
 
 // 請求書の送る前チェック: 発行した請求書を送る前に、よくある間違いを決まったルールで確かめる。
 // ・適格請求書の要件(登録番号)・振込先・宛先・期限(請求日より前/もう過ぎている)
@@ -50,6 +51,10 @@ export async function checkInvoice(companyId: string, id: string, today = jstDat
   if (!inv.dueDate) add("warn", "お支払期限がありません");
   if (inv.issueDate && inv.dueDate && inv.dueDate < inv.issueDate) add("error", `お支払期限(${key(inv.dueDate)})が請求日(${key(inv.issueDate)})より前です`);
   if (inv.dueDate && key(inv.dueDate) < today && (inv.status === "CONFIRMED" || inv.status === "PENDING_REVIEW")) add("warn", `お支払期限(${key(inv.dueDate)})がもう過ぎています。期限を見直してから送ってください`);
+  if (inv.dueDate && key(inv.dueDate) >= today && closedReason(key(inv.dueDate), "bank")) {
+    const due = key(inv.dueDate);
+    add("info", `お支払期限(${due})は銀行の休業日(${closedReason(due, "bank")})です。振込は前の営業日(${prevBusinessDay(due, "bank")})か次の営業日(${nextBusinessDay(due, "bank")})になります。期限の書き方を確かめてください`);
+  }
   if (inv.issueDate && Date.parse(`${key(inv.issueDate)}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`) > 31 * DAY) add("warn", `請求日(${key(inv.issueDate)})が1か月以上先です`);
 
   // 明細

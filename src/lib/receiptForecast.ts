@@ -4,6 +4,7 @@ import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { formatYen } from "@/lib/format";
+import { closedReason, nextBusinessDay } from "@/lib/holidays";
 
 // 入金予測: 入金待ちの請求書が、期日ではなく「実際にはいつ入りそうか」を、顧客ごとの過去の払い方から見込む。
 // ・入金済みの請求書(直近2年)で、期日から何日後に払い終えたか(早いときはマイナス)の中央値を、その顧客のふだんのずれとする
@@ -118,6 +119,12 @@ export async function predictReceipts(companyId: string, today = jstDateKey(new 
       } else {
         predicted = today;
       }
+    }
+    // 銀行の休業日(土日・祝日・年末年始)には入金されないので、次の営業日にずらす
+    const closed = predicted > today ? closedReason(predicted, "bank") : null;
+    if (closed) {
+      predicted = nextBusinessDay(predicted, "bank");
+      basis += `(${closed}なので次の営業日)`;
     }
     rows.push({
       invoiceId: inv.id,
