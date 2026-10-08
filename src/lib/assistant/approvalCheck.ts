@@ -9,6 +9,7 @@ import { getRequest, KIND_LABELS, type RequestKind } from "@/lib/approvals/servi
 import { leaveBalance } from "@/lib/leave/service";
 import { getCashBalance } from "@/lib/dashboard";
 import { findDuplicates } from "@/lib/duplicates";
+import { closedReason } from "@/lib/holidays";
 
 // 申請・承認のAIチェック: 稟議・申請や経費精算を承認する前に、決まったルールで確かめられること
 // (重複・上限超え・領収書なし・有給の残り・初めての支払先など)を調べ、AIが内容を読んで
@@ -135,8 +136,9 @@ async function expenseFacts(companyId: string, id: string) {
     if (i.account?.name.includes("交際")) points.push(rule("info", `「${i.description}」は交際費です。相手先・人数・目的がわかるか確かめてください。`));
     return { date, weekday: "日月火水木金土"[dow], description: i.description, amount: i.amount, account: i.account?.name ?? null, vendor: i.vendor?.name ?? null, vendorInvoiceRegistered: i.vendor ? !!i.vendor.registrationNumber : null, hasReceipt: !!i.receiptImageUrl };
   });
-  const weekend = items.filter((i) => i.weekday === "土" || i.weekday === "日");
-  if (weekend.length) points.push(rule("info", `土日の経費が ${weekend.length}件 あります(${weekend.map((i) => `${i.date.slice(5)} ${i.description}`).slice(0, 3).join("、")})。仕事のための支払か確かめてください。`));
+  // 土日・祝日・年末年始の経費(休みの日の支払は私用が混ざりやすい)
+  const offDay = items.map((i) => ({ ...i, off: closedReason(i.date) })).filter((i) => i.off);
+  if (offDay.length) points.push(rule("info", `休みの日(土日・祝日・年末年始)の経費が ${offDay.length}件 あります(${offDay.map((i) => `${i.date.slice(5)}(${i.off}) ${i.description}`).slice(0, 3).join("、")})。仕事のための支払か確かめてください。`));
   const past = await prisma.expenseReport.findMany({
     where: { companyId, employeeId: report.employee.id, id: { not: report.id }, createdAt: { gte: new Date(base.getTime() - 180 * DAY) } },
     select: { items: { select: { amount: true } } },

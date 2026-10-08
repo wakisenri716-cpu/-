@@ -8,6 +8,7 @@ import { getCashBalance, getTodos } from "@/lib/dashboard";
 import { getAging } from "@/lib/accounting/receivables";
 import { nextDay } from "@/lib/accounting/period";
 import { getWatches } from "@/lib/aiWatch";
+import { closedReason, isBusinessDay } from "@/lib/holidays";
 
 // AIの朝のブリーフィング: 今日の「やること」、昨日のお金の動き、今週の入金・支払の予定をまとめ、
 // AIが「今日まずやること」を優先順に選んで理由をつける。会社・日ごとに1つ保存する。
@@ -25,6 +26,24 @@ const addDays = (key: string, n: number) => new Date(Date.parse(`${key}T00:00:00
 
 export function weekdayOf(key: string) {
   return WEEKDAYS[new Date(`${key}T00:00:00Z`).getUTCDay()];
+}
+
+// 明日から続く休み(3日以上か、祝日・年末年始を含むときだけ)。銀行の手続きを前倒しするための知らせ
+export function upcomingClosure(today: string) {
+  if (!isBusinessDay(today)) return null;
+  const days: { date: string; reason: string }[] = [];
+  for (let d = addDays(today, 1); days.length < 12; d = addDays(d, 1)) {
+    const reason = closedReason(d);
+    if (!reason) break;
+    days.push({ date: d, reason });
+  }
+  if (!days.length || (days.length < 3 && days.every((d) => d.reason === "土曜日" || d.reason === "日曜日"))) return null;
+  return { from: days[0].date, to: days[days.length - 1].date, days: days.length, names: [...new Set(days.map((d) => d.reason).filter((r) => r !== "土曜日" && r !== "日曜日"))], nextBusinessDay: addDays(days[days.length - 1].date, 1) };
+}
+
+export function closureNote(c: NonNullable<ReturnType<typeof upcomingClosure>>) {
+  const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
+  return `明日から${c.days}日間お休みです(${md(c.from)}〜${md(c.to)}${c.names.length ? `・${c.names.join("・")}` : ""})。振込・入金の確認など銀行の手続きは今日中に。次の営業日は${md(c.nextBusinessDay)}です。`;
 }
 
 export async function buildBriefingFacts(companyId: string, now = new Date()) {
@@ -54,6 +73,7 @@ export async function buildBriefingFacts(companyId: string, now = new Date()) {
   return {
     date: today,
     weekday: weekdayOf(today),
+    closureAhead: upcomingClosure(today),
     cash,
     todos: todos.map((t) => ({ key: t.key, label: t.label, count: t.count, detail: t.detail, href: t.href, urgent: t.tone === "rose" })),
     yesterday: {
@@ -217,6 +237,8 @@ export async function generateBriefing(companyId: string, userId = "system", now
     }
   }
   result ??= templateBriefing(facts);
+  // 連休前の知らせは、AIが書かなかったときも必ず入れる
+  if (facts.closureAhead && !result.notes.some((n) => n.includes("お休み"))) result = { ...result, notes: [closureNote(facts.closureAhead), ...result.notes].slice(0, 4) };
   await prisma.assistantLog.create({ data: { companyId, userId, question: `朝のブリーフィング ${facts.date}`, tools: [], mode: `briefing-${mode}` } });
   return prisma.dailyBriefing.upsert({
     where: { companyId_date: { companyId, date: facts.date } },
