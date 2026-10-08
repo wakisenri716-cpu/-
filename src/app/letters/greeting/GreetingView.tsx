@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { GreetingKind, GREETING_KINDS } from "@/lib/greetingLetters";
 import { PrintButton } from "@/components/PrintButton";
+import GreetingMailPanel, { type MailRecipient } from "./GreetingMailPanel";
+import type { MailSender } from "@/lib/greetingMailText";
 
 type Kinds = typeof GREETING_KINDS;
 type Party = { kind: "customer" | "vendor"; id: string; name: string };
@@ -22,7 +24,7 @@ type Letter = {
 const ORDER: GreetingKind[] = ["THANKS", "HOLIDAY", "MOVE", "PERSON", "APOLOGY", "LAUNCH"];
 const jp = (key: string) => `${Number(key.slice(0, 4))}年${Number(key.slice(5, 7))}月${Number(key.slice(8, 10))}日`;
 
-export default function GreetingView({ kinds, parties, today, ai }: { kinds: Kinds; parties: Party[]; today: string; ai: boolean }) {
+export default function GreetingView({ kinds, parties, today, ai, mail }: { kinds: Kinds; parties: Party[]; today: string; ai: boolean; mail: { recipients: MailRecipient[]; me: Omit<MailSender, "sender"> } | null }) {
   const [kind, setKind] = useState<GreetingKind>("THANKS");
   const [fields, setFields] = useState<Record<string, string>>({});
   const [party, setParty] = useState("");
@@ -173,6 +175,7 @@ export default function GreetingView({ kinds, parties, today, ai }: { kinds: Kin
               </div>
             )}
           </article>
+          {mail && <GreetingMailPanel key={`${letter.subject}:${letter.body.join("")}`} letter={letter} recipients={mail.recipients} me={mail.me} />}
         </div>
       )}
     </div>
