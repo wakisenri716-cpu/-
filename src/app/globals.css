@@ -43,8 +43,9 @@
   --color-vermilion-300: #ef9c80;
   --color-vermilion-400: #e8734f;
   --color-vermilion-500: #e0522d;
-  --color-vermilion-600: #e0522d;
-  --color-vermilion-700: #c4431f;
+  /* ボタンはロゴ(500)より少し深い朱色。白い文字との差を4.5:1以上にして読みやすく */
+  --color-vermilion-600: #c64422;
+  --color-vermilion-700: #a8391a;
   --color-vermilion-800: #9e3519;
   --color-vermilion-900: #7f2c16;
 
