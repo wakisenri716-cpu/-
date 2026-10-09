@@ -248,6 +248,7 @@ model Company {
   minutes              Minutes[]
   entertainmentRecords EntertainmentRecord[]
   phoneMemos           PhoneMemo[]
+  mailItems     MailItem[]
   partyNotes           PartyNote[]
   teamTasks            TeamTask[]
   closures             CompanyClosure[]
@@ -2434,4 +2435,26 @@ model CompanyClosure {
   name      String
 
   @@unique([companyId, date])
+}
+
+// 郵便物・荷物の受付(届いたものを記録して、宛先の人に渡すまで知らせる)
+model MailItem {
+  id          String    @id @default(cuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  receivedOn  String // 届いた日 YYYY-MM-DD
+  kind        String    @default("LETTER") // LETTER / INVOICE / PACKAGE / REGISTERED / OFFICIAL / DM
+  sender      String?
+  partyKind   String? // customer / vendor
+  partyId     String?
+  forUserId   String? // 宛先(null は「会社あて・どなたか」)
+  forName     String?
+  note        String?
+  status      String    @default("WAITING") // WAITING(まだ渡していない) / HANDED(渡した)
+  handedAt    DateTime?
+  handedTo    String?
+  takenByName String
+  createdAt   DateTime  @default(now())
+
+  @@index([companyId, status])
 }
