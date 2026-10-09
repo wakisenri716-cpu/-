@@ -407,6 +407,11 @@ model Customer {
   name             String
   // 振込名義(銀行明細の摘要に出る名前)。入金を請求書と消込んだときに覚え、次からの消込の候補に使う
   payerName        String?
+  // 支払条件(締め日・支払日)。請求書の支払期限の初期値に使う。closingDay/payDay は 0 で月末
+  closingDay       Int?
+  payMonths        Int?
+  payDay           Int?
+  holidayRule      String? // next(翌営業日) / prev(前営業日) / none
   // 請求書・見積書をメールで送るときの宛先(前回入力したものを覚えておく)
   email            String?
   address          String?
