@@ -54,7 +54,11 @@ export function suggestSlots(opts: {
 }
 
 // 候補のおかしいところ(休みの日・過ぎた日・時刻の前後)
-export function slotWarnings(slots: Slot[], today: string) {
+export function slotWarnings(
+  slots: Slot[],
+  today: string,
+  closures: Record<string, string> = {},
+) {
   return slots.flatMap((s) => {
     const w: string[] = [];
     if (s.date <= today) w.push(`${slotLabel(s)}は今日より前か今日です`);
@@ -62,6 +66,8 @@ export function slotWarnings(slots: Slot[], today: string) {
       w.push(
         `${slotLabel(s)}は休みの日(${holidayName(s.date) ?? "土日・年末年始"})です`,
       );
+    else if (closures[s.date])
+      w.push(`${slotLabel(s)}は会社の休業日(${closures[s.date]})です`);
     if (s.end <= s.start)
       w.push(`${slotLabel(s)}の終わりの時刻が始まりより前です`);
     return w;

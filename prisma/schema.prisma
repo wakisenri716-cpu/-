@@ -250,6 +250,7 @@ model Company {
   phoneMemos           PhoneMemo[]
   partyNotes           PartyNote[]
   teamTasks            TeamTask[]
+  closures             CompanyClosure[]
   inboxItems           InboxItem[]
   dailyBriefings       DailyBriefing[]
   approvalChecks       ApprovalCheck[]
@@ -2422,4 +2423,15 @@ model TeamTask {
 
   @@index([companyId, status])
   @@index([companyId, partyKind, partyId])
+}
+
+// 会社の休業日(夏季休業・創立記念日など)。日程調整・朝のまとめの連休前の知らせ・営業日の数え方に使う(税金・銀行の期限は国の祝日だけで決める)
+model CompanyClosure {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  date      String // YYYY-MM-DD
+  name      String
+
+  @@unique([companyId, date])
 }

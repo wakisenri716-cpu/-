@@ -24,6 +24,7 @@ type Draft = {
   subject: string;
   slots: Slot[];
   busy: string[];
+  closures?: Record<string, string>;
   place: Place;
   minutes: number;
   intro: string | null;
@@ -91,7 +92,7 @@ export default function SchedulingView({
 
   const today = jstDateKey(new Date());
   const body = useMemo(() => (draft ? schedulingMail(draft) : ""), [draft]);
-  const warnings = draft ? slotWarnings(draft.slots, today) : [];
+  const warnings = draft ? slotWarnings(draft.slots, today, draft.closures ?? {}) : [];
   const email = party
     ? parties.find((p) => `${p.kind}:${p.id}` === party)?.email
     : null;
