@@ -7,6 +7,7 @@ import { normalizeName } from "@/lib/partyMerge";
 import { inventedNumbers } from "@/lib/ai/numberGuard";
 import { parseDue } from "@/lib/minutes";
 import { MailError, appUrl, sendMail } from "@/lib/mail";
+import { closureMap } from "@/lib/companyClosures";
 import {
   followingDue,
   nextDue,
@@ -439,7 +440,7 @@ export async function createTasks(
     0,
     30,
   ) as Record<string, unknown>[];
-  const ctx = await taskContext(user.companyId);
+  const [ctx, closures] = await Promise.all([taskContext(user.companyId), closureMap(user.companyId)]);
   const source = SOURCES.includes(raw.source as (typeof SOURCES)[number])
     ? (raw.source as string)
     : "MANUAL";
@@ -463,7 +464,7 @@ export async function createTasks(
         typeof t.due === "string" && validDate(t.due)
           ? t.due
           : repeat
-            ? nextDue(repeat, jstDateKey(new Date()))
+            ? nextDue(repeat, jstDateKey(new Date()), closures)
             : null;
       const party =
         (t.partyKind === "customer" || t.partyKind === "vendor") &&
@@ -588,6 +589,7 @@ export async function updateTask(
         task.repeat,
         task.dueOn,
         jstDateKey(new Date()),
+        await closureMap(user.companyId),
       );
       const exists = await prisma.teamTask.findFirst({
         where: {
@@ -661,7 +663,7 @@ export async function updateTask(
       throw new UserError("繰り返しの指定が正しくありません");
     data.repeat = (raw.repeat as string) || null;
     if (data.repeat && !task.dueOn && !("due" in raw))
-      data.dueOn = nextDue(data.repeat, jstDateKey(new Date()));
+      data.dueOn = nextDue(data.repeat, jstDateKey(new Date()), await closureMap(task.companyId));
   }
   if (!Object.keys(data).length) throw new UserError("変更の内容がありません");
   return prisma.teamTask.update({ where: { id }, data });

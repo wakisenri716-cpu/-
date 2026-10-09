@@ -3,16 +3,18 @@ import { aiEnabled } from "@/lib/ai/access";
 import { jstDateKey } from "@/lib/jst";
 import { listTasks, taskContext } from "@/lib/teamTasks";
 import TaskView from "./TaskView";
+import { closureMap } from "@/lib/companyClosures";
 
 export const dynamic = "force-dynamic";
 
 export default async function TasksPage() {
   const companyId = await requireCompanyId();
   const user = await requireMember();
-  const [tasks, ctx, ai] = await Promise.all([
+  const [tasks, ctx, ai, closures] = await Promise.all([
     listTasks(companyId),
     taskContext(companyId),
     aiEnabled(companyId),
+    closureMap(companyId),
   ]);
   return (
     <div className="space-y-6">
@@ -27,6 +29,7 @@ export default async function TasksPage() {
         </p>
       </div>
       <TaskView
+        closures={Object.fromEntries(closures)}
         initial={JSON.parse(JSON.stringify(tasks))}
         users={ctx.users.map((u) => ({
           id: u.id,

@@ -7,7 +7,7 @@ import { closureNotice, groupClosures, shortDate, type Closure } from "@/lib/clo
 const input = "mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm";
 
 // 会社の休業日(夏季休業・創立記念日など)
-export function ClosuresCard({ initial, today }: { initial: Closure[]; today: string }) {
+export function ClosuresCard({ initial, today, taskDues }: { initial: Closure[]; today: string; taskDues: string[] }) {
   const [list, setList] = useState(initial);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -15,6 +15,8 @@ export function ClosuresCard({ initial, today }: { initial: Closure[]; today: st
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [announced, setAnnounced] = useState<Record<string, string>>({});
+  const [dues, setDues] = useState(taskDues);
+  const [shifted, setShifted] = useState<Record<string, string>>({});
 
   async function call(method: "POST" | "DELETE", body: unknown) {
     setBusy(true);
@@ -46,6 +48,23 @@ export function ClosuresCard({ initial, today }: { initial: Closure[]; today: st
       setAnnounced((a) => ({ ...a, [date]: data.title }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "お知らせを出せませんでした");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // お休み中が期限のやることを、お休みの前の営業日に前倒し
+  async function shift(date: string, from: string, to: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/company/closures/tasks", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ date }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "前倒しできませんでした");
+      setDues((d) => d.map((x) => (x >= from && x <= to ? data.before : x)));
+      setShifted((s) => ({ ...s, [date]: `${data.count}件を${shortDate(data.before)}に前倒ししました` }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "前倒しできませんでした");
     } finally {
       setBusy(false);
     }
@@ -93,6 +112,7 @@ export function ClosuresCard({ initial, today }: { initial: Closure[]; today: st
               </div>
               {(() => {
                 const n = closureNotice(g, map);
+                const due = dues.filter((d) => d >= n.from && d <= n.to).length;
                 return (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                     <span className="text-slate-500">
@@ -109,6 +129,16 @@ export function ClosuresCard({ initial, today }: { initial: Closure[]; today: st
                         社内に知らせる
                       </button>
                     )}
+                    {shifted[g.dates[0]] ? (
+                      <span className="text-emerald-700">{shifted[g.dates[0]]}</span>
+                    ) : due > 0 ? (
+                      <span className="text-amber-800">
+                        お休み中が期限のやること{due}件
+                        <button onClick={() => shift(g.dates[0], n.from, n.to)} disabled={busy} className="ml-1 text-indigo-700 hover:underline disabled:opacity-50">
+                          休みの前に前倒し
+                        </button>
+                      </span>
+                    ) : null}
                   </div>
                 );
               })()}

@@ -50,6 +50,7 @@ export default function TaskView({
   viewerId,
   today,
   ai,
+  closures = {},
 }: {
   initial: Task[];
   users: User[];
@@ -57,6 +58,7 @@ export default function TaskView({
   viewerId: string;
   today: string;
   ai: boolean;
+  closures?: Record<string, string>;
 }) {
   const [tasks, setTasks] = useState(initial);
   const [text, setText] = useState("");
@@ -188,9 +190,12 @@ export default function TaskView({
     (t) => mine(t) && t.dueOn && t.dueOn < today,
   ).length;
 
-  // 期限の日が祝日なら名前を添える(休みの日に期限を置いていないか気づけるように)
+  // 期限の日が祝日・会社の休業日なら名前を添える(休みの日に期限を置いていないか気づけるように)
   function dueBadge(t: Task) {
-    const off = t.dueOn && t.status === "OPEN" ? holidayName(t.dueOn) : null;
+    const off =
+      t.dueOn && t.status === "OPEN"
+        ? (holidayName(t.dueOn) ?? closures[t.dueOn] ?? null)
+        : null;
     return (
       <>
         {dueText(t)}
