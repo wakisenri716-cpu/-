@@ -206,7 +206,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
       tone: "amber",
     },
     { key: "quoteFollowup", label: "返事待ちの見積", detail: "送ってから7日たった・有効期限が近い見積書があります。ご検討の状況をうかがいましょう", count: quoteFollow, href: "/quote-followup", tone: "amber" },
-    { key: "mailLog", label: user ? "届いている自分あての郵便物・荷物" : "まだ渡していない郵便物・荷物", detail: waitingMail.important ? `書留・役所から・請求書が${waitingMail.important}件あります。受け取ったら「渡した」に` : "受け取ったら「渡した」に", count: waitingMail.count, href: "/mail-log", tone: waitingMail.important ? "rose" : "amber" },
+    { key: "mailLog", label: user ? "届いている自分あての郵便物・荷物" : "まだ渡していない郵便物・荷物", detail: [waitingMail.important ? `書留・役所から・請求書が${waitingMail.important}件あります。` : "", waitingMail.stale ? `届いてから3日以上たったものが${waitingMail.stale}件あります。` : "", "受け取ったら「渡した」に"].join(""), count: waitingMail.count, href: "/mail-log", tone: waitingMail.important || waitingMail.stale ? "rose" : "amber" },
     { key: "teamTasks", label: user ? "期限が来た自分のやること" : "期限が来たやること", detail: dueTasks.overdue ? `期限を過ぎたものが${dueTasks.overdue}件あります。済んだら「済み」に` : "今日が期限のやることがあります。済んだら「済み」に", count: dueTasks.count, href: "/tasks", tone: dueTasks.overdue ? "rose" : "amber" },
     { key: "phoneMemos", label: "伝言メモ", detail: memos.urgent ? `至急が${memos.urgent}件あります。折り返したら「対応済み」に` : "電話・来客の伝言があります。折り返したら「対応済み」に", count: memos.count, href: "/phone-memos", tone: memos.urgent ? "rose" : "amber" },
     {

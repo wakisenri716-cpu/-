@@ -2,6 +2,8 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
 import { findPartyInText, getKarte, templateSummary } from "@/lib/partyKarte";
 import { listMemos, memoTitle } from "@/lib/phoneMemos";
+import { waitingMailFor } from "@/lib/mailItems";
+import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
 import { MEMO_ACTIONS, type MemoAction } from "@/lib/phoneMemoLabels";
 import { ruleCheck } from "@/lib/textCheck";
 import { jstDateKey } from "@/lib/jst";
@@ -387,6 +389,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_phone_memos",
     description: "伝言メモ(電話・来客)。対応していない伝言(相手・宛先・用件・折り返しの要否・至急・受けた日時)を、至急・新しい順に最大20件返す。「伝言はある?」「折り返しが必要な電話は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_mail_items",
+    description: "郵便物・荷物の受付。まだ渡していない郵便物・荷物(種類・差出人・宛先・メモ・届いた日・何日たったか)を、届いた順に最大30件返す。mine=true なら聞いた人あてと宛先なしのものだけ。「私あての郵便物は?」「荷物は届いてる?」「書留は来てる?」などに使う。",
+    input_schema: { type: "object", properties: { mine: { type: "boolean", description: "聞いた人あてだけにする" } }, additionalProperties: false },
   },
   {
     name: "get_tasks",
@@ -878,6 +885,16 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         urgent: memos.filter((m) => m.urgent).length,
         memos: memos.map((m) => ({ from: memoTitle(m), phone: m.callerPhone, for: m.forName ?? "どなたか", message: m.message, action: MEMO_ACTIONS[m.action as MemoAction] ?? m.action, urgent: m.urgent, at: jstDateKey(m.createdAt) })),
         link: "/phone-memos",
+      };
+    }
+    case "get_mail_items": {
+      const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);
+      return {
+        count: items.length,
+        important: items.filter((m) => m.kind === "REGISTERED" || m.kind === "OFFICIAL" || m.kind === "INVOICE").length,
+        stale: items.filter((m) => m.days >= 3).length,
+        items: items.map((m) => ({ kind: MAIL_KINDS[m.kind as MailKind] ?? m.kind, title: m.title, for: m.for, note: m.note, receivedOn: m.receivedOn, days: m.days })),
+        link: "/mail-log",
       };
     }
     case "get_tasks": {

@@ -153,7 +153,7 @@ async function askClaude(client: Anthropic, ctx: { companyId: string; userId: st
 }
 
 // APIキーがないときの簡易版: 言葉の手がかりで道具を1つ選び、結果を文章にする
-async function askSimple(companyId: string, question: string): Promise<AssistantReply> {
+async function askSimple(companyId: string, question: string, userId = ""): Promise<AssistantReply> {
   const q = question.normalize("NFKC");
   const preset = /先月/.test(q) ? "last-month" : /前期|去年|昨年/.test(q) ? "last-fy" : /今期|今年|年度/.test(q) ? "this-fy" : "this-month";
   const label = { "last-month": "先月", "last-fy": "前期", "this-fy": "今期", "this-month": "今月" }[preset];
@@ -222,6 +222,20 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
         `次の営業日: ${md(r.nextBusinessDay)}`,
       ].join("\n"),
       tools: ["get_business_calendar"],
+      mode: "simple",
+    };
+  }
+  if (/郵便|荷物|書留|宅配|届いて(る|い)/.test(q) && !/伝言/.test(q)) {
+    const mine = /(私|わたし|自分|僕|ぼく)(あて|宛|宛て|に)/.test(q);
+    const r = (await runAssistantTool({ companyId, userId }, "get_mail_items", { mine })) as { count: number; important: number; stale: number; items: { kind: string; title: string; for: string; note: string | null; days: number }[] };
+    if (!r.count) return { reply: `${mine ? "あなたあての" : ""}まだ渡していない郵便物・荷物はありません。[郵便物・荷物](/mail-log)`, tools: ["get_mail_items"], mode: "simple" };
+    return {
+      reply: [
+        `${mine ? "あなたあて(宛先なしを含む)の" : ""}まだ渡していない郵便物・荷物が ${r.count}件 あります${r.important ? `(書留・役所から・請求書 ${r.important}件)` : ""}:`,
+        ...r.items.slice(0, 8).map((m) => `・${m.title} → ${m.for}${m.note ? `(${m.note})` : ""}${m.days >= 3 ? ` ※${m.days}日たっています` : ""}`),
+        "[郵便物・荷物](/mail-log)",
+      ].join("\n"),
+      tools: ["get_mail_items"],
       mode: "simple",
     };
   }
@@ -516,7 +530,7 @@ export async function askAssistant(user: { id: string; companyId: string }, inpu
       throw error;
     }
   } else {
-    result = await askSimple(user.companyId, question.text);
+    result = await askSimple(user.companyId, question.text, user.id);
   }
   await prisma.assistantLog.create({ data: { companyId: user.companyId, userId: user.id, question: question.text.slice(0, 500), tools: result.tools, mode: result.mode } });
   return result;

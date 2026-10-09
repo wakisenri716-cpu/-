@@ -146,7 +146,12 @@ export async function parseMailText(user: { id: string; companyId: string }, raw
   return { items, mode };
 }
 
-export const mailTitle = (m: { kind: string; sender: string | null }) => `${m.sender ? `${m.sender}から` : ""}${MAIL_KINDS[m.kind as MailKind] ?? "郵便物"}`;
+// 見出し(「税務署からの郵便物」「アスクルからの荷物」)
+const TITLE_WORD: Record<MailKind, string> = { LETTER: "郵便物", INVOICE: "請求書", PACKAGE: "荷物", REGISTERED: "書留", OFFICIAL: "郵便物", DM: "案内" };
+export const mailTitle = (m: { kind: string; sender: string | null }) => {
+  const word = TITLE_WORD[m.kind as MailKind] ?? "郵便物";
+  return m.sender ? `${m.sender}からの${word}` : m.kind === "OFFICIAL" ? "役所からの郵便物" : (MAIL_KINDS[m.kind as MailKind] ?? "郵便物");
+};
 
 // まとめて記録する。宛先の人にメールで知らせる(1人1通)
 export async function createMailItems(user: { id: string; companyId: string; name: string }, raw: Record<string, unknown>, request?: Request) {
@@ -216,6 +221,23 @@ export async function deleteMailItem(companyId: string, id: string) {
 // やることリスト: 自分あて・宛先なしの、まだ渡していないもの(user がなければ全部)
 export async function countWaitingMail(companyId: string, userId?: string) {
   const where = { companyId, status: "WAITING", ...(userId ? { OR: [{ forUserId: userId }, { forUserId: null }] } : {}) };
-  const [count, important] = await Promise.all([prisma.mailItem.count({ where }), prisma.mailItem.count({ where: { ...where, kind: { in: ["REGISTERED", "OFFICIAL", "INVOICE"] } } })]);
-  return { count, important };
+  const staleBefore = addDaysKey(jstDateKey(new Date()), -(STALE_DAYS - 1));
+  const [count, important, stale] = await Promise.all([
+    prisma.mailItem.count({ where }),
+    prisma.mailItem.count({ where: { ...where, kind: { in: ["REGISTERED", "OFFICIAL", "INVOICE"] } } }),
+    prisma.mailItem.count({ where: { ...where, receivedOn: { lt: staleBefore } } }),
+  ]);
+  return { count, important, stale };
+}
+
+// 届いてから何日たったか(届いた日を0日)。STALE_DAYS 日以上は「受け取られていない」として知らせる
+export const STALE_DAYS = 3;
+const addDaysKey = (key: string, n: number) => new Date(Date.parse(`${key}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+export const daysWaiting = (receivedOn: string, today: string) => Math.max(0, Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${receivedOn}T00:00:00Z`)) / 86_400_000));
+
+// AIアシスタント用: まだ渡していないもの(mine なら自分あて・宛先なし)
+export async function waitingMailFor(companyId: string, userId: string | null) {
+  const today = jstDateKey(new Date());
+  const rows = await prisma.mailItem.findMany({ where: { companyId, status: "WAITING", ...(userId ? { OR: [{ forUserId: userId }, { forUserId: null }] } : {}) }, orderBy: { receivedOn: "asc" }, take: 30 });
+  return rows.map((m) => ({ id: m.id, kind: m.kind, title: mailTitle(m), for: m.forName ?? "会社あて・どなたか", note: m.note, receivedOn: m.receivedOn, days: daysWaiting(m.receivedOn, today) }));
 }
