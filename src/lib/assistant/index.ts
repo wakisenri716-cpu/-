@@ -186,6 +186,24 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
       mode: "simple",
     };
   }
+  // 「コピー用紙の前回の仕入値は?」「トナーの単価は?」
+  const priceQ = q.match(/^(.{2,30}?)の(?:前回の|最近の|いつもの)?(?:仕入値|仕入れ値|仕入価格|発注単価|単価|値段)/);
+  if (priceQ) {
+    const item = priceQ[1].replace(/^(?:前回|最近)の/, "").trim();
+    const r = (await run("get_purchase_prices", { item })) as { found: number; history: { date: string; vendor: string; unitPrice: number; quantity: number; unit: string | null }[]; byVendor: { vendor: string; unitPrice: number; date: string }[] };
+    const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
+    if (!r.found) return { reply: `この2年の発注書に「${item}」は見つかりませんでした。見積を比べるときは「相見積の比較」(/quote-compare)が使えます。`, tools: ["get_purchase_prices"], mode: "simple" };
+    const last = r.history[0];
+    return {
+      reply: [
+        `「${item}」の前回の仕入値: ${last.unitPrice.toLocaleString()}円(税抜、${md(last.date)} ${last.vendor}、${last.quantity}${last.unit ?? ""})`,
+        ...(r.byVendor.length > 1 ? [`仕入先ごと(新しい単価・安い順): ${r.byVendor.map((v) => `${v.vendor} ${v.unitPrice.toLocaleString()}円(${md(v.date)})`).join("、")}`] : []),
+        ...(r.history.length > 1 ? [`これまで: ${r.history.slice(0, 5).map((h) => `${md(h.date)} ${h.unitPrice.toLocaleString()}円`).join(" → ")}`] : []),
+      ].join("\n"),
+      tools: ["get_purchase_prices"],
+      mode: "simple",
+    };
+  }
   if (/祝日|営業日|休業日/.test(q)) {
     const mm = q.match(/(\d{1,2})\s*月/);
     const today = jstDateKey(new Date());

@@ -51,6 +51,7 @@ import { draftScheduling } from "@/lib/scheduling";
 import { slotLabel } from "@/lib/schedulingText";
 import { holidaysOf, nextBusinessDay } from "@/lib/holidays";
 import { closureMap, isCompanyOpen } from "@/lib/companyClosures";
+import { priceHistory } from "@/lib/quoteCompare";
 import { defaultWeek, mondayOf, templateWeekly, weeklyFacts } from "@/lib/weeklyReport";
 import { repeatLabel } from "@/lib/taskRepeat";
 import { getEntertainment, KIND_LABEL } from "@/lib/entertainment";
@@ -417,6 +418,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_business_calendar",
     description: "営業日と祝日。指定した月(既定は今月)の祝日(振替休日・国民の休日を含む)、会社の休業日(夏季休業など)、営業日の数(土日・祝日・年末年始・会社の休業日を除く)、今日の次の営業日を返す。「11月の祝日は?」「今月の営業日は何日?」「次の営業日は?」などに使う。",
     input_schema: { type: "object", properties: { month: { type: "string", description: "YYYY-MM(任意)" } }, additionalProperties: false },
+  },
+  {
+    name: "get_purchase_prices",
+    description: "仕入値の履歴。品目(例: コピー用紙・トナー)の、この2年の発注書での単価(税抜)・日付・仕入先と、仕入先ごとのいちばん新しい単価(安い順)を返す。「コピー用紙の前回の仕入値は?」「トナーはどこが安い?」などに使う。見積を比べるときは /quote-compare を案内する。",
+    input_schema: { type: "object", properties: { item: { type: "string", description: "品目の名前" } }, required: ["item"], additionalProperties: false },
   },
   {
     name: "check_text",
@@ -928,6 +934,12 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         nextBusinessDay: next,
         note: "営業日は土日・祝日・年末年始(12/29〜1/3)と会社の休業日(会社の設定で登録)を除いた日",
       };
+    }
+    case "get_purchase_prices": {
+      const item = str(input.item).replace(/\s+/g, " ").trim().slice(0, 60);
+      if (!item) return { error: "品目を指定してください" };
+      const r = await priceHistory(companyId, item);
+      return { ...r, note: r.found ? "単価は税抜。発注書の明細から" : "この2年の発注書に、この品目は見つかりませんでした", compareLink: "/quote-compare" };
     }
     case "check_text": {
       const text = str(input.text).slice(0, 8000);
