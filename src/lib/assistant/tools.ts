@@ -49,7 +49,8 @@ import { listMinutes } from "@/lib/minutes";
 import { listTasks } from "@/lib/teamTasks";
 import { draftScheduling } from "@/lib/scheduling";
 import { slotLabel } from "@/lib/schedulingText";
-import { holidaysOf, isBusinessDay, nextBusinessDay } from "@/lib/holidays";
+import { holidaysOf, nextBusinessDay } from "@/lib/holidays";
+import { closureMap, isCompanyOpen } from "@/lib/companyClosures";
 import { defaultWeek, mondayOf, templateWeekly, weeklyFacts } from "@/lib/weeklyReport";
 import { repeatLabel } from "@/lib/taskRepeat";
 import { getEntertainment, KIND_LABEL } from "@/lib/entertainment";
@@ -414,7 +415,7 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   },
   {
     name: "get_business_calendar",
-    description: "営業日と祝日。指定した月(既定は今月)の祝日(振替休日・国民の休日を含む)、営業日の数(土日・祝日・年末年始を除く)、今日の次の営業日を返す。「11月の祝日は?」「今月の営業日は何日?」「次の営業日は?」などに使う。",
+    description: "営業日と祝日。指定した月(既定は今月)の祝日(振替休日・国民の休日を含む)、会社の休業日(夏季休業など)、営業日の数(土日・祝日・年末年始・会社の休業日を除く)、今日の次の営業日を返す。「11月の祝日は?」「今月の営業日は何日?」「次の営業日は?」などに使う。",
     input_schema: { type: "object", properties: { month: { type: "string", description: "YYYY-MM(任意)" } }, additionalProperties: false },
   },
   {
@@ -916,12 +917,16 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
       const [y, m] = month.split("-").map(Number);
       const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
       const days = Array.from({ length: last }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`);
+      const closures = await closureMap(companyId);
+      let next = nextBusinessDay(new Date(Date.parse(`${today}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10));
+      for (let i = 0; i < 60 && !isCompanyOpen(next, closures); i++) next = nextBusinessDay(new Date(Date.parse(`${next}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10));
       return {
         month,
         holidays: [...holidaysOf(y)].filter(([k]) => k.startsWith(month)).map(([date, name]) => ({ date, name })),
-        businessDays: days.filter((d) => isBusinessDay(d)).length,
-        nextBusinessDay: nextBusinessDay(new Date(Date.parse(`${today}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)),
-        note: "営業日は土日・祝日・年末年始(12/29〜1/3)を除いた日",
+        companyClosures: days.filter((d) => closures.has(d)).map((date) => ({ date, name: closures.get(date)! })),
+        businessDays: days.filter((d) => isCompanyOpen(d, closures)).length,
+        nextBusinessDay: next,
+        note: "営業日は土日・祝日・年末年始(12/29〜1/3)と会社の休業日(会社の設定で登録)を除いた日",
       };
     }
     case "check_text": {

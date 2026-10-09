@@ -9,6 +9,7 @@ import { getAging } from "@/lib/accounting/receivables";
 import { nextDay } from "@/lib/accounting/period";
 import { getWatches } from "@/lib/aiWatch";
 import { closedReason, isBusinessDay } from "@/lib/holidays";
+import { closureMap } from "@/lib/companyClosures";
 
 // AIの朝のブリーフィング: 今日の「やること」、昨日のお金の動き、今週の入金・支払の予定をまとめ、
 // AIが「今日まずやること」を優先順に選んで理由をつける。会社・日ごとに1つ保存する。
@@ -28,12 +29,12 @@ export function weekdayOf(key: string) {
   return WEEKDAYS[new Date(`${key}T00:00:00Z`).getUTCDay()];
 }
 
-// 明日から続く休み(3日以上か、祝日・年末年始を含むときだけ)。銀行の手続きを前倒しするための知らせ
-export function upcomingClosure(today: string) {
-  if (!isBusinessDay(today)) return null;
+// 明日から続く休み(3日以上か、祝日・年末年始・会社の休業日を含むときだけ)。銀行の手続きを前倒しするための知らせ
+export function upcomingClosure(today: string, closures: Map<string, string> = new Map()) {
+  if (!isBusinessDay(today) || closures.has(today)) return null;
   const days: { date: string; reason: string }[] = [];
   for (let d = addDays(today, 1); days.length < 12; d = addDays(d, 1)) {
-    const reason = closedReason(d);
+    const reason = closedReason(d) ?? closures.get(d) ?? null;
     if (!reason) break;
     days.push({ date: d, reason });
   }
@@ -73,7 +74,7 @@ export async function buildBriefingFacts(companyId: string, now = new Date()) {
   return {
     date: today,
     weekday: weekdayOf(today),
-    closureAhead: upcomingClosure(today),
+    closureAhead: upcomingClosure(today, await closureMap(companyId, today)),
     cash,
     todos: todos.map((t) => ({ key: t.key, label: t.label, count: t.count, detail: t.detail, href: t.href, urgent: t.tone === "rose" })),
     yesterday: {

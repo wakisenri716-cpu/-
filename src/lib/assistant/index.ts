@@ -194,12 +194,13 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
       const y = Number(today.slice(0, 4)) + (Number(mm[1]) < Number(today.slice(5, 7)) - 6 ? 1 : 0);
       month = `${y}-${String(Number(mm[1])).padStart(2, "0")}`;
     } else if (/来月/.test(q)) month = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 1)).toISOString().slice(0, 7);
-    const r = (await run("get_business_calendar", month ? { month } : {})) as { month: string; holidays: { date: string; name: string }[]; businessDays: number; nextBusinessDay: string };
+    const r = (await run("get_business_calendar", month ? { month } : {})) as { month: string; holidays: { date: string; name: string }[]; companyClosures?: { date: string; name: string }[]; businessDays: number; nextBusinessDay: string };
     const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
     return {
       reply: [
         `${Number(r.month.slice(5))}月の祝日: ${r.holidays.length ? r.holidays.map((h) => `${md(h.date)} ${h.name}`).join("、") : "ありません"}`,
-        `${Number(r.month.slice(5))}月の営業日: ${r.businessDays}日(土日・祝日・年末年始を除く)`,
+        ...(r.companyClosures?.length ? [`${Number(r.month.slice(5))}月の会社の休業日: ${r.companyClosures.map((h) => `${md(h.date)} ${h.name}`).join("、")}`] : []),
+        `${Number(r.month.slice(5))}月の営業日: ${r.businessDays}日(土日・祝日・年末年始・会社の休業日を除く)`,
         `次の営業日: ${md(r.nextBusinessDay)}`,
       ].join("\n"),
       tools: ["get_business_calendar"],

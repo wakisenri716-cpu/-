@@ -2,6 +2,9 @@ import { requireUser } from "@/lib/auth/session";
 import { CompanyForm } from "./CompanyForm";
 import { AddCompany } from "./AddCompany";
 import { listMyCompanies } from "@/lib/auth/companies";
+import { listClosures } from "@/lib/companyClosures";
+import { jstDateKey } from "@/lib/jst";
+import { ClosuresCard } from "./ClosuresCard";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +18,12 @@ export default async function CompanyPage() {
       </div>
     );
   }
-  const companies = await listMyCompanies(user.id);
+  const today = jstDateKey(new Date());
+  const [companies, closures] = await Promise.all([listMyCompanies(user.id), listClosures(user.companyId, today)]);
   return (
     <div className="space-y-6">
       <CompanyForm key={user.companyId} />
+      <ClosuresCard initial={closures.map((c) => ({ date: c.date, name: c.name }))} today={today} />
       <AddCompany companies={companies} />
     </div>
   );

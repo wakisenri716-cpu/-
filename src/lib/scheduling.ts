@@ -5,6 +5,7 @@ import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { inventedNumbers } from "@/lib/ai/numberGuard";
 import { addressee, getParty } from "@/lib/addressBook";
+import { closureMap } from "@/lib/companyClosures";
 import {
   PLACE_LABEL,
   schedulingMail,
@@ -124,10 +125,15 @@ export async function draftScheduling(
     where: { id: user.companyId },
     select: { name: true },
   });
-  const busy = await busyDays(user.companyId, user.id, today);
+  const [busy, closures] = await Promise.all([
+    busyDays(user.companyId, user.id, today),
+    closureMap(user.companyId, today),
+  ]);
+  // 会社の休業日も候補から外す
   const slots =
     readSlots(raw.slots) ??
-    suggestSlots({ today, after, count, minutes, time, busy });
+    suggestSlots({ today, after, count, minutes, time, busy: [...busy, ...closures.keys()] });
+  const closed = Object.fromEntries([...closures].slice(0, 120));
   if (!slots.length) throw new UserError("候補の日時がありません");
   const to = party
     ? [...addressee(party).lines, addressee(party).main].join("\n")
@@ -140,7 +146,8 @@ export async function draftScheduling(
     purpose,
     subject: schedulingSubject(purpose, company.name),
     slots,
-    warnings: slotWarnings(slots, today),
+    warnings: slotWarnings(slots, today, closed),
+    closures: closed,
     busy: busy.filter((d) => d >= today).slice(0, 10),
     place,
     minutes,
