@@ -10,6 +10,7 @@ import { cancelImportedInvoice, getPoMatches, linkInvoiceToOrder } from "@/lib/p
 import { addDraftItems, sanitizeItems } from "./expenseText";
 import { EXPENSE_ACCOUNT_CODES } from "@/lib/accounting/chartOfAccounts";
 import { fixAccount, getAccountReview } from "@/lib/accountReview";
+import { termsDueDate } from "@/lib/customerTerms";
 
 // AIアシスタントの下書き(提案)。AIは提案を作るだけで、確定は人が画面のボタンを押したときだけ行う。
 // 提案は24時間で期限切れ。
@@ -42,7 +43,8 @@ export async function proposeInvoice(ctx: Ctx, input: Input) {
   const customerName = str(input.customerName).slice(0, 100);
   if (!customerName) throw new UserError("請求先の名前が必要です");
   const issueDate = validDate(str(input.issueDate)) ? str(input.issueDate) : today;
-  const dueDate = validDate(str(input.dueDate)) ? str(input.dueDate) : endOfNextMonth(issueDate);
+  // 期限の指定がなければ、顧客の支払条件(なければ翌月末)
+  const dueDate = validDate(str(input.dueDate)) ? str(input.dueDate) : ((await termsDueDate(ctx.companyId, customerName, issueDate)) ?? endOfNextMonth(issueDate));
   if (dueDate < issueDate) throw new UserError("支払期限が請求日より前です");
   const rawLines = Array.isArray(input.lines) ? (input.lines as Input[]) : [];
   const lines: InvoiceLineInput[] = validateLines(

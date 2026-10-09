@@ -3,6 +3,7 @@ import { jstDateKey } from "@/lib/jst";
 import { UserError } from "@/lib/errors";
 import { cancelIssuedInvoice, issueInvoice } from "./issueInvoice";
 import { postingDate } from "./recurring";
+import { termsDueDate } from "@/lib/customerTerms";
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 const MAX_BACKFILL = 12;
@@ -110,7 +111,8 @@ export async function issueRecurringInvoice(companyId: string, id: string, month
   const invoice = await issueInvoice(companyId, {
     customerName: template.customer?.name ?? "",
     issueDate,
-    dueDate: dueDateFor(issueDate, item.dueDays),
+    // 日数の指定がなければ、顧客の支払条件(なければ翌月末)
+    dueDate: item.dueDays === null ? ((await termsDueDate(companyId, template.customer?.name ?? "", issueDate)) ?? dueDateFor(issueDate, null)) : dueDateFor(issueDate, item.dueDays),
     notes: template.notes,
     lines: template.lines,
     // ひな形の請求書と同じ部門にする(停止した部門なら部門なし)

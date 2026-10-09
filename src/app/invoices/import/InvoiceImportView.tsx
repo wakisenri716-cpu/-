@@ -96,7 +96,7 @@ export function InvoiceImportView() {
             サンプルCSVをダウンロード
           </a>
         </div>
-        <p className="text-xs text-slate-500">列: まとめ・請求先・メールアドレス(任意)・請求日・支払期限・品目・数量・単位・単価(税抜)・税率(10 か 8)・備考。Shift_JIS・UTF-8 どちらでも読めます。</p>
+        <p className="text-xs text-slate-500">列: まとめ・請求先・メールアドレス(任意)・請求日・支払期限(空なら顧客の支払条件、なければ翌月末)・品目・数量・単位・単価(税抜)・税率(10 か 8)・備考。Shift_JIS・UTF-8 どちらでも読めます。</p>
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="file"
