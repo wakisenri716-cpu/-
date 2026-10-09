@@ -112,6 +112,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/invoices", label: "請求書", icon: DocumentIcon },
       { href: "/billing-gaps", label: "請求漏れのチェック", icon: SparkleIcon },
       { href: "/purchase-orders", label: "発注書", icon: CartIcon },
+      { href: "/quote-compare", label: "相見積の比較", icon: SparkleIcon },
       {
         href: "/po-matching",
         label: "発注書と請求書の突き合わせ",
