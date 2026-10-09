@@ -183,6 +183,7 @@ export default function QuoteCompareView({ ai, vendors }: { ai: boolean; vendors
                           {q.vendor}
                         </th>
                       ))}
+                      <th className="py-2 pr-3 text-right font-medium">前回の発注</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -197,16 +198,34 @@ export default function QuoteCompareView({ ai, vendors }: { ai: boolean; vendors
                               <>
                                 {yen(p)}
                                 <span className="block text-xs font-normal text-slate-500">× {r.quantities[i]}</span>
+                                {r.last && r.last.unitPrice > 0 && Math.abs(p - r.last.unitPrice) / r.last.unitPrice >= 0.05 && (
+                                  <span className={`block text-xs font-normal ${p > r.last.unitPrice ? "text-rose-700" : "text-emerald-700"}`}>
+                                    前回比{p > r.last.unitPrice ? "+" : ""}
+                                    {Math.round(((p - r.last.unitPrice) / r.last.unitPrice) * 1000) / 10}%
+                                  </span>
+                                )}
                               </>
                             )}
                           </td>
                         ))}
+                        <td className="py-2 pr-3 text-right text-xs tabular-nums text-slate-600">
+                          {r.last ? (
+                            <>
+                              {yen(r.last.unitPrice)}
+                              <span className="block text-slate-400">
+                                {Number(r.last.date.slice(5, 7))}/{Number(r.last.date.slice(8, 10))} {r.last.vendor}
+                              </span>
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="mt-2 text-xs text-slate-500">緑の太字は、その品目でいちばん安い単価です。</p>
+              <p className="mt-2 text-xs text-slate-500">緑の太字は、その品目でいちばん安い単価です。「前回の発注」はこの2年の発注書でいちばん新しい単価(税抜)で、5%以上変わった単価には前回比を出します。</p>
             </section>
           )}
         </>

@@ -151,7 +151,9 @@ export const itemKey = (s: string) =>
     .toLowerCase()
     .replace(/[\s()「」・\-_/、。,.]/g, "");
 
-export type CompareRow = { key: string; description: string; prices: (number | null)[]; quantities: (number | null)[]; lowest: number | null };
+// 前に発注したときの単価(税抜)
+export type PastPrice = { unitPrice: number; date: string; vendor: string };
+export type CompareRow = { key: string; description: string; prices: (number | null)[]; quantities: (number | null)[]; lowest: number | null; last: PastPrice | null };
 export type Comparison = {
   quotes: ComparedQuote[];
   rows: CompareRow[];
@@ -160,7 +162,8 @@ export type Comparison = {
   summary: string[];
 };
 
-export function compareQuotes(quotes: ComparedQuote[]): Comparison {
+// history: 品目(itemKey)ごとの前回の発注単価
+export function compareQuotes(quotes: ComparedQuote[], history: ReadonlyMap<string, PastPrice> = new Map()): Comparison {
   const rows: CompareRow[] = [];
   const find = (k: string) => rows.find((r) => r.key === k || (k.length >= 3 && r.key.length >= 3 && (r.key.includes(k) || k.includes(r.key))));
   quotes.forEach((q, qi) => {
@@ -169,7 +172,7 @@ export function compareQuotes(quotes: ComparedQuote[]): Comparison {
       if (!k) continue;
       let row = find(k);
       if (!row) {
-        row = { key: k, description: l.description, prices: quotes.map(() => null), quantities: quotes.map(() => null), lowest: null };
+        row = { key: k, description: l.description, prices: quotes.map(() => null), quantities: quotes.map(() => null), lowest: null, last: null };
         rows.push(row);
       }
       if (row.prices[qi] === null) {
@@ -179,9 +182,17 @@ export function compareQuotes(quotes: ComparedQuote[]): Comparison {
       }
     }
   });
+  const pastOf = (k: string) => {
+    const hit = history.get(k);
+    if (hit) return hit;
+    if (k.length < 3) return null;
+    for (const [hk, v] of history) if (hk.length >= 3 && (hk.includes(k) || k.includes(hk))) return v;
+    return null;
+  };
   for (const r of rows) {
     const vals = r.prices.filter((p): p is number => p !== null);
     r.lowest = vals.length >= 2 ? Math.min(...vals) : null;
+    r.last = pastOf(r.key);
   }
   const usable = quotes.map((q, i) => ({ q, i })).filter(({ q }) => q.lines.length > 0);
   const cover = (i: number) => rows.filter((r) => r.prices[i] !== null).length;
@@ -221,6 +232,16 @@ export function compareQuotes(quotes: ComparedQuote[]): Comparison {
         .map((r) => r.description)
         .join("・")}は他社のほうが安いです(分けて頼むと安くなるかもしれません)。`);
     if (b.shipping > 0) summary.push(`${b.vendor}は送料${yen(b.shipping)}が合計に入っています。`);
+    // 前回の発注より5%以上変わった品目
+    const moved = rows
+      .filter((r) => r.last && r.prices[best] !== null && r.last.unitPrice > 0)
+      .map((r) => ({ r, pct: Math.round(((r.prices[best]! - r.last!.unitPrice) / r.last!.unitPrice) * 1000) / 10 }))
+      .filter((x) => Math.abs(x.pct) >= 5);
+    const up = moved.filter((x) => x.pct > 0);
+    const down = moved.filter((x) => x.pct < 0);
+    const fmt = (x: (typeof moved)[number]) => `${x.r.description}(前回${yen(x.r.last!.unitPrice)}→${yen(x.r.prices[best]!)}、${x.pct > 0 ? "+" : ""}${x.pct}%)`;
+    if (up.length) summary.push(`${b.vendor}の見積で、前回の発注より高くなった品目: ${up.slice(0, 3).map(fmt).join("・")}。値下げの相談の材料にできます。`);
+    if (down.length) summary.push(`前回の発注より安くなった品目: ${down.slice(0, 3).map(fmt).join("・")}。`);
   }
   return { quotes, rows, best, cheapest, summary };
 }
