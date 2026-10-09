@@ -5,7 +5,7 @@ import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { inventedNumbers } from "@/lib/ai/numberGuard";
 import { createPurchaseOrder } from "@/lib/accounting/purchaseOrders";
-import { compareQuotes, deliveryDate, parseQuoteText, totalsOf, type ParsedQuote, type QuoteLine } from "@/lib/quoteCompareText";
+import { compareQuotes, deliveryDate, itemKey, parseQuoteText, totalsOf, type ParsedQuote, type PastPrice, type QuoteLine } from "@/lib/quoteCompareText";
 
 // 相見積の比較: 仕入先から届いた見積(メールやPDFの文章を貼る)を2〜5社分並べ、税込の合計・品目ごとの単価・納期・支払条件を比べる。
 // AIが使えるときは、形のそろっていない見積の文章から明細を読み取る(書いていない数字は使わない。合わなければ決まったルールの読み取りに戻す)。
@@ -96,10 +96,28 @@ function fromAi(a: AiQuote | undefined, source: string): ParsedQuote | null {
   };
 }
 
+// 品目ごとの前回の発注単価(税抜。この2年の発注書から、いちばん新しいもの)
+export async function pastPrices(companyId: string): Promise<Map<string, PastPrice>> {
+  const since = new Date(Date.now() - 730 * 86_400_000);
+  const lines = await prisma.purchaseOrderLine.findMany({
+    where: { purchaseOrder: { companyId, issueDate: { gte: since }, status: { not: "CANCELLED" } } },
+    select: { description: true, unitPrice: true, purchaseOrder: { select: { issueDate: true, vendor: { select: { name: true } } } } },
+    orderBy: { purchaseOrder: { issueDate: "desc" } },
+    take: 2000,
+  });
+  const map = new Map<string, PastPrice>();
+  for (const l of lines) {
+    const k = itemKey(l.description);
+    if (k && !map.has(k)) map.set(k, { unitPrice: l.unitPrice, date: l.purchaseOrder.issueDate.toISOString().slice(0, 10), vendor: l.purchaseOrder.vendor.name });
+  }
+  return map;
+}
+
 export async function compareVendorQuotes(user: { id: string; companyId: string }, raw: Record<string, unknown>) {
   const input = readInput(raw);
+  const history = await pastPrices(user.companyId);
   const template = input.map((q) => totalsOf(q.vendor, parseQuoteText(q.text)));
-  if (raw.useAi !== true) return { ...compareQuotes(template), mode: "template" as const };
+  if (raw.useAi !== true) return { ...compareQuotes(template, history), mode: "template" as const };
 
   const ai = await aiFor(user.companyId);
   if (!ai) throw new UserError("AIが使えません(AIの設定を確かめてください)");
@@ -145,7 +163,7 @@ export async function compareVendorQuotes(user: { id: string; companyId: string 
     if (!(error instanceof Anthropic.APIError) && !(error instanceof SyntaxError)) throw error;
   }
   await prisma.assistantLog.create({ data: { companyId: user.companyId, userId: user.id, question: `相見積の比較 ${input.map((q) => q.vendor).join("・")}`.slice(0, 200), tools: [], mode: `quote-compare-${mode}` } });
-  return { ...compareQuotes(quotes), mode };
+  return { ...compareQuotes(quotes, history), mode };
 }
 
 // 選んだ見積から発注書を作る(税込の見積は税抜の単価に直す。値引は備考に書く)
