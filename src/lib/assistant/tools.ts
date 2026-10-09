@@ -47,6 +47,8 @@ import { getHrProcedures } from "@/lib/hrProcedures";
 import { getTaxCalendar } from "@/lib/taxCalendar";
 import { listMinutes } from "@/lib/minutes";
 import { listTasks } from "@/lib/teamTasks";
+import { draftScheduling } from "@/lib/scheduling";
+import { slotLabel } from "@/lib/schedulingText";
 import { holidaysOf, isBusinessDay, nextBusinessDay } from "@/lib/holidays";
 import { defaultWeek, mondayOf, templateWeekly, weeklyFacts } from "@/lib/weeklyReport";
 import { repeatLabel } from "@/lib/taskRepeat";
@@ -393,6 +395,22 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_weekly_report",
     description: "週報。1週間(月〜日)の済んだやること・日報の作業時間(人別・案件別)・請求書と入金・見積・受注・伝言、来週が期限のやること、期限を過ぎたやること・請求書をまとめた週報の本文と数字を返す。week を省くと、月〜水は先週・木〜日は今週。「今週はどうだった?」「先週の週報を作って」などに使う。",
     input_schema: { type: "object", properties: { week: { type: "string", description: "週のどこかの日 YYYY-MM-DD(任意)" } }, additionalProperties: false },
+  },
+  {
+    name: "get_meeting_slots",
+    description: "日程調整。取引先との打ち合わせの候補日時を、営業日(土日・祝日・年末年始を除く)から1日1つずつ出し、日程のご相談メールの下書きも返す。聞いた人のやることに打ち合わせ・訪問が入っている日は外す。「さくら商事との打ち合わせの候補を出して」「来週、1時間の打ち合わせの日程を3つ」などに使う。",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "相手の取引先・顧客の名前(任意)" },
+        purpose: { type: "string", description: "用件(任意)" },
+        minutes: { type: "number", description: "所要時間(分、既定60)" },
+        count: { type: "number", description: "候補の数(1〜5、既定3)" },
+        after: { type: "number", description: "何日後から(既定2)" },
+        time: { type: "string", enum: ["am", "pm", "any"], description: "時間帯" },
+      },
+      additionalProperties: false,
+    },
   },
   {
     name: "get_business_calendar",
@@ -875,6 +893,22 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
       const week = /^\d{4}-\d{2}-\d{2}$/.test(str(input.week)) && mondayOf(str(input.week)) <= today ? str(input.week) : defaultWeek(today);
       const f = await weeklyFacts(companyId, week, today);
       return { from: f.from, to: f.to, tasksDone: f.tasksDone.length, workHours: Math.round((f.work.minutes / 60) * 10) / 10, sales: f.sales, quotes: f.quotes, dealsWon: f.deals.won.length, overdueTasks: f.tasksOverdue.length, lateInvoices: f.lateInvoices, report: templateWeekly(f), link: "/reports/weekly" };
+    }
+    case "get_meeting_slots": {
+      const found = str(input.name) ? await findPartyInText(companyId, str(input.name)) : { party: null };
+      const me = ctx.userId ? await prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }) : null;
+      const d = await draftScheduling(
+        { id: ctx.userId, companyId, name: me?.name ?? "担当者" },
+        { partyKind: found.party?.kind, partyId: found.party?.id, purpose: str(input.purpose), minutes: input.minutes, count: input.count, after: input.after, time: input.time },
+      );
+      return {
+        party: found.party?.name ?? null,
+        slots: d.slots.map((x) => slotLabel(x)),
+        skippedBusyDays: d.busy,
+        subject: d.subject,
+        mail: d.body,
+        link: found.party ? `/scheduling?kind=${found.party.kind}&id=${found.party.id}` : "/scheduling",
+      };
     }
     case "get_business_calendar": {
       const today = jstDateKey(new Date());
