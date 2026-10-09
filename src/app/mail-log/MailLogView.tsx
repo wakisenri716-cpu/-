@@ -24,6 +24,7 @@ const input = "w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 te
 const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
 const kindLabel = (k: string) => MAIL_KINDS[k as MailKind] ?? "郵便物";
 const important = (k: string) => (IMPORTANT_KINDS as string[]).includes(k);
+const waitDays = (from: string, to: string) => Math.max(0, Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000));
 
 export default function MailLogView({ initial, users, viewerId, today, ai }: { initial: Item[]; users: User[]; viewerId: string; today: string; ai: boolean }) {
   const [items, setItems] = useState(initial);
@@ -160,6 +161,7 @@ export default function MailLogView({ initial, users, viewerId, today, ai }: { i
                 <span className="text-slate-600">→ {m.forName ?? "会社あて・どなたか"}</span>
                 {m.note && <span className="w-full text-xs text-slate-500 sm:w-auto">{m.note}</span>}
                 <span className="ml-auto flex items-center gap-3 text-xs text-slate-500">
+                  {waitDays(m.receivedOn, today) >= 3 && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-900">{waitDays(m.receivedOn, today)}日たっています</span>}
                   {md(m.receivedOn)} 受付 {m.takenByName}
                   {m.kind === "INVOICE" && (
                     <Link href="/inbox" className="text-indigo-700 hover:underline">
