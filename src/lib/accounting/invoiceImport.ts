@@ -4,6 +4,7 @@ import { parseCsv } from "@/lib/csvParse";
 import { UserError } from "@/lib/errors";
 import { calcInvoice, issueInvoice, validDate, validateLines, type InvoiceLineInput } from "./issueInvoice";
 import { buildDraft, sendDocumentMail } from "@/lib/documentMail";
+import { endOfNextMonth, termsDueDate } from "@/lib/customerTerms";
 
 // 請求書のCSV一括作成と、まだ送っていない請求書のまとめてメール送信。
 // CSVは1行が明細1行。「まとめ」の列(なければ 請求先・請求日・支払期限 が同じ行)で1枚の請求書にまとめる。
@@ -33,7 +34,8 @@ const COLUMNS: Record<string, string[]> = {
   taxRate: ["税率"],
   notes: ["備考"],
 };
-const REQUIRED = ["customer", "issueDate", "dueDate", "description", "unitPrice"];
+// 支払期限は空でもよい(顧客の支払条件、なければ翌月末にする)
+const REQUIRED = ["customer", "issueDate", "description", "unitPrice"];
 
 const norm = (s: string) => s.normalize("NFKC").trim().toLowerCase().replace(/\s/g, "");
 
@@ -76,11 +78,12 @@ export async function previewInvoiceImport(companyId: string, text: string) {
     const get = (k: string) => (col[k] >= 0 ? (r[col[k]] ?? "").normalize("NFKC").trim() : "");
     const customerName = get("customer").slice(0, 100);
     const issueDate = toDate(get("issueDate"));
-    const dueDate = toDate(get("dueDate"));
+    const dueRaw = get("dueDate");
+    const dueDate = dueRaw ? toDate(dueRaw) : "";
     const rowErrors: string[] = [];
     if (!customerName) rowErrors.push("請求先が空です");
     if (!issueDate) rowErrors.push("請求日が正しくありません");
-    if (!dueDate) rowErrors.push("支払期限が正しくありません");
+    if (dueRaw && !dueDate) rowErrors.push("支払期限が正しくありません");
     if (issueDate && dueDate && dueDate < issueDate) rowErrors.push("支払期限が請求日より前です");
     const quantity = get("quantity") === "" ? 1 : Number(get("quantity").replace(/,/g, ""));
     const unitPrice = Number(get("unitPrice").replace(/[,¥円]/g, ""));
@@ -112,6 +115,8 @@ export async function previewInvoiceImport(companyId: string, text: string) {
   const existing = new Set((await prisma.customer.findMany({ where: { companyId }, select: { name: true } })).map((c) => c.name));
   const invoices: ImportedInvoice[] = [];
   for (const { inv, bad } of groups.values()) {
+    // 支払期限が空なら、顧客の支払条件(なければ翌月末)
+    if (!inv.dueDate && inv.issueDate) inv.dueDate = (await termsDueDate(companyId, inv.customerName, inv.issueDate)) ?? endOfNextMonth(inv.issueDate);
     if (inv.lines.length > 50) errors.push(`${inv.customerName}: 1枚の請求書の明細は50行までです`);
     const calc = bad ? null : calcInvoice(inv.lines);
     if (calc && calc.total <= 0) errors.push(`${inv.rows[0]}行目〜: ${inv.customerName} の合計が0円です`);
