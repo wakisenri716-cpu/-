@@ -3,6 +3,7 @@ import { CompanyForm } from "./CompanyForm";
 import { AddCompany } from "./AddCompany";
 import { listMyCompanies } from "@/lib/auth/companies";
 import { listClosures } from "@/lib/companyClosures";
+import { prisma } from "@/lib/prisma";
 import { jstDateKey } from "@/lib/jst";
 import { ClosuresCard } from "./ClosuresCard";
 
@@ -19,11 +20,16 @@ export default async function CompanyPage() {
     );
   }
   const today = jstDateKey(new Date());
-  const [companies, closures] = await Promise.all([listMyCompanies(user.id), listClosures(user.companyId, today)]);
+  const [companies, closures, dueTasks] = await Promise.all([
+    listMyCompanies(user.id),
+    listClosures(user.companyId),
+    // お休み中が期限のやることを数えるため
+    prisma.teamTask.findMany({ where: { companyId: user.companyId, status: "OPEN", dueOn: { gte: today } }, select: { dueOn: true }, take: 2000 }),
+  ]);
   return (
     <div className="space-y-6">
       <CompanyForm key={user.companyId} />
-      <ClosuresCard initial={closures.map((c) => ({ date: c.date, name: c.name }))} today={today} />
+      <ClosuresCard initial={closures.map((c) => ({ date: c.date, name: c.name }))} today={today} taskDues={dueTasks.map((t) => t.dueOn!)} />
       <AddCompany companies={companies} />
     </div>
   );

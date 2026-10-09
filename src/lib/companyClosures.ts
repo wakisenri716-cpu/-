@@ -68,3 +68,29 @@ export async function announceClosure(
   const result = await createAnnouncement(user, { ...text, pinned: false, notify: raw.notify === true }, request);
   return { ...result, notice };
 }
+
+// お休みの間(前後の土日・祝日を含む)が期限のやること(済んでいないもの)
+export async function closureTasks(companyId: string, date: unknown) {
+  if (!valid(date)) throw new UserError("休業日を選んでください");
+  const list = await listClosures(companyId);
+  const group = groupClosures(list).find((g) => g.dates[0] === date);
+  if (!group) throw new UserError("その休業日が見つかりません");
+  const closures = new Map(list.map((c) => [c.date, c.name]));
+  const notice = closureNotice(group, closures);
+  const tasks = await prisma.teamTask.findMany({ where: { companyId, status: "OPEN", dueOn: { gte: notice.from, lte: notice.to } }, select: { id: true, title: true, dueOn: true, ownerName: true }, orderBy: { dueOn: "asc" }, take: 200 });
+  // 前倒し先: お休みの前の最後の営業日(会社の休業日も除く)
+  let before = addDays(notice.from, -1);
+  for (let i = 0; i < 60 && !isCompanyOpen(before, closures); i++) before = addDays(before, -1);
+  return { notice, tasks, before };
+}
+
+// お休み中が期限のやることを、お休みの前の営業日に前倒しする(今日より前にはしない)
+export async function shiftClosureTasks(user: { companyId: string; role: string }, raw: { date?: unknown }) {
+  if (user.role === "EMPLOYEE" || user.role === "ADVISOR") throw new UserError("やることの前倒しは管理者・経理担当ができます");
+  const { notice, tasks, before } = await closureTasks(user.companyId, raw.date);
+  if (!tasks.length) throw new UserError("お休み中が期限のやることはありません");
+  const today = jstDateKey(new Date());
+  if (before < today) throw new UserError("お休みの前の営業日が過ぎているので、前倒しできません");
+  const { count } = await prisma.teamTask.updateMany({ where: { id: { in: tasks.map((t) => t.id) }, companyId: user.companyId, status: "OPEN" }, data: { dueOn: before } });
+  return { count, before, notice };
+}

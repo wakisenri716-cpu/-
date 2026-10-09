@@ -22,11 +22,12 @@ export function validRepeat(v: unknown): v is string {
 }
 
 // from 以降(from を含む)で最初の日
-export function nextDue(repeat: string, from: string): string {
+// closures: 会社の休業日(毎日の繰り返しはこの日も飛ばす)
+export function nextDue(repeat: string, from: string, closures: ReadonlyMap<string, string> = new Map()): string {
   if (repeat === "DAILY") {
     let d = from;
-    // 毎日は営業日だけ(土日・祝日・年末年始を飛ばす)
-    while (!isBusinessDay(d)) d = addDays(d, 1);
+    // 毎日は営業日だけ(土日・祝日・年末年始・会社の休業日を飛ばす)
+    for (let i = 0; i < 60 && (!isBusinessDay(d) || closures.has(d)); i++) d = addDays(d, 1);
     return d;
   }
   const w = repeat.match(/^WEEKLY:([0-6])$/);
@@ -47,9 +48,10 @@ export function followingDue(
   repeat: string,
   prevDue: string | null,
   today: string,
+  closures: ReadonlyMap<string, string> = new Map(),
 ) {
   const after = prevDue ? addDays(prevDue, 1) : today;
-  return nextDue(repeat, after > today ? after : today);
+  return nextDue(repeat, after > today ? after : today, closures);
 }
 
 export function repeatLabel(repeat: string | null | undefined) {

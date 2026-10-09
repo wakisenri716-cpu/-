@@ -42,9 +42,9 @@ export function upcomingClosure(today: string, closures: Map<string, string> = n
   return { from: days[0].date, to: days[days.length - 1].date, days: days.length, names: [...new Set(days.map((d) => d.reason).filter((r) => r !== "土曜日" && r !== "日曜日"))], nextBusinessDay: addDays(days[days.length - 1].date, 1) };
 }
 
-export function closureNote(c: NonNullable<ReturnType<typeof upcomingClosure>>) {
+export function closureNote(c: NonNullable<ReturnType<typeof upcomingClosure>> & { tasksDue?: number }) {
   const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
-  return `明日から${c.days}日間お休みです(${md(c.from)}〜${md(c.to)}${c.names.length ? `・${c.names.join("・")}` : ""})。振込・入金の確認など銀行の手続きは今日中に。次の営業日は${md(c.nextBusinessDay)}です。`;
+  return `明日から${c.days}日間お休みです(${md(c.from)}〜${md(c.to)}${c.names.length ? `・${c.names.join("・")}` : ""})。振込・入金の確認など銀行の手続きは今日中に。次の営業日は${md(c.nextBusinessDay)}です。${c.tasksDue ? `お休み中が期限のやることが${c.tasksDue}件あります(今日中に済ませるか、期限を見直してください)。` : ""}`;
 }
 
 export async function buildBriefingFacts(companyId: string, now = new Date()) {
@@ -71,10 +71,13 @@ export async function buildBriefingFacts(companyId: string, now = new Date()) {
       .map((r) => ({ party: r.partyName, amount: r.remaining, dueDate: r.dueDate!, invoiceNumber: r.invoiceNumber }));
   const overdue = receivables.rows.filter((r) => r.overdueDays > 0);
   const overduePayables = payables.rows.filter((r) => r.overdueDays > 0);
+  // 明日からのお休みと、その間が期限のやること(休みの前に済ませるように)
+  const closure = upcomingClosure(today, await closureMap(companyId, today));
+  const closureAhead = closure ? { ...closure, tasksDue: await prisma.teamTask.count({ where: { companyId, status: "OPEN", dueOn: { gte: closure.from, lte: closure.to } } }) } : null;
   return {
     date: today,
     weekday: weekdayOf(today),
-    closureAhead: upcomingClosure(today, await closureMap(companyId, today)),
+    closureAhead,
     cash,
     todos: todos.map((t) => ({ key: t.key, label: t.label, count: t.count, detail: t.detail, href: t.href, urgent: t.tone === "rose" })),
     yesterday: {
