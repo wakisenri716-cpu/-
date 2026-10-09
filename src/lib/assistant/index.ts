@@ -177,6 +177,15 @@ async function askSimple(companyId: string, question: string): Promise<Assistant
     const r = (await run("get_weekly_report", /先週/.test(q) ? { week: new Date(Date.parse(`${today}T00:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10) } : /今週/.test(q) ? { week: today } : {})) as { report: string };
     return { reply: `${r.report.replace(/^## /gm, "■ ")}\n[AIの週報](/reports/weekly)`, tools: ["get_weekly_report"], mode: "simple" };
   }
+  if (/日程調整|(打ち合わせ|打合せ|面談|訪問)の?(候補|日程)/.test(q)) {
+    const name = q.match(/([^\s、。]{2,20}?)(?:さん|様|社)?(?:と|との)(?:の)?(?:打ち合わせ|打合せ|面談|日程)/)?.[1];
+    const r = (await run("get_meeting_slots", name ? { name } : {})) as { party: string | null; slots: string[]; subject: string; link: string };
+    return {
+      reply: [`${r.party ? `${r.party}との` : ""}打ち合わせの候補(営業日・土日祝を除く):`, ...r.slots.map((x, i) => `${i + 1}. ${x}`), `メールの下書きは[日程調整](${r.link})で作れます。`].join("\n"),
+      tools: ["get_meeting_slots"],
+      mode: "simple",
+    };
+  }
   if (/祝日|営業日|休業日/.test(q)) {
     const mm = q.match(/(\d{1,2})\s*月/);
     const today = jstDateKey(new Date());
