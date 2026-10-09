@@ -5,7 +5,7 @@ import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { addressee, getParty, type PartyKind } from "@/lib/addressBook";
 
-// 挨拶状・お礼状: お礼・年末年始の休業・移転・担当者の交代・お詫び・新しい商品やサービスのご案内を、
+// 挨拶状・お礼状: お礼・年末年始の休業・夏季休業などの休業・移転・担当者の交代・お詫び・新しい商品やサービスのご案内を、
 // 拝啓/時候の挨拶/本文/敬具(必要なら「記」)の形で作る。宛名は住所録から。
 // AIが使えるときは、会社の事情(メモ)に合わせて本文を書き直す(日付・住所・電話番号などの数字は変えない)。何も保存しない。
 
@@ -13,7 +13,7 @@ const MODEL = process.env.ANTHROPIC_ASSISTANT_MODEL || "claude-opus-5-5";
 const DAILY_LIMIT = Number(process.env.ASSISTANT_DAILY_LIMIT || 100);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export type GreetingKind = "THANKS" | "HOLIDAY" | "MOVE" | "PERSON" | "APOLOGY" | "LAUNCH";
+export type GreetingKind = "THANKS" | "HOLIDAY" | "CLOSURE" | "MOVE" | "PERSON" | "APOLOGY" | "LAUNCH";
 type Field = { key: string; label: string; placeholder: string; required?: boolean; multiline?: boolean };
 export const GREETING_KINDS: Record<GreetingKind, { title: string; subject: string; fields: Field[] }> = {
   THANKS: { title: "お礼状", subject: "御礼", fields: [{ key: "what", label: "何へのお礼か", placeholder: "例: 先日のご来社 / このたびのご注文", required: true }] },
@@ -23,6 +23,15 @@ export const GREETING_KINDS: Record<GreetingKind, { title: string; subject: stri
     fields: [
       { key: "period", label: "休業期間", placeholder: "例: 2026年12月29日(火)〜2027年1月4日(月)", required: true },
       { key: "restart", label: "営業を始める日", placeholder: "例: 2027年1月5日(火)" },
+    ],
+  },
+  CLOSURE: {
+    title: "休業のお知らせ(夏季休業など)",
+    subject: "休業のお知らせ",
+    fields: [
+      { key: "name", label: "休業の名前", placeholder: "例: 夏季休業 / 創立記念日", required: true },
+      { key: "period", label: "休業期間", placeholder: "例: 2026年8月13日(木)〜8月17日(月)", required: true },
+      { key: "restart", label: "営業を始める日", placeholder: "例: 2026年8月18日(火)" },
     ],
   },
   MOVE: {
@@ -79,6 +88,18 @@ export function templateLetter(kind: GreetingKind, f: Record<string, string>, da
         subject,
         opening,
         body: ["さて、誠に勝手ながら、弊社では下記の期間を年末年始の休業とさせていただきます。", "休業期間中はご不便をおかけいたしますが、何卒ご了承くださいますようお願い申し上げます。", "本年中のご厚情に心より感謝申し上げますとともに、来年も変わらぬご愛顧を賜りますようお願い申し上げます。"],
+        closing,
+        notes: [`休業期間: ${f.period}`, ...(f.restart ? [`営業開始: ${f.restart}`] : [])],
+      };
+    case "CLOSURE":
+      return {
+        subject: `${f.name}のお知らせ`,
+        opening,
+        body: [
+          `さて、誠に勝手ながら、弊社では下記の期間を${f.name}とさせていただきます。`,
+          `休業期間中にいただいたお問い合わせ・ご注文につきましては、${f.restart ? `${f.restart}以降` : "休業明け"}に順次ご対応いたします。`,
+          "皆様にはご不便をおかけいたしますが、何卒ご了承くださいますようお願い申し上げます。",
+        ],
         closing,
         notes: [`休業期間: ${f.period}`, ...(f.restart ? [`営業開始: ${f.restart}`] : [])],
       };

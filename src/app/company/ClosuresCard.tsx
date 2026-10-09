@@ -1,24 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { closureNotice, groupClosures, shortDate, type Closure } from "@/lib/closureNotice";
 
-type Closure = { date: string; name: string };
-const WEEK = "日月火水木金土";
-const label = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}(${WEEK[new Date(`${k}T00:00:00Z`).getUTCDay()]})`;
 const input = "mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm";
-
-// 続いている同じ名前の日をまとめて1行にする
-function groups(list: Closure[]) {
-  const out: { name: string; dates: string[] }[] = [];
-  for (const c of list) {
-    const last = out[out.length - 1];
-    const prev = last?.dates[last.dates.length - 1];
-    const next = prev ? new Date(Date.parse(`${prev}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10) : null;
-    if (last && last.name === c.name && next === c.date) last.dates.push(c.date);
-    else out.push({ name: c.name, dates: [c.date] });
-  }
-  return out;
-}
 
 // 会社の休業日(夏季休業・創立記念日など)
 export function ClosuresCard({ initial, today }: { initial: Closure[]; today: string }) {
@@ -28,6 +14,7 @@ export function ClosuresCard({ initial, today }: { initial: Closure[]; today: st
   const [name, setName] = useState("夏季休業");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [announced, setAnnounced] = useState<Record<string, string>>({});
 
   async function call(method: "POST" | "DELETE", body: unknown) {
     setBusy(true);
@@ -48,12 +35,29 @@ export function ClosuresCard({ initial, today }: { initial: Closure[]; today: st
     }
   }
 
-  const upcoming = groups(list.filter((c) => c.date >= today));
+  // 社内のお知らせに出す(従業員も読める。メールは送らない)
+  async function announce(date: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/company/closures/announce", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ date }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "お知らせを出せませんでした");
+      setAnnounced((a) => ({ ...a, [date]: data.title }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "お知らせを出せませんでした");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const map = new Map(list.map((c) => [c.date, c.name]));
+  const upcoming = groupClosures(list.filter((c) => c.date >= today));
   return (
     <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:p-6">
       <div>
         <h2 className="text-lg font-semibold">会社の休業日</h2>
-        <p className="mt-1 text-slate-600">夏季休業・創立記念日など、土日・祝日・年末年始(12/29〜1/3)のほかに会社が休む日です。日程調整の候補、朝のまとめの連休前の知らせ、営業日の数え方に使います(税金・銀行の期限は国の祝日で決めます)。</p>
+        <p className="mt-1 text-slate-600">夏季休業・創立記念日など、土日・祝日・年末年始(12/29〜1/3)のほかに会社が休む日です。日程調整の候補、朝のまとめの連休前の知らせ、営業日の数え方に使います(税金・銀行の期限は国の祝日で決めます)。取引先へのお知らせ状と、社内のお知らせもここから作れます。</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
         <label className="block">
@@ -76,15 +80,38 @@ export function ClosuresCard({ initial, today }: { initial: Closure[]; today: st
       {upcoming.length ? (
         <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
           {upcoming.map((g) => (
-            <li key={g.dates[0]} className="flex flex-wrap items-center gap-3 px-3 py-2">
-              <span className="font-medium">{g.name}</span>
-              <span className="tabular-nums text-slate-600">
-                {label(g.dates[0])}
-                {g.dates.length > 1 ? `〜${label(g.dates[g.dates.length - 1])}(${g.dates.length}日)` : ""}
-              </span>
-              <button onClick={() => call("DELETE", { dates: g.dates })} disabled={busy} className="ml-auto text-xs text-slate-500 hover:text-rose-700">
-                消す
-              </button>
+            <li key={g.dates[0]} className="space-y-2 px-3 py-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-medium">{g.name}</span>
+                <span className="tabular-nums text-slate-600">
+                  {shortDate(g.dates[0])}
+                  {g.dates.length > 1 ? `〜${shortDate(g.dates[g.dates.length - 1])}(${g.dates.length}日)` : ""}
+                </span>
+                <button onClick={() => call("DELETE", { dates: g.dates })} disabled={busy} className="ml-auto text-xs text-slate-500 hover:text-rose-700">
+                  消す
+                </button>
+              </div>
+              {(() => {
+                const n = closureNotice(g, map);
+                return (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                    <span className="text-slate-500">
+                      お休みは{shortDate(n.from)}
+                      {n.from === n.to ? "" : `〜${shortDate(n.to)}`}の{n.days}日間、{shortDate(n.restart)}から営業
+                    </span>
+                    <Link href={`/letters/greeting?closure=${g.dates[0]}`} className="text-indigo-700 hover:underline">
+                      取引先へのお知らせ状
+                    </Link>
+                    {announced[g.dates[0]] ? (
+                      <span className="text-emerald-700">社内のお知らせに出しました</span>
+                    ) : (
+                      <button onClick={() => announce(g.dates[0])} disabled={busy} className="text-indigo-700 hover:underline disabled:opacity-50">
+                        社内に知らせる
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </li>
           ))}
         </ul>
