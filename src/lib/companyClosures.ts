@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { jstDateKey } from "@/lib/jst";
 import { UserError } from "@/lib/errors";
 import { isBusinessDay } from "@/lib/holidays";
+import { createAnnouncement } from "@/lib/announcements";
+import { closureNotice, groupClosures, staffAnnouncement } from "@/lib/closureNotice";
 
 // 会社の休業日(夏季休業・創立記念日など)。国の祝日・土日・年末年始に足して「会社が休みの日」を決める。
 // 税金・銀行の期限は国の決まりなので、ここの休業日は使わない(日程調整・朝のまとめ・営業日の数え方に使う)
@@ -44,4 +47,24 @@ export async function removeClosures(companyId: string, raw: { dates?: unknown }
   if (!dates.length) throw new UserError("消す日を選んでください");
   const { count } = await prisma.companyClosure.deleteMany({ where: { companyId, date: { in: dates } } });
   return count;
+}
+
+// 休業日を社内のお知らせに出す(date は休業日のまとまりの最初の日)。同じお知らせは2度出さない
+export async function announceClosure(
+  user: { id: string; name: string; companyId: string; role: "ADMIN" | "ACCOUNTANT" | "EMPLOYEE" | "ADVISOR" },
+  raw: { date?: unknown; notify?: unknown },
+  request?: Request,
+) {
+  if (user.role === "EMPLOYEE" || user.role === "ADVISOR") throw new UserError("社内のお知らせは管理者・経理担当が出せます");
+  if (!valid(raw.date)) throw new UserError("休業日を選んでください");
+  const list = await listClosures(user.companyId);
+  const group = groupClosures(list).find((g) => g.dates[0] === raw.date);
+  if (!group) throw new UserError("その休業日が見つかりません");
+  if (group.dates[group.dates.length - 1] < jstDateKey(new Date())) throw new UserError("終わった休業日です");
+  const notice = closureNotice(group, new Map(list.map((c) => [c.date, c.name])));
+  const text = staffAnnouncement(notice);
+  const dup = await prisma.announcement.findFirst({ where: { companyId: user.companyId, title: text.title }, select: { id: true } });
+  if (dup) throw new UserError("この休業日は、もう社内のお知らせに出しています");
+  const result = await createAnnouncement(user, { ...text, pinned: false, notify: raw.notify === true }, request);
+  return { ...result, notice };
 }

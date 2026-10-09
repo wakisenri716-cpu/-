@@ -21,12 +21,12 @@ type Letter = {
   notes: string[];
   mode: "claude" | "template";
 };
-const ORDER: GreetingKind[] = ["THANKS", "HOLIDAY", "MOVE", "PERSON", "APOLOGY", "LAUNCH"];
+const ORDER: GreetingKind[] = ["THANKS", "HOLIDAY", "CLOSURE", "MOVE", "PERSON", "APOLOGY", "LAUNCH"];
 const jp = (key: string) => `${Number(key.slice(0, 4))}年${Number(key.slice(5, 7))}月${Number(key.slice(8, 10))}日`;
 
-export default function GreetingView({ kinds, parties, today, ai, mail }: { kinds: Kinds; parties: Party[]; today: string; ai: boolean; mail: { recipients: MailRecipient[]; me: Omit<MailSender, "sender"> } | null }) {
-  const [kind, setKind] = useState<GreetingKind>("THANKS");
-  const [fields, setFields] = useState<Record<string, string>>({});
+export default function GreetingView({ kinds, parties, today, ai, mail, initial }: { kinds: Kinds; parties: Party[]; today: string; ai: boolean; mail: { recipients: MailRecipient[]; me: Omit<MailSender, "sender"> } | null; initial?: { kind: GreetingKind; fields: Record<string, string> } }) {
+  const [kind, setKind] = useState<GreetingKind>(initial?.kind ?? "THANKS");
+  const [fields, setFields] = useState<Record<string, string>>(initial?.fields ?? {});
   const [party, setParty] = useState("");
   const [date, setDate] = useState(today);
   const [sender, setSender] = useState("");
