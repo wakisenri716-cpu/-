@@ -52,7 +52,7 @@ export async function memoContext(companyId: string) {
 }
 
 // 住所録の相手(会社名か電話番号が同じ)
-function findParty(parties: Party[], text: string, phone: string | null) {
+export function findParty(parties: Party[], text: string, phone: string | null) {
   if (phone) {
     const p = parties.find((x) => x.phone && digitsOf(x.phone) === digitsOf(phone));
     if (p) return p;
@@ -67,7 +67,7 @@ function findParty(parties: Party[], text: string, phone: string | null) {
 }
 
 // 宛先(「田中さんへ」「田中部長宛」、または名字が書いてある)
-function findMember(users: Member[], text: string, exclude: string | null) {
+export function findMember(users: Member[], text: string, exclude: string | null) {
   const t = text.normalize("NFKC");
   const scored = users
     .map((u) => {

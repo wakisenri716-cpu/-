@@ -21,6 +21,7 @@ import { countRemittanceAlerts } from "@/lib/withholding/service";
 import { countHrProcedureAlerts } from "@/lib/hrProcedures";
 import { countTaxCalendarAlerts } from "@/lib/taxCalendar";
 import { countOpenMemos } from "@/lib/phoneMemos";
+import { countWaitingMail } from "@/lib/mailItems";
 import { countDueTasks } from "@/lib/teamTasks";
 import { countQuoteFollowups } from "@/lib/quoteFollowup";
 import type { User } from "@prisma/client";
@@ -112,7 +113,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions, hrAlerts, calendarAlerts, memos, quoteFollow, dueTasks] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions, hrAlerts, calendarAlerts, memos, quoteFollow, dueTasks, waitingMail] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -157,6 +158,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     countOpenMemos(companyId, user?.id),
     countQuoteFollowups(companyId),
     countDueTasks(companyId, user?.id, today),
+    countWaitingMail(companyId, user?.id),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
@@ -204,6 +206,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
       tone: "amber",
     },
     { key: "quoteFollowup", label: "返事待ちの見積", detail: "送ってから7日たった・有効期限が近い見積書があります。ご検討の状況をうかがいましょう", count: quoteFollow, href: "/quote-followup", tone: "amber" },
+    { key: "mailLog", label: user ? "届いている自分あての郵便物・荷物" : "まだ渡していない郵便物・荷物", detail: waitingMail.important ? `書留・役所から・請求書が${waitingMail.important}件あります。受け取ったら「渡した」に` : "受け取ったら「渡した」に", count: waitingMail.count, href: "/mail-log", tone: waitingMail.important ? "rose" : "amber" },
     { key: "teamTasks", label: user ? "期限が来た自分のやること" : "期限が来たやること", detail: dueTasks.overdue ? `期限を過ぎたものが${dueTasks.overdue}件あります。済んだら「済み」に` : "今日が期限のやることがあります。済んだら「済み」に", count: dueTasks.count, href: "/tasks", tone: dueTasks.overdue ? "rose" : "amber" },
     { key: "phoneMemos", label: "伝言メモ", detail: memos.urgent ? `至急が${memos.urgent}件あります。折り返したら「対応済み」に` : "電話・来客の伝言があります。折り返したら「対応済み」に", count: memos.count, href: "/phone-memos", tone: memos.urgent ? "rose" : "amber" },
     {
