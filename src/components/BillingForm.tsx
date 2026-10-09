@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatYen } from "@/lib/format";
+import { dueDateFor, readTerms, termsLabel } from "@/lib/paymentTerms";
 
 export type FormLine = { description: string; quantity: string; unit: string; unitPrice: string; taxRate: string };
 type Line = FormLine;
@@ -76,7 +77,9 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
     : TEXT[kind];
   const [reason, setReason] = useState("");
   const router = useRouter();
-  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
+  const [customers, setCustomers] = useState<{ id: string; name: string; closingDay?: number | null; payMonths?: number | null; payDay?: number | null; holidayRule?: string | null }[]>([]);
+  // 支払期限を手で直したら、支払条件からの自動の計算はしない
+  const [dueTouched, setDueTouched] = useState(!!initial?.dueDate);
   const [customerName, setCustomerName] = useState(initial?.customerName ?? "");
   const [issueDate, setIssueDate] = useState(() => initial?.issueDate ?? dateKey(new Date()));
   const [dueDate, setDueDate] = useState(() => initial?.dueDate ?? (kind === "invoice" ? endOfNextMonth(new Date()) : oneMonthLater(new Date())));
@@ -91,6 +94,11 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [credit, setCredit] = useState<{ limit: number | null; balance?: number; overdue?: number; after?: number; over?: boolean } | null>(null);
+
+  // 請求書: 顧客に支払条件があれば、請求日から支払期限を出す
+  const terms = kind === "invoice" ? readTerms(customers.find((c) => c.name === customerName.trim())) : null;
+  const termsDue = terms && /^\d{4}-\d{2}-\d{2}$/.test(issueDate) ? dueDateFor(terms, issueDate) : null;
+  const effectiveDue = !dueTouched && termsDue ? termsDue : dueDate;
 
   useEffect(() => {
     // 発注書の相手は取引先(仕入先)、見積書・請求書の相手は顧客
@@ -148,8 +156,8 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
         body: JSON.stringify({
           customerName,
           issueDate,
-          dueDate,
-          validUntil: dueDate,
+          dueDate: effectiveDue,
+          validUntil: effectiveDue,
           notes,
           lines,
           departmentId: departmentId || null,
@@ -196,7 +204,33 @@ export function BillingForm({ kind, initial, correction }: { kind: "invoice" | "
           </div>
           <div>
             <label className="mb-1 block text-xs text-slate-500">{text.deadline}</label>
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} required className={inputClass} />
+            <input
+              type="date"
+              value={effectiveDue}
+              onChange={(e) => {
+                setDueDate(e.target.value);
+                setDueTouched(true);
+              }}
+              required
+              className={inputClass}
+            />
+            {terms && (
+              <p className="mt-1 text-xs text-slate-500">
+                支払条件: {termsLabel(terms)}
+                {termsDue && termsDue !== effectiveDue && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDueDate(termsDue);
+                      setDueTouched(false);
+                    }}
+                    className="ml-1 text-indigo-700 underline"
+                  >
+                    {termsDue}にする
+                  </button>
+                )}
+              </p>
+            )}
           </div>
           {kind === "order" && (
             <>

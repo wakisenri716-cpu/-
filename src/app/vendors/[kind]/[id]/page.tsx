@@ -5,6 +5,9 @@ import { getPartyDetail } from "@/lib/parties";
 import { formatDate, formatYen } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PartyContactCard } from "@/components/PartyContactCard";
+import { PaymentTermsCard } from "@/components/PaymentTermsCard";
+import { readTerms } from "@/lib/paymentTerms";
+import { prisma } from "@/lib/prisma";
 import { getParty } from "@/lib/addressBook";
 import { getKarte, templateSummary } from "@/lib/partyKarte";
 import { PartyKarte } from "@/components/PartyKarte";
@@ -49,6 +52,7 @@ export default async function PartyPage({ params }: { params: Promise<{ kind: st
       </div>
 
       <PartyContactCard kind={kind} id={id} values={contact} />
+      {kind === "customer" && <PaymentTermsCard id={id} initial={readTerms(await prisma.customer.findFirst({ where: { id, companyId }, select: { closingDay: true, payMonths: true, payDay: true, holidayRule: true } }))} />}
 
       <PartyKarte kind={kind} id={id} events={karte.events} initialSummary={{ ...templateSummary(karte.facts), summary: null, mode: "template" }} ai={ai} />
 
