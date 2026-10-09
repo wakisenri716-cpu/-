@@ -261,3 +261,53 @@ export function deliveryDate(text: string | null, today: string): string | null 
   }
   return null;
 }
+
+// 値下げの相談: その見積で、他社の見積より高い品目・前回の発注より5%以上高い品目(単価は税抜)
+export type NegotiationPoint = { description: string; price: number; other: number | null; last: number | null };
+export function negotiationPoints(c: Comparison, qi: number) {
+  const points: NegotiationPoint[] = [];
+  for (const r of c.rows) {
+    const price = r.prices[qi];
+    if (price === null) continue;
+    const others = r.prices.filter((p, i): p is number => i !== qi && p !== null);
+    const other = others.length ? Math.min(...others) : null;
+    const last = r.last && r.last.unitPrice > 0 && (price - r.last.unitPrice) / r.last.unitPrice >= 0.05 ? r.last.unitPrice : null;
+    if ((other !== null && other < price) || last !== null) points.push({ description: r.description, price, other: other !== null && other < price ? other : null, last });
+  }
+  const me = c.quotes[qi];
+  const otherTotals = c.quotes.filter((q, i) => i !== qi && q.lines.length).map((q) => q.total);
+  const totalGap = me && otherTotals.length ? Math.max(0, me.total - Math.min(...otherTotals)) : 0;
+  return { points: points.slice(0, 10), totalGap };
+}
+
+export function negotiationSubject(company: string) {
+  return `お見積の価格についてのご相談【${company}】`;
+}
+
+// 取引先には他社の名前を出さない(「他社様のお見積」とだけ書く)
+export function negotiationMail(p: { vendor: string; me: { company: string; name: string }; points: NegotiationPoint[]; totalGap: number; intro?: string | null; closing?: string | null }) {
+  const yen = (n: number) => `${n.toLocaleString()}円`;
+  const lines = p.points.map((x) => {
+    const refs = [x.other !== null ? `他社様のお見積 ${yen(x.other)}` : null, x.last !== null ? `前回のお取引 ${yen(x.last)}` : null].filter(Boolean);
+    return `・${x.description}: 御見積 ${yen(x.price)}(${refs.join("/")})`;
+  });
+  return [
+    `${p.vendor} ご担当者様`,
+    "",
+    `いつもお世話になっております。${p.me.company}の${p.me.name}です。`,
+    "このたびはお見積をお送りいただき、誠にありがとうございました。",
+    "",
+    p.intro || "社内で検討いたしましたところ、下記の品目について、他社様のお見積や以前のお取引の価格と比べて差がございました。",
+    "",
+    "【ご相談したい品目】(単価はいずれも税抜)",
+    ...lines,
+    ...(p.totalGap > 0 ? ["", `お見積の合計(税込)では、他社様と比べて${yen(p.totalGap)}の差がございます。`] : []),
+    "",
+    p.closing || "今後もお取引を続けさせていただきたく、上記の品目について価格をご再考いただけないでしょうか。ご無理のない範囲でご検討いただけますと幸いです。",
+    "何卒よろしくお願いいたします。",
+    "",
+    "--",
+    p.me.company,
+    p.me.name,
+  ].join("\n");
+}

@@ -2,16 +2,24 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { Comparison } from "@/lib/quoteCompareText";
+import { negotiationPoints, type Comparison } from "@/lib/quoteCompareText";
 
 type Entry = { vendor: string; text: string };
 type Result = Comparison & { mode: "claude" | "template" };
 
-const input = "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm";
+const input =
+  "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm";
 const yen = (n: number) => `${n.toLocaleString()}円`;
-const SAMPLE = "例:\nコピー用紙 A4 10箱 2,800 28,000\nトナーカートリッジ 2本 12,000 24,000\n送料 1,000円\n合計 58,300円\n納期 10月20日";
+const SAMPLE =
+  "例:\nコピー用紙 A4 10箱 2,800 28,000\nトナーカートリッジ 2本 12,000 24,000\n送料 1,000円\n合計 58,300円\n納期 10月20日";
 
-export default function QuoteCompareView({ ai, vendors }: { ai: boolean; vendors: string[] }) {
+export default function QuoteCompareView({
+  ai,
+  vendors,
+}: {
+  ai: boolean;
+  vendors: string[];
+}) {
   const [entries, setEntries] = useState<Entry[]>([
     { vendor: "", text: "" },
     { vendor: "", text: "" },
@@ -19,16 +27,32 @@ export default function QuoteCompareView({ ai, vendors }: { ai: boolean; vendors
   const [result, setResult] = useState<Result | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [ordered, setOrdered] = useState<Record<number, { id: string; orderNumber: string }>>({});
+  const [ordered, setOrdered] = useState<
+    Record<number, { id: string; orderNumber: string }>
+  >({});
+  const [nego, setNego] = useState<{
+    index: number;
+    vendor: string;
+    subject: string;
+    body: string;
+    mode: "claude" | "template";
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const set = (i: number, patch: Partial<Entry>) => setEntries((e) => e.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const set = (i: number, patch: Partial<Entry>) =>
+    setEntries((e) => e.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
   async function compare(useAi: boolean) {
     setBusy(useAi ? "ai" : "compare");
     setError(null);
     setOrdered({});
+    setNego(null);
     try {
-      const res = await fetch("/api/quote-compare", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ quotes: entries, useAi }) });
+      const res = await fetch("/api/quote-compare", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ quotes: entries, useAi }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "比べられませんでした");
       setResult(data);
@@ -39,13 +63,59 @@ export default function QuoteCompareView({ ai, vendors }: { ai: boolean; vendors
     }
   }
 
+  // 値下げの相談メールの下書き
+  async function negotiate(i: number, useAi: boolean) {
+    if (!result) return;
+    const q = result.quotes[i];
+    const { points, totalGap } = negotiationPoints(result, i);
+    setBusy(useAi ? `nego-ai-${i}` : `nego-${i}`);
+    setError(null);
+    setCopied(false);
+    try {
+      const res = await fetch("/api/quote-compare/negotiate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ vendor: q.vendor, points, totalGap, useAi }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "下書きを作れませんでした");
+      setNego({
+        index: i,
+        vendor: q.vendor,
+        subject: data.subject,
+        body: data.body,
+        mode: data.mode,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "下書きを作れませんでした");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function copyNego() {
+    if (!nego) return;
+    try {
+      await navigator.clipboard.writeText(
+        `件名: ${nego.subject}\n\n${nego.body}`,
+      );
+      setCopied(true);
+    } catch {
+      setError("コピーできませんでした。本文を選んでコピーしてください");
+    }
+  }
+
   async function order(i: number) {
     if (!result) return;
     const q = result.quotes[i];
     setBusy(`order-${i}`);
     setError(null);
     try {
-      const res = await fetch("/api/quote-compare/order", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ vendor: q.vendor, quote: q }) });
+      const res = await fetch("/api/quote-compare/order", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ vendor: q.vendor, quote: q }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "発注書を作れませんでした");
       setOrdered((o) => ({ ...o, [i]: data }));
@@ -66,41 +136,78 @@ export default function QuoteCompareView({ ai, vendors }: { ai: boolean; vendors
       <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <div className="grid gap-4 lg:grid-cols-2">
           {entries.map((e, i) => (
-            <div key={i} className="space-y-2 rounded-lg border border-slate-200 p-3">
+            <div
+              key={i}
+              className="space-y-2 rounded-lg border border-slate-200 p-3"
+            >
               <div className="flex items-end gap-2">
                 <label className="block flex-1 text-sm">
                   <span className="text-slate-700">仕入先 {i + 1}</span>
-                  <input value={e.vendor} onChange={(ev) => set(i, { vendor: ev.target.value })} list="vendor-names" placeholder="例: 〇〇商事" className={input} />
+                  <input
+                    value={e.vendor}
+                    onChange={(ev) => set(i, { vendor: ev.target.value })}
+                    list="vendor-names"
+                    placeholder="例: 〇〇商事"
+                    className={input}
+                  />
                 </label>
                 {entries.length > 2 && (
-                  <button onClick={() => setEntries((x) => x.filter((_, j) => j !== i))} className="pb-2 text-xs text-slate-500 hover:text-rose-700">
+                  <button
+                    onClick={() =>
+                      setEntries((x) => x.filter((_, j) => j !== i))
+                    }
+                    className="pb-2 text-xs text-slate-500 hover:text-rose-700"
+                  >
                     外す
                   </button>
                 )}
               </div>
               <label className="block text-sm">
                 <span className="text-slate-700">見積の内容(貼り付け)</span>
-                <textarea value={e.text} onChange={(ev) => set(i, { text: ev.target.value })} rows={7} placeholder={i === 0 ? SAMPLE : ""} className={`${input} font-mono text-xs`} />
+                <textarea
+                  value={e.text}
+                  onChange={(ev) => set(i, { text: ev.target.value })}
+                  rows={7}
+                  placeholder={i === 0 ? SAMPLE : ""}
+                  className={`${input} font-mono text-xs`}
+                />
               </label>
             </div>
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {entries.length < 5 && (
-            <button onClick={() => setEntries((x) => [...x, { vendor: "", text: "" }])} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">
+            <button
+              onClick={() =>
+                setEntries((x) => [...x, { vendor: "", text: "" }])
+              }
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50"
+            >
               ＋ 見積を足す
             </button>
           )}
-          <button onClick={() => compare(false)} disabled={!!busy} className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
+          <button
+            onClick={() => compare(false)}
+            disabled={!!busy}
+            className="rounded-md bg-vermilion-600 px-4 py-2 text-sm font-medium text-white hover:bg-vermilion-700 disabled:opacity-50"
+          >
             {busy === "compare" ? "比べています…" : "比べる"}
           </button>
           {ai && (
-            <button onClick={() => compare(true)} disabled={!!busy} className="rounded-md border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50">
+            <button
+              onClick={() => compare(true)}
+              disabled={!!busy}
+              className="rounded-md border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
+            >
               {busy === "ai" ? "AIが読み取っています…" : "AIで読み取る"}
             </button>
           )}
         </div>
-        {error && <p className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-800">{error}</p>}
+        {error && (
+          <p className="rounded-md bg-rose-50 px-4 py-2 text-sm text-rose-800">
+            {error}
+          </p>
+        )}
       </section>
 
       {result && (
@@ -108,7 +215,11 @@ export default function QuoteCompareView({ ai, vendors }: { ai: boolean; vendors
           <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">比べた結果</h2>
-              <span className="text-xs text-slate-500">{result.mode === "claude" ? "AIが明細を読み取りました" : "決まったルールで読み取りました"}</span>
+              <span className="text-xs text-slate-500">
+                {result.mode === "claude"
+                  ? "AIが明細を読み取りました"
+                  : "決まったルールで読み取りました"}
+              </span>
             </div>
             <ul className="list-disc space-y-1 pl-5 text-slate-700">
               {result.summary.map((s) => (
@@ -119,13 +230,26 @@ export default function QuoteCompareView({ ai, vendors }: { ai: boolean; vendors
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {result.quotes.map((q, i) => (
-              <section key={i} className={`space-y-2 rounded-xl border bg-white p-4 text-sm shadow-sm ${i === result.best ? "border-emerald-400 ring-1 ring-emerald-300" : "border-slate-200"}`}>
+              <section
+                key={i}
+                className={`space-y-2 rounded-xl border bg-white p-4 text-sm shadow-sm ${i === result.best ? "border-emerald-400 ring-1 ring-emerald-300" : "border-slate-200"}`}
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-semibold">{q.vendor}</h3>
-                  {i === result.best && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">おすすめ</span>}
-                  {i === result.cheapest && i !== result.best && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">合計がいちばん安い</span>}
+                  {i === result.best && (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                      おすすめ
+                    </span>
+                  )}
+                  {i === result.cheapest && i !== result.best && (
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                      合計がいちばん安い
+                    </span>
+                  )}
                 </div>
-                <p className="text-2xl font-semibold tabular-nums">{yen(q.total)}</p>
+                <p className="text-2xl font-semibold tabular-nums">
+                  {yen(q.total)}
+                </p>
                 <p className="text-xs text-slate-500 tabular-nums">
                   税抜 {yen(q.subtotal)}・消費税 {yen(q.tax)}
                   {q.taxIncluded ? "(税込の見積)" : ""}
@@ -155,35 +279,118 @@ export default function QuoteCompareView({ ai, vendors }: { ai: boolean; vendors
                     ))}
                   </ul>
                 )}
-                {ordered[i] ? (
-                  <Link href={`/purchase-orders/${ordered[i].id}`} className="inline-block text-emerald-700 hover:underline">
-                    発注書 {ordered[i].orderNumber} を作りました →
-                  </Link>
-                ) : (
-                  q.lines.length > 0 && (
-                    <button onClick={() => order(i)} disabled={!!busy} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-50">
-                      {busy === `order-${i}` ? "作っています…" : "この見積で発注書を作る"}
+                <div className="flex flex-wrap items-center gap-2">
+                  {ordered[i] ? (
+                    <Link
+                      href={`/purchase-orders/${ordered[i].id}`}
+                      className="inline-block text-emerald-700 hover:underline"
+                    >
+                      発注書 {ordered[i].orderNumber} を作りました →
+                    </Link>
+                  ) : (
+                    q.lines.length > 0 && (
+                      <button
+                        onClick={() => order(i)}
+                        disabled={!!busy}
+                        className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        {busy === `order-${i}`
+                          ? "作っています…"
+                          : "この見積で発注書を作る"}
+                      </button>
+                    )
+                  )}
+                  {negotiationPoints(result, i).points.length > 0 && (
+                    <button
+                      onClick={() => negotiate(i, false)}
+                      disabled={!!busy}
+                      className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      {busy === `nego-${i}`
+                        ? "作っています…"
+                        : "値下げの相談メール"}
                     </button>
-                  )
-                )}
+                  )}
+                </div>
               </section>
             ))}
           </div>
 
+          {nego && (
+            <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-semibold">
+                  {nego.vendor}への値下げの相談メール
+                </h2>
+                <span className="text-xs text-slate-500">
+                  {nego.mode === "claude"
+                    ? "AIが前置きと結びを整えました"
+                    : "ひな形の下書きです"}
+                  (他社の名前は書きません)
+                </span>
+              </div>
+              <label className="block">
+                <span className="text-slate-700">件名</span>
+                <input
+                  value={nego.subject}
+                  onChange={(e) =>
+                    setNego({ ...nego, subject: e.target.value })
+                  }
+                  className={input}
+                />
+              </label>
+              <textarea
+                value={nego.body}
+                onChange={(e) => setNego({ ...nego, body: e.target.value })}
+                rows={16}
+                className={`${input} leading-relaxed`}
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={copyNego}
+                  className="rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700"
+                >
+                  件名と本文をコピー
+                </button>
+                {ai && (
+                  <button
+                    onClick={() => negotiate(nego.index, true)}
+                    disabled={!!busy}
+                    className="rounded-md border border-indigo-300 bg-indigo-50 px-4 py-2 font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
+                  >
+                    {busy === `nego-ai-${nego.index}`
+                      ? "AIが整えています…"
+                      : "AIで言葉を整える"}
+                  </button>
+                )}
+                {copied && (
+                  <span className="text-emerald-700">コピーしました</span>
+                )}
+              </div>
+            </section>
+          )}
+
           {result.rows.length > 0 && (
             <section className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:p-6">
-              <h2 className="font-semibold">品目ごとの単価(税抜にそろえています)</h2>
+              <h2 className="font-semibold">
+                品目ごとの単価(税抜にそろえています)
+              </h2>
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[32rem] text-left">
                   <thead>
                     <tr className="border-b border-slate-200 text-xs text-slate-500">
                       <th className="py-2 pr-3 font-medium">品目</th>
                       {result.quotes.map((q, i) => (
-                        <th key={i} className="py-2 pr-3 text-right font-medium">
+                        <th
+                          key={i}
+                          className="py-2 pr-3 text-right font-medium"
+                        >
                           {q.vendor}
                         </th>
                       ))}
-                      <th className="py-2 pr-3 text-right font-medium">前回の発注</th>
+                      <th className="py-2 pr-3 text-right font-medium">
+                        前回の発注
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -191,19 +398,37 @@ export default function QuoteCompareView({ ai, vendors }: { ai: boolean; vendors
                       <tr key={r.key} className="border-b border-slate-100">
                         <td className="py-2 pr-3">{r.description}</td>
                         {r.prices.map((p, i) => (
-                          <td key={i} className={`py-2 pr-3 text-right tabular-nums ${p !== null && p === r.lowest ? "font-semibold text-emerald-700" : ""}`}>
+                          <td
+                            key={i}
+                            className={`py-2 pr-3 text-right tabular-nums ${p !== null && p === r.lowest ? "font-semibold text-emerald-700" : ""}`}
+                          >
                             {p === null ? (
-                              <span className="text-xs text-slate-400">なし</span>
+                              <span className="text-xs text-slate-400">
+                                なし
+                              </span>
                             ) : (
                               <>
                                 {yen(p)}
-                                <span className="block text-xs font-normal text-slate-500">× {r.quantities[i]}</span>
-                                {r.last && r.last.unitPrice > 0 && Math.abs(p - r.last.unitPrice) / r.last.unitPrice >= 0.05 && (
-                                  <span className={`block text-xs font-normal ${p > r.last.unitPrice ? "text-rose-700" : "text-emerald-700"}`}>
-                                    前回比{p > r.last.unitPrice ? "+" : ""}
-                                    {Math.round(((p - r.last.unitPrice) / r.last.unitPrice) * 1000) / 10}%
-                                  </span>
-                                )}
+                                <span className="block text-xs font-normal text-slate-500">
+                                  × {r.quantities[i]}
+                                </span>
+                                {r.last &&
+                                  r.last.unitPrice > 0 &&
+                                  Math.abs(p - r.last.unitPrice) /
+                                    r.last.unitPrice >=
+                                    0.05 && (
+                                    <span
+                                      className={`block text-xs font-normal ${p > r.last.unitPrice ? "text-rose-700" : "text-emerald-700"}`}
+                                    >
+                                      前回比{p > r.last.unitPrice ? "+" : ""}
+                                      {Math.round(
+                                        ((p - r.last.unitPrice) /
+                                          r.last.unitPrice) *
+                                          1000,
+                                      ) / 10}
+                                      %
+                                    </span>
+                                  )}
                               </>
                             )}
                           </td>
@@ -213,7 +438,9 @@ export default function QuoteCompareView({ ai, vendors }: { ai: boolean; vendors
                             <>
                               {yen(r.last.unitPrice)}
                               <span className="block text-slate-400">
-                                {Number(r.last.date.slice(5, 7))}/{Number(r.last.date.slice(8, 10))} {r.last.vendor}
+                                {Number(r.last.date.slice(5, 7))}/
+                                {Number(r.last.date.slice(8, 10))}{" "}
+                                {r.last.vendor}
                               </span>
                             </>
                           ) : (
@@ -225,7 +452,9 @@ export default function QuoteCompareView({ ai, vendors }: { ai: boolean; vendors
                   </tbody>
                 </table>
               </div>
-              <p className="mt-2 text-xs text-slate-500">緑の太字は、その品目でいちばん安い単価です。「前回の発注」はこの2年の発注書でいちばん新しい単価(税抜)で、5%以上変わった単価には前回比を出します。</p>
+              <p className="mt-2 text-xs text-slate-500">
+                緑の太字は、その品目でいちばん安い単価です。「前回の発注」はこの2年の発注書でいちばん新しい単価(税抜)で、5%以上変わった単価には前回比を出します。
+              </p>
             </section>
           )}
         </>
