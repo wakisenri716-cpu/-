@@ -37,6 +37,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_tasks: "社内のやること",
   get_weekly_report: "週報",
   get_business_calendar: "営業日と祝日",
+  get_purchase_prices: "仕入値の履歴",
   get_meeting_slots: "日程調整",
   check_text: "文章チェック",
   get_business_analysis: "経営分析",

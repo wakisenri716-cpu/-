@@ -201,3 +201,35 @@ export async function orderFromQuote(user: { companyId: string; role: string }, 
     lines: orderLines,
   });
 }
+
+// 品目の仕入値の履歴(発注書から。「コピー用紙の前回の値段は?」に答える)
+export async function priceHistory(companyId: string, item: string) {
+  const key = itemKey(item);
+  if (key.length < 2) return { item, found: 0, history: [], byVendor: [] };
+  const since = new Date(Date.now() - 730 * 86_400_000);
+  const lines = await prisma.purchaseOrderLine.findMany({
+    where: { purchaseOrder: { companyId, issueDate: { gte: since }, status: { not: "CANCELLED" } } },
+    select: { description: true, quantity: true, unit: true, unitPrice: true, purchaseOrder: { select: { id: true, orderNumber: true, issueDate: true, vendor: { select: { name: true } } } } },
+    orderBy: { purchaseOrder: { issueDate: "desc" } },
+    take: 3000,
+  });
+  const hits = lines.filter((l) => {
+    const k = itemKey(l.description);
+    return k === key || k.includes(key) || (k.length >= 3 && key.includes(k));
+  });
+  const history = hits.slice(0, 10).map((l) => ({
+    date: l.purchaseOrder.issueDate.toISOString().slice(0, 10),
+    vendor: l.purchaseOrder.vendor.name,
+    description: l.description,
+    quantity: l.quantity,
+    unit: l.unit,
+    unitPrice: l.unitPrice,
+    orderNumber: l.purchaseOrder.orderNumber,
+    link: `/purchase-orders/${l.purchaseOrder.id}`,
+  }));
+  // 仕入先ごとのいちばん新しい単価(安い順)
+  const byVendor = [...new Map([...hits].reverse().map((l) => [l.purchaseOrder.vendor.name, l] as const)).values()]
+    .map((l) => ({ vendor: l.purchaseOrder.vendor.name, unitPrice: l.unitPrice, date: l.purchaseOrder.issueDate.toISOString().slice(0, 10) }))
+    .sort((a, b) => a.unitPrice - b.unitPrice);
+  return { item, found: hits.length, history, byVendor };
+}
