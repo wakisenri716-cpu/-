@@ -40,6 +40,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_mail_items: "郵便物・荷物",
   get_upcoming_leaves: "近いうちに休む人",
   get_handover: "引き継ぎメモ",
+  get_bookings: "会議室・社用車の予約",
   get_purchase_prices: "仕入値の履歴",
   get_meeting_slots: "日程調整",
   check_text: "文章チェック",

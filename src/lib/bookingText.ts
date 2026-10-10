@@ -52,3 +52,17 @@ export function parseTimeRange(text: string, minutes = 60): { start: string; end
 
 // 時間が重なっているか(終わりと始まりが同じなら重ならない)
 export const overlaps = (a: { start: string; end: string }, b: { start: string; end: string }) => a.start < b.end && b.start < a.end;
+
+// 空いている時間帯(既定は 9:00〜18:00 の間で30分以上)
+export function freeSlots(booked: { start: string; end: string }[], from = "09:00", to = "18:00", min = 30) {
+  const out: { start: string; end: string }[] = [];
+  let at = toMin(from);
+  for (const b of [...booked].sort((x, y) => x.start.localeCompare(y.start))) {
+    const s = toMin(b.start);
+    if (s - at >= min) out.push({ start: toHM(at), end: toHM(Math.min(s, toMin(to))) });
+    at = Math.max(at, toMin(b.end));
+    if (at >= toMin(to)) break;
+  }
+  if (toMin(to) - at >= min) out.push({ start: toHM(at), end: to });
+  return out.filter((f) => toMin(f.end) - toMin(f.start) >= min);
+}
