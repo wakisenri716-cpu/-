@@ -249,6 +249,8 @@ model Company {
   entertainmentRecords EntertainmentRecord[]
   phoneMemos           PhoneMemo[]
   mailItems     MailItem[]
+  facilities    Facility[]
+  bookings      Booking[]
   partyNotes           PartyNote[]
   teamTasks            TeamTask[]
   closures             CompanyClosure[]
@@ -2457,4 +2459,38 @@ model MailItem {
   createdAt   DateTime  @default(now())
 
   @@index([companyId, status])
+}
+
+// 会議室・社用車などの予約できるもの
+model Facility {
+  id        String    @id @default(cuid())
+  companyId String
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  kind      String    @default("ROOM") // ROOM(会議室) / CAR(社用車) / OTHER
+  note      String?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  bookings  Booking[]
+
+  @@unique([companyId, name])
+}
+
+// 予約(日付と時刻は日本時間の文字で持つ)
+model Booking {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  facilityId String
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  date       String // YYYY-MM-DD
+  start      String // HH:MM
+  end        String // HH:MM
+  title      String
+  userId     String?
+  userName   String
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, date])
+  @@index([facilityId, date])
 }
