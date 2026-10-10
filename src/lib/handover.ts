@@ -177,3 +177,45 @@ export async function transferHandover(user: { companyId: string; name: string; 
   }
   return { from: from.name, to: to.name, tasks: tasks.count, memos: memos.count, mail: mail.count, deals: deals.count, mailed };
 }
+
+// 近いうちに休む人(有給の申請・取得から。days 日先まで)と、その人の引き継ぐもの(やること・伝言・郵便物)の件数
+export async function upcomingLeaves(companyId: string, days = 7) {
+  const today = jstDateKey(new Date());
+  const until = new Date(Date.parse(`${today}T00:00:00Z`) + days * 86_400_000);
+  const from = new Date(`${today}T00:00:00Z`);
+  const [users, requests, taken] = await Promise.all([
+    members(companyId),
+    prisma.approvalRequest.findMany({ where: { companyId, kind: "LEAVE", status: { in: ["PENDING", "APPROVED"] }, leaveDate: { gte: from, lte: until } }, select: { requesterId: true, leaveDate: true } }),
+    prisma.leaveTaken.findMany({ where: { companyId, bulk: false, date: { gte: from, lte: until } }, select: { date: true, staff: { select: { name: true, userId: true } } } }),
+  ]);
+  const byUser = new Map<string, Set<string>>();
+  const add = (uid: string, d: Date) => byUser.set(uid, (byUser.get(uid) ?? new Set()).add(d.toISOString().slice(0, 10)));
+  for (const r of requests) if (r.leaveDate && users.some((u) => u.id === r.requesterId)) add(r.requesterId, r.leaveDate);
+  // スタッフにひも付いたアカウント(なければ同じ名前の人)
+  for (const t of taken) {
+    const u = users.find((x) => x.id === t.staff.userId) ?? users.find((x) => flat(x.name) === flat(t.staff.name));
+    if (u) add(u.id, t.date);
+  }
+  const out = await Promise.all(
+    [...byUser].map(async ([uid, dates]) => {
+      const [tasks, memos, mail] = await Promise.all([
+        prisma.teamTask.count({ where: { companyId, status: "OPEN", ownerUserId: uid } }),
+        prisma.phoneMemo.count({ where: { companyId, status: "OPEN", forUserId: uid } }),
+        prisma.mailItem.count({ where: { companyId, status: "WAITING", forUserId: uid } }),
+      ]);
+      const sorted = [...dates].sort();
+      return { userId: uid, name: users.find((u) => u.id === uid)!.name, dates: sorted, first: sorted[0], items: tasks + memos + mail, tasks, memos, mail };
+    }),
+  );
+  return out.sort((a, b) => a.first.localeCompare(b.first));
+}
+
+// やることリスト: 3日以内に休む人で、引き継ぐものがある人の数
+export async function countHandoverDue(companyId: string) {
+  const today = jstDateKey(new Date());
+  const soon = new Date(Date.parse(`${today}T00:00:00Z`) + 3 * 86_400_000).toISOString().slice(0, 10);
+  const list = await upcomingLeaves(companyId, 3);
+  return list.filter((x) => x.items > 0 && x.first <= soon).length;
+}
+
+export const leavePeriod = (dates: string[]) => `${dates.map(md).join("・")} 休み`;
