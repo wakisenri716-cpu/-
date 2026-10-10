@@ -225,6 +225,22 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「明日の会議室の空きは?」「今日の社用車の予約は?」
+  if (/(会議室|社用車|応接室|車)/.test(q) && /(空き|空い|予約|使え|使って)/.test(q)) {
+    const kind = /社用車|車/.test(q) && !/会議室|応接/.test(q) ? "CAR" : /会議室|応接/.test(q) ? "ROOM" : undefined;
+    const r = (await run("get_bookings", { date: q, ...(kind ? { kind } : {}) })) as { date: string; facilities: { name: string; bookings: { start: string; end: string; title: string; by: string }[]; free: { start: string; end: string }[] }[] };
+    const md = `${Number(r.date.slice(5, 7))}/${Number(r.date.slice(8, 10))}`;
+    if (!r.facilities.length) return { reply: "予約できるもの(会議室・社用車など)がまだ登録されていません。[会議室・社用車の予約](/bookings) で登録できます。", tools: ["get_bookings"], mode: "simple" };
+    return {
+      reply: [
+        `${md}の予約と空き(9時〜18時):`,
+        ...r.facilities.map((f) => `・${f.name}: ${f.bookings.length ? f.bookings.map((b) => `${b.start}〜${b.end} ${b.title}(${b.by})`).join("、") : "予約なし"} / 空き ${f.free.length ? f.free.map((x) => `${x.start}〜${x.end}`).join("、") : "なし"}`),
+        "予約は [会議室・社用車の予約](/bookings) で(「明日14時から 会議室A 打ち合わせ」のように1行で書けます)。",
+      ].join("\n"),
+      tools: ["get_bookings"],
+      mode: "simple",
+    };
+  }
   // 「山田さんの引き継ぎメモを作って」
   const handQ = q.match(/([^\s、]{1,8}?)(?:さん|様)?の引き?継ぎ/);
   if (handQ && !/^(今日|今週|来週|私|自分)$/.test(handQ[1])) {

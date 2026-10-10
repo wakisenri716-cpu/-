@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FACILITY_KINDS, type FacilityKind } from "@/lib/bookingText";
+import { FACILITY_KINDS, freeSlots, toHM, toMin, type FacilityKind } from "@/lib/bookingText";
 
 type Facility = { id: string; name: string; kind: string; note: string | null };
 type Booking = { id: string; facilityId: string; date: string; start: string; end: string; title: string; userId: string | null; userName: string; facility: { name: string; kind: string } };
@@ -79,6 +79,15 @@ export default function BookingView({ facilities: initialFacilities, initial, to
       setFacilities(data.facilities);
     });
 
+  // 空きを押すと、その時間(最大1時間)で下書きを作る
+  function pickSlot(facilityId: string, slot: { start: string; end: string }) {
+    setDraft({ facilityId, date: day, start: slot.start, end: toHM(Math.min(toMin(slot.end), toMin(slot.start) + 60)), title: "" });
+    setWarnings([]);
+    setFlash(null);
+    setError(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   const ofDay = bookings.filter((b) => b.date === day);
   return (
     <div className="space-y-6">
@@ -103,7 +112,7 @@ export default function BookingView({ facilities: initialFacilities, initial, to
                 <input aria-label="日付" type="date" value={draft.date} onChange={(e) => e.target.value && setDraft({ ...draft, date: e.target.value })} className={input} />
                 <input aria-label="始まり" type="time" value={draft.start ?? ""} onChange={(e) => setDraft({ ...draft, start: e.target.value })} className={input} />
                 <input aria-label="終わり" type="time" value={draft.end ?? ""} onChange={(e) => setDraft({ ...draft, end: e.target.value })} className={input} />
-                <input aria-label="用件" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className={input} />
+                <input aria-label="用件" placeholder="用件(例: 来客打ち合わせ)" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className={input} />
                 <button onClick={save} disabled={!!busy} className="rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                   {busy === "save" ? "予約しています…" : "予約する"}
                 </button>
@@ -160,6 +169,25 @@ export default function BookingView({ facilities: initialFacilities, initial, to
                 </div>
               ))}
             </div>
+          </div>
+          <div className="mt-3 space-y-1 text-xs">
+            {facilities.map((f) => {
+              const free = freeSlots(ofDay.filter((b) => b.facilityId === f.id));
+              return (
+                <p key={f.id} className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-slate-500">{f.name}の空き:</span>
+                  {free.length ? (
+                    free.map((x) => (
+                      <button key={x.start} onClick={() => pickSlot(f.id, x)} className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-800 hover:bg-emerald-100" title="この時間で予約の下書きを作る">
+                        {x.start}〜{x.end}
+                      </button>
+                    ))
+                  ) : (
+                    <span className="text-slate-400">9時〜18時は空いていません</span>
+                  )}
+                </p>
+              );
+            })}
           </div>
           {ofDay.length ? (
             <ul className="mt-3 divide-y divide-slate-100">

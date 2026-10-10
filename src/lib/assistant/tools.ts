@@ -4,7 +4,9 @@ import { findPartyInText, getKarte, templateSummary } from "@/lib/partyKarte";
 import { listMemos, memoTitle } from "@/lib/phoneMemos";
 import { waitingMailFor } from "@/lib/mailItems";
 import { handoverFacts, handoverText, leavePeriod, upcomingLeaves } from "@/lib/handover";
-import { matchMember } from "@/lib/teamTasks";
+import { matchMember, relativeDue } from "@/lib/teamTasks";
+import { listBookings, listFacilities, kindLabel } from "@/lib/bookings";
+import { freeSlots } from "@/lib/bookingText";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
 import { MEMO_ACTIONS, type MemoAction } from "@/lib/phoneMemoLabels";
 import { ruleCheck } from "@/lib/textCheck";
@@ -401,6 +403,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_handover",
     description: "引き継ぎメモ。社内の人(name)の済んでいないやること・繰り返し・対応していない伝言・渡していない郵便物・進めている商談をまとめた引き継ぎメモの文を返す(何も移さない)。「山田さんの引き継ぎメモを作って」「田中さんが休む間の引き継ぎは?」などに使う。移すときは /handover を案内する。",
     input_schema: { type: "object", properties: { name: { type: "string", description: "引き継ぐ人の名前" }, period: { type: "string", description: "期間(任意)" } }, required: ["name"], additionalProperties: false },
+  },
+  {
+    name: "get_bookings",
+    description: "会議室・社用車の予約。date(YYYY-MM-DD、または「今日」「明日」「金曜」などの言葉。既定は今日)の予約できるものごとの予約(時刻・用件・予約した人)と、9時〜18時の空いている時間帯を返す。「明日の会議室の空きは?」「今日の社用車の予約は?」などに使う。予約するときは /bookings を案内する。",
+    input_schema: { type: "object", properties: { date: { type: "string", description: "日付(YYYY-MM-DD か「明日」など)" }, kind: { type: "string", enum: ["ROOM", "CAR", "OTHER"], description: "会議室だけ・社用車だけにするとき" } }, additionalProperties: false },
   },
   {
     name: "get_mail_items",
@@ -910,6 +917,22 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
       if (!member) return { error: `「${str(input.name)}」という人が見つかりません`, members: users.map((u) => u.name) };
       const f = await handoverFacts(companyId, member.id);
       return { name: member.name, text: handoverText(f, { toName: null, period: str(input.period).slice(0, 60), note: "" }), counts: { tasks: f.tasks.length, memos: f.memos.length, mail: f.mail.length, deals: f.deals.length }, link: "/handover" };
+    }
+    case "get_bookings": {
+      const today = jstDateKey(new Date());
+      const raw = str(input.date);
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : (raw && relativeDue(raw, today)) || today;
+      const kind = input.kind === "ROOM" || input.kind === "CAR" || input.kind === "OTHER" ? input.kind : null;
+      const [facilities, bookings] = await Promise.all([listFacilities(companyId), listBookings(companyId, date, 1)]);
+      const list = facilities.filter((f) => !kind || f.kind === kind);
+      return {
+        date,
+        facilities: list.map((f) => {
+          const mine = bookings.filter((b) => b.facilityId === f.id);
+          return { name: f.name, kind: kindLabel(f.kind), bookings: mine.map((b) => ({ start: b.start, end: b.end, title: b.title, by: b.userName })), free: freeSlots(mine) };
+        }),
+        link: "/bookings",
+      };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);
