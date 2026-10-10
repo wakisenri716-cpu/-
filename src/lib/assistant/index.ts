@@ -225,6 +225,24 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「山田さんの引き継ぎメモを作って」
+  const handQ = q.match(/([^\s、]{1,8}?)(?:さん|様)?の引き?継ぎ/);
+  if (handQ && !/^(今日|今週|来週|私|自分)$/.test(handQ[1])) {
+    const r = (await run("get_handover", { name: handQ[1] })) as { error?: string; members?: string[]; text?: string };
+    if (r.error) return { reply: `${r.error}。${r.members?.length ? `社内の人: ${r.members.join("、")}` : ""}`, tools: ["get_handover"], mode: "simple" };
+    return { reply: `${r.text}\n\n後任の人に移すときは [引き継ぎメモ](/handover) で。`, tools: ["get_handover"], mode: "simple" };
+  }
+  // 「今週休む人は?」「来週誰が休み?」
+  if (/(休む人|誰が休|だれが休|休みの人|有給の人)/.test(q)) {
+    const days = /来週/.test(q) ? 14 : /今週/.test(q) ? 7 : 14;
+    const r = (await run("get_upcoming_leaves", { days })) as { count: number; people: { name: string; period: string; openTasks: number; openMemos: number; waitingMail: number }[] };
+    if (!r.count) return { reply: `${days}日先までに休む予定の人はいません。`, tools: ["get_upcoming_leaves"], mode: "simple" };
+    return {
+      reply: [`${days}日先までに休む人が ${r.count}人 います:`, ...r.people.map((p) => `・${p.name}: ${p.period}(やること${p.openTasks}・伝言${p.openMemos}・郵便物${p.waitingMail})`), "引き継ぎは [引き継ぎメモ](/handover) で。"].join("\n"),
+      tools: ["get_upcoming_leaves"],
+      mode: "simple",
+    };
+  }
   if (/郵便|荷物|書留|宅配|届いて(る|い)/.test(q) && !/伝言/.test(q)) {
     const mine = /(私|わたし|自分|僕|ぼく)(あて|宛|宛て|に)/.test(q);
     const r = (await runAssistantTool({ companyId, userId }, "get_mail_items", { mine })) as { count: number; important: number; stale: number; items: { kind: string; title: string; for: string; note: string | null; days: number }[] };

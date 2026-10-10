@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { findPartyInText, getKarte, templateSummary } from "@/lib/partyKarte";
 import { listMemos, memoTitle } from "@/lib/phoneMemos";
 import { waitingMailFor } from "@/lib/mailItems";
+import { handoverFacts, handoverText, leavePeriod, upcomingLeaves } from "@/lib/handover";
+import { matchMember } from "@/lib/teamTasks";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
 import { MEMO_ACTIONS, type MemoAction } from "@/lib/phoneMemoLabels";
 import { ruleCheck } from "@/lib/textCheck";
@@ -389,6 +391,16 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_phone_memos",
     description: "伝言メモ(電話・来客)。対応していない伝言(相手・宛先・用件・折り返しの要否・至急・受けた日時)を、至急・新しい順に最大20件返す。「伝言はある?」「折り返しが必要な電話は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_upcoming_leaves",
+    description: "近いうちに休む人。有給の申請(申請中・承認済み)と取得の記録から、days 日先(既定14日)までに休む人と休む日、その人の済んでいないやること・伝言・郵便物の件数を返す。「今週休む人は?」「来週誰が休み?」などに使う。",
+    input_schema: { type: "object", properties: { days: { type: "integer", description: "何日先まで(1〜31)" } }, additionalProperties: false },
+  },
+  {
+    name: "get_handover",
+    description: "引き継ぎメモ。社内の人(name)の済んでいないやること・繰り返し・対応していない伝言・渡していない郵便物・進めている商談をまとめた引き継ぎメモの文を返す(何も移さない)。「山田さんの引き継ぎメモを作って」「田中さんが休む間の引き継ぎは?」などに使う。移すときは /handover を案内する。",
+    input_schema: { type: "object", properties: { name: { type: "string", description: "引き継ぐ人の名前" }, period: { type: "string", description: "期間(任意)" } }, required: ["name"], additionalProperties: false },
   },
   {
     name: "get_mail_items",
@@ -886,6 +898,18 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         memos: memos.map((m) => ({ from: memoTitle(m), phone: m.callerPhone, for: m.forName ?? "どなたか", message: m.message, action: MEMO_ACTIONS[m.action as MemoAction] ?? m.action, urgent: m.urgent, at: jstDateKey(m.createdAt) })),
         link: "/phone-memos",
       };
+    }
+    case "get_upcoming_leaves": {
+      const days = Math.min(31, Math.max(1, Math.round(Number(input.days) || 14)));
+      const list = await upcomingLeaves(companyId, days);
+      return { days, count: list.length, people: list.map((l) => ({ name: l.name, dates: l.dates, period: leavePeriod(l.dates), openTasks: l.tasks, openMemos: l.memos, waitingMail: l.mail })), link: "/handover" };
+    }
+    case "get_handover": {
+      const users = await prisma.user.findMany({ where: { companyId, active: true, role: { not: "ADVISOR" } }, select: { id: true, name: true, email: true } });
+      const member = matchMember(users, str(input.name));
+      if (!member) return { error: `「${str(input.name)}」という人が見つかりません`, members: users.map((u) => u.name) };
+      const f = await handoverFacts(companyId, member.id);
+      return { name: member.name, text: handoverText(f, { toName: null, period: str(input.period).slice(0, 60), note: "" }), counts: { tasks: f.tasks.length, memos: f.memos.length, mail: f.mail.length, deals: f.deals.length }, link: "/handover" };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);
