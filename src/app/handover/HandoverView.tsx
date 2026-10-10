@@ -16,7 +16,9 @@ type Kind = "tasks" | "memos" | "mail" | "deals";
 const input = "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm";
 const LABEL: Record<Kind, string> = { tasks: "やること", memos: "伝言", mail: "郵便物・荷物", deals: "商談" };
 
-export default function HandoverView({ users, viewerId, ai }: { users: User[]; viewerId: string; ai: boolean }) {
+type Leave = { userId: string; name: string; period: string; tasks: number; memos: number; mail: number };
+
+export default function HandoverView({ users, viewerId, ai, leaves = [] }: { users: User[]; viewerId: string; ai: boolean; leaves?: Leave[] }) {
   const [fromUserId, setFrom] = useState(users.find((u) => u.id !== viewerId)?.id ?? users[0]?.id ?? "");
   const [toUserId, setTo] = useState(viewerId);
   const [period, setPeriod] = useState("");
@@ -29,12 +31,12 @@ export default function HandoverView({ users, viewerId, ai }: { users: User[]; v
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
-  async function make(useAi: boolean) {
+  async function make(useAi: boolean, preset?: { fromUserId: string; period: string }) {
     setBusy(useAi ? "ai" : "make");
     setError(null);
     setDone(null);
     try {
-      const res = await fetch("/api/handover", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ fromUserId, toUserId: toUserId || null, period, note, useAi }) });
+      const res = await fetch("/api/handover", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ fromUserId: preset?.fromUserId ?? fromUserId, toUserId: toUserId && toUserId !== (preset?.fromUserId ?? fromUserId) ? toUserId : null, period: preset?.period ?? period, note, useAi }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "うまくいきませんでした");
       setDraft(data);
@@ -90,8 +92,35 @@ export default function HandoverView({ users, viewerId, ai }: { users: User[]; v
     : [];
   const count = Object.values(picked).filter(Boolean).length;
 
+  // 近いうちに休む人を選ぶと、その人と期間を入れて引き継ぎメモを作る
+  function pickLeave(l: Leave) {
+    setFrom(l.userId);
+    setPeriod(l.period);
+    if (toUserId === l.userId) setTo("");
+    void make(false, { fromUserId: l.userId, period: l.period });
+  }
+
   return (
     <div className="space-y-6">
+      {leaves.length > 0 && (
+        <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-sm shadow-sm">
+          <h2 className="font-semibold text-amber-900">近いうちに休む人(2週間)</h2>
+          <ul className="mt-2 space-y-1.5">
+            {leaves.map((l) => (
+              <li key={l.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="font-medium">{l.name}</span>
+                <span className="text-slate-600">{l.period}</span>
+                <span className="text-xs text-slate-500">
+                  やること{l.tasks}・伝言{l.memos}・郵便物{l.mail}
+                </span>
+                <button onClick={() => pickLeave(l)} disabled={!!busy} className="ml-auto rounded-md border border-amber-300 bg-white px-3 py-1 text-xs text-amber-900 hover:bg-amber-100 disabled:opacity-50">
+                  この人の引き継ぎメモを作る
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
