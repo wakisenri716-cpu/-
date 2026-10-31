@@ -7,6 +7,7 @@ import { handoverFacts, handoverText, leavePeriod, upcomingLeaves } from "@/lib/
 import { matchMember, relativeDue } from "@/lib/teamTasks";
 import { listBookings, listFacilities, kindLabel } from "@/lib/bookings";
 import { freeSlots } from "@/lib/bookingText";
+import { visitorsOn, VISITOR_STATUS } from "@/lib/visitors";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
 import { MEMO_ACTIONS, type MemoAction } from "@/lib/phoneMemoLabels";
 import { ruleCheck } from "@/lib/textCheck";
@@ -408,6 +409,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_bookings",
     description: "会議室・社用車の予約。date(YYYY-MM-DD、または「今日」「明日」「金曜」などの言葉。既定は今日)の予約できるものごとの予約(時刻・用件・予約した人)と、9時〜18時の空いている時間帯を返す。「明日の会議室の空きは?」「今日の社用車の予約は?」などに使う。予約するときは /bookings を案内する。",
     input_schema: { type: "object", properties: { date: { type: "string", description: "日付(YYYY-MM-DD か「明日」など)" }, kind: { type: "string", enum: ["ROOM", "CAR", "OTHER"], description: "会議室だけ・社用車だけにするとき" } }, additionalProperties: false },
+  },
+  {
+    name: "get_visitors",
+    description: "来客の受付簿。date(YYYY-MM-DD、または「今日」「明日」「金曜」などの言葉。既定は今日)の来客(時刻・会社とお名前・担当・用件・お見えになったか・同じ日の会議室の予約)を返す。「今日の来客は?」「明日お客さんは来る?」などに使う。予定を入れるときは /visitors を案内する。",
+    input_schema: { type: "object", properties: { date: { type: "string", description: "日付(YYYY-MM-DD か「明日」など)" } }, additionalProperties: false },
   },
   {
     name: "get_mail_items",
@@ -933,6 +939,13 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         }),
         link: "/bookings",
       };
+    }
+    case "get_visitors": {
+      const today = jstDateKey(new Date());
+      const raw = str(input.date);
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : (raw && relativeDue(raw, today)) || today;
+      const list = await visitorsOn(companyId, date);
+      return { date, count: list.length, visitors: list.map((v) => ({ time: v.time, visitor: v.label, host: v.host ?? "決めていない", purpose: v.purpose, status: VISITOR_STATUS[v.status] ?? v.status, room: v.room ? `${v.room.facility} ${v.room.start}〜${v.room.end}` : null })), link: "/visitors" };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);

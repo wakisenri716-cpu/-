@@ -251,6 +251,7 @@ model Company {
   mailItems     MailItem[]
   facilities    Facility[]
   bookings      Booking[]
+  visitors      Visitor[]
   partyNotes           PartyNote[]
   teamTasks            TeamTask[]
   closures             CompanyClosure[]
@@ -2493,4 +2494,27 @@ model Booking {
 
   @@index([companyId, date])
   @@index([facilityId, date])
+}
+
+// 来客の受付簿(予定を入れておき、お見えになったら担当の人に知らせる。日付と時刻は日本時間の文字で持つ)
+model Visitor {
+  id             String    @id @default(cuid())
+  companyId      String
+  company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  date           String // YYYY-MM-DD
+  time           String? // HH:MM
+  visitorName    String
+  visitorCompany String?
+  partyKind      String? // customer / vendor
+  partyId        String?
+  hostUserId     String?
+  hostName       String?
+  purpose        String?
+  status         String    @default("EXPECTED") // EXPECTED(予定) / ARRIVED(お見えになった) / LEFT(お帰りになった) / CANCELLED
+  arrivedAt      DateTime?
+  leftAt         DateTime?
+  createdByName  String
+  createdAt      DateTime  @default(now())
+
+  @@index([companyId, date])
 }
