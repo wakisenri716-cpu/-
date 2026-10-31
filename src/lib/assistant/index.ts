@@ -225,6 +225,17 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「今日の来客は?」「明日お客さんは来る?」
+  if (/(来客|来社|来訪|お客さん|お客様).{0,8}(は|ある|来る|いる|予定|[?？]|$)/.test(q) && !/(会議室|社用車|伝言|電話)/.test(q)) {
+    const r = (await run("get_visitors", { date: q })) as { date: string; count: number; visitors: { time: string | null; visitor: string; host: string; purpose: string | null; status: string; room: string | null }[] };
+    const md = `${Number(r.date.slice(5, 7))}/${Number(r.date.slice(8, 10))}`;
+    if (!r.count) return { reply: `${md}の来客の予定はありません。予定は [来客の受付簿](/visitors) で入れられます。`, tools: ["get_visitors"], mode: "simple" };
+    return {
+      reply: [`${md}の来客は ${r.count}件 です:`, ...r.visitors.map((v) => `・${v.time ?? "時刻なし"} ${v.visitor}(担当: ${v.host}${v.purpose ? `・${v.purpose}` : ""}${v.room ? `・${v.room}` : ""})${v.status === "予定" ? "" : ` — ${v.status}`}`), "受付は [来客の受付簿](/visitors) で。"].join("\n"),
+      tools: ["get_visitors"],
+      mode: "simple",
+    };
+  }
   // 「明日の会議室の空きは?」「今日の社用車の予約は?」
   if (/(会議室|社用車|応接室|車)/.test(q) && /(空き|空い|予約|使え|使って)/.test(q)) {
     const kind = /社用車|車/.test(q) && !/会議室|応接/.test(q) ? "CAR" : /会議室|応接/.test(q) ? "ROOM" : undefined;
