@@ -254,6 +254,7 @@ model Company {
   visitors      Visitor[]
   staffQuestions StaffQuestion[]
   alcoholChecks AlcoholCheck[]
+  companyEvents CompanyEvent[]
   partyNotes           PartyNote[]
   teamTasks            TeamTask[]
   closures             CompanyClosure[]
@@ -2569,4 +2570,38 @@ model AlcoholCheck {
   checkedAt   DateTime @default(now())
 
   @@index([companyId, date])
+}
+
+// 社内のイベント(忘年会・歓迎会・社員旅行など)と出欠
+model CompanyEvent {
+  id            String        @id @default(cuid())
+  companyId     String
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title         String
+  date          String // YYYY-MM-DD
+  time          String? // HH:MM
+  place         String?
+  fee           Int? // 会費(円)
+  deadline      String? // 出欠の締め切り YYYY-MM-DD
+  note          String?
+  createdByName String
+  closed        Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  answers       EventAnswer[]
+
+  @@index([companyId, date])
+}
+
+model EventAnswer {
+  id        String       @id @default(cuid())
+  eventId   String
+  event     CompanyEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  userName  String
+  answer    String // YES(出席) / NO(欠席) / MAYBE(未定)
+  comment   String?
+  paid      Boolean      @default(false) // 会費を受け取った
+  updatedAt DateTime     @updatedAt
+
+  @@unique([eventId, userId])
 }
