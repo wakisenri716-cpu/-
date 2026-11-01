@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type Answer = { userId: string; userName: string; answer: string; comment: string | null; paid: boolean };
-type Event = { id: string; title: string; date: string; time: string | null; place: string | null; fee: number | null; deadline: string | null; note: string | null; closed: boolean; answers: Answer[]; counts: { YES: number; NO: number; MAYBE: number }; pending: { id: string; name: string }[]; paidCount: number; collected: number };
+type Event = { id: string; title: string; date: string; time: string | null; place: string | null; fee: number | null; deadline: string | null; note: string | null; closed: boolean; answers: Answer[]; counts: { YES: number; NO: number; MAYBE: number }; pending: { id: string; name: string }[]; paidCount: number; collected: number; cost: number | null; journalEntryId: string | null; companyShare: number | null };
 type Fields = { title: string; date: string; time: string | null; place: string | null; fee: number | null; deadline: string | null; note: string | null };
 
 const input = "w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm";
@@ -20,6 +20,8 @@ export default function EventsView({ initial, ai, today }: { initial: Event[]; a
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const [costs, setCosts] = useState<Record<string, string>>({});
+  const [payFrom, setPayFrom] = useState<"1010" | "1020">("1010");
 
   async function call(url: string, body?: unknown) {
     const res = await fetch(url, { method: body ? "POST" : "GET", headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
@@ -59,7 +61,7 @@ export default function EventsView({ initial, ai, today }: { initial: Event[]; a
       setText("");
       await reload();
     });
-  const act = (e: Event, body: Record<string, unknown>, done?: (r: { sent?: number }) => string) =>
+  const act = (e: Event, body: Record<string, unknown>, done?: (r: { sent?: number; share?: number }) => string) =>
     run(`${e.id}-${String(body.action)}`, async () => {
       const r = await call(`/api/events/${e.id}`, body);
       if (done) setFlash(done(r));
@@ -167,6 +169,47 @@ export default function EventsView({ initial, ai, today }: { initial: Event[]; a
               </ul>
             )}
             {e.pending.length > 0 && <p className="text-xs text-slate-500">まだ答えていない人: {e.pending.map((p) => p.name).join("、")}</p>}
+            {(e.fee || e.cost != null || past) && (
+              <div className="flex flex-wrap items-center gap-2 rounded-md bg-slate-50 px-3 py-2 text-xs">
+                {e.journalEntryId ? (
+                  <span className="text-emerald-700">
+                    かかった金額 {e.cost?.toLocaleString()}円・会社の負担 {e.companyShare?.toLocaleString()}円を福利厚生費で仕訳しました(
+                    <a href="/journal" className="underline">
+                      仕訳帳
+                    </a>
+                    )
+                  </span>
+                ) : (
+                  <>
+                    <label className="flex items-center gap-1">
+                      かかった金額
+                      <input aria-label="かかった金額" inputMode="numeric" value={costs[e.id] ?? (e.cost != null ? String(e.cost) : "")} onChange={(ev) => setCosts({ ...costs, [e.id]: ev.target.value })} placeholder="例: 48000" className="w-28 rounded-md border border-slate-300 bg-white px-2 py-1" />円
+                    </label>
+                    <button onClick={() => act(e, { action: "cost", cost: costs[e.id] ?? "" })} disabled={!!busy} className="rounded-md border border-slate-300 bg-white px-2.5 py-1 hover:bg-slate-50 disabled:opacity-50">
+                      保存
+                    </button>
+                    {e.companyShare != null && (
+                      <>
+                        <span className="text-slate-600">
+                          会社の負担 {e.companyShare.toLocaleString()}円(かかった金額 − 受け取った会費 {e.collected.toLocaleString()}円)
+                        </span>
+                        {e.companyShare > 0 && (
+                          <>
+                            <select aria-label="払ったところ" value={payFrom} onChange={(ev) => setPayFrom(ev.target.value as "1010" | "1020")} className="rounded-md border border-slate-300 bg-white px-1.5 py-1">
+                              <option value="1010">現金で払った</option>
+                              <option value="1020">普通預金から払った</option>
+                            </select>
+                            <button onClick={() => act(e, { action: "post", payFrom }, (r) => `会社の負担 ${(r.share ?? 0).toLocaleString()}円を福利厚生費で仕訳しました`)} disabled={!!busy} className="rounded-md bg-vermilion-600 px-2.5 py-1 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
+                              会社の負担分を仕訳する
+                            </button>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
             {!past && (
               <div className="flex flex-wrap gap-2">
                 {e.pending.length > 0 && !e.closed && (

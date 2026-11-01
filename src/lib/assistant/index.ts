@@ -225,6 +225,20 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「忘年会の出欠は?」「何人来る?」
+  if (/(忘年会|新年会|歓迎会|送別会|懇親会|社員旅行|飲み会|イベント).{0,10}(出欠|出席|参加|何人|会費|答えて)/.test(q)) {
+    const r = (await run("get_events")) as { events: { title: string; date: string; time: string | null; place: string | null; fee: number | null; deadline: string | null; closed: boolean; yes: string[]; no: number; maybe: number; notAnswered: string[]; paid: number; collected: number }[] };
+    const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
+    if (!r.events.length) return { reply: "これからの社内のイベントはありません。[社内のイベント](/events) で作れます。", tools: ["get_events"], mode: "simple" };
+    return {
+      reply: [
+        ...r.events.map((e) => `・${e.title}(${md(e.date)}${e.time ? ` ${e.time}` : ""}${e.place ? `・${e.place}` : ""}): 出席 ${e.yes.length}人・欠席 ${e.no}人・未定 ${e.maybe}人${e.notAnswered.length ? `・まだ答えていない ${e.notAnswered.join("、")}` : ""}${e.fee ? `・会費 ${e.paid}/${e.yes.length}人 ${e.collected.toLocaleString()}円` : ""}${e.closed ? "(締め切り済み)" : e.deadline ? `(締め切り ${md(e.deadline)})` : ""}`),
+        "[社内のイベント](/events)",
+      ].join("\n"),
+      tools: ["get_events"],
+      mode: "simple",
+    };
+  }
   // 「車検はいつ?」「点検が必要な車は?」
   if (/車検|自動車保険|任意保険|オイル交換|(車|社用車).{0,6}(点検|保険|走った|距離)/.test(q)) {
     const r = (await run("get_vehicles")) as { vehicles: { name: string; plate: string | null; inspectionDue: string | null; insuranceDue: string | null; serviceAtKm: number | null; odometer: number | null; monthTrips: number; monthKm: number; alerts: string[] }[] };

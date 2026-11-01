@@ -2586,6 +2586,8 @@ model CompanyEvent {
   note          String?
   createdByName String
   closed        Boolean       @default(false)
+  cost          Int? // お店などに払った合計(円)
+  journalEntryId String? // 会社の負担分の仕訳
   createdAt     DateTime      @default(now())
   answers       EventAnswer[]
 

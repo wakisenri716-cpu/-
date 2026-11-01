@@ -44,6 +44,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_visitors: "来客の受付簿",
   get_alcohol_checks: "アルコールチェック",
   get_vehicles: "社用車の管理",
+  get_events: "社内のイベント",
   get_purchase_prices: "仕入値の履歴",
   get_meeting_slots: "日程調整",
   check_text: "文章チェック",
