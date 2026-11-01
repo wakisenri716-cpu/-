@@ -2513,6 +2513,7 @@ model Visitor {
   status         String    @default("EXPECTED") // EXPECTED(予定) / ARRIVED(お見えになった) / LEFT(お帰りになった) / CANCELLED
   arrivedAt      DateTime?
   leftAt         DateTime?
+  thanksSentAt   DateTime? // お礼のメールを送った日時
   createdByName  String
   createdAt      DateTime  @default(now())
 
