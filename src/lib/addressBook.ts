@@ -87,7 +87,12 @@ export async function listAddressBook(companyId: string) {
     prisma.customer.findMany({ where: { companyId }, select: SELECT, orderBy: { name: "asc" } }),
     prisma.vendor.findMany({ where: { companyId }, select: SELECT, orderBy: { name: "asc" } }),
   ]);
-  return [...customers.map((c) => ({ ...c, kind: "customer" as const })), ...vendors.map((v) => ({ ...v, kind: "vendor" as const }))];
+  // この1年に請求書のやりとりがあった相手(年賀状・年末のご挨拶を送る相手を選ぶ目安)
+  const since = new Date(Date.now() - 365 * 86_400_000);
+  const recent = await prisma.invoice.findMany({ where: { companyId, OR: [{ issueDate: { gte: since } }, { createdAt: { gte: since } }] }, select: { customerId: true, vendorId: true }, take: 5000 });
+  const activeCustomers = new Set(recent.map((r) => r.customerId).filter(Boolean));
+  const activeVendors = new Set(recent.map((r) => r.vendorId).filter(Boolean));
+  return [...customers.map((c) => ({ ...c, kind: "customer" as const, active: activeCustomers.has(c.id) })), ...vendors.map((v) => ({ ...v, kind: "vendor" as const, active: activeVendors.has(v.id) }))];
 }
 
 // "customer:ID,vendor:ID" の並びから、宛名ラベルに載せる相手を取り出す
