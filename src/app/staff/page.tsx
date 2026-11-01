@@ -14,6 +14,8 @@ type Home = {
   latestNotices: { id: string; title: string }[];
   lowStock: number;
   hasProducts: boolean;
+  toAnswer?: { id: string; title: string; date: string; deadline: string | null }[];
+  newAnswers?: number;
 };
 
 const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8))}`;
@@ -58,6 +60,20 @@ export default function StaffHome() {
           </Link>
         )}
       </section>
+
+      {!!data.toAnswer?.length && (
+        <Link href="/staff/events" className="block rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm shadow-sm">
+          <span className="block font-semibold text-rose-800">出欠を答えていないイベントがあります</span>
+          <span className="mt-0.5 block text-rose-700">
+            {data.toAnswer.map((e) => `${e.title}(${md(e.date)}${e.deadline ? `・締め切り ${md(e.deadline)}` : ""})`).join("、")} ›
+          </span>
+        </Link>
+      )}
+      {!!data.newAnswers && (
+        <Link href="/staff/ask" className="block rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800 shadow-sm">
+          総務から質問の答えが{data.newAnswers}件届いています ›
+        </Link>
+      )}
 
       <Link href="/staff/ask" className="flex items-center gap-3 rounded-2xl border border-indigo-200 bg-white p-4 shadow-sm hover:bg-indigo-50">
         <SparkleIcon className="h-6 w-6 shrink-0 text-indigo-600" />
