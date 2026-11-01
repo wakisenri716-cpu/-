@@ -253,6 +253,7 @@ model Company {
   bookings      Booking[]
   visitors      Visitor[]
   staffQuestions StaffQuestion[]
+  alcoholChecks AlcoholCheck[]
   partyNotes           PartyNote[]
   teamTasks            TeamTask[]
   closures             CompanyClosure[]
@@ -2540,4 +2541,25 @@ model StaffQuestion {
 
   @@index([companyId, status])
   @@index([userId])
+}
+
+// 社用車のアルコールチェックの記録(運転の前と後。1年間残す)
+model AlcoholCheck {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  date        String // YYYY-MM-DD(日本時間)
+  timing      String // BEFORE(運転前) / AFTER(運転後)
+  driverId    String?
+  driverName  String
+  vehicle     String // 車の名前・ナンバー
+  bookingId   String? // 社用車の予約から記録したとき
+  method      String   @default("FACE") // FACE(対面) / VIDEO(カメラ・ビデオ通話) / PHONE(電話)
+  detected    Boolean  @default(false) // 酒気帯びの有無
+  value       String? // 検知器の数値(mg/L)
+  checkerName String // 確認した人
+  note        String?
+  checkedAt   DateTime @default(now())
+
+  @@index([companyId, date])
 }
