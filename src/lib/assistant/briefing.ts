@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
 import { visitorsOn } from "@/lib/visitors";
+import { listEvents } from "@/lib/companyEvents";
 import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
@@ -55,6 +56,11 @@ export function visitorsNote(list: { time: string | null; label: string; host: s
   return `今日は来客が${list.length}件あります: ${shown.join("、")}${list.length > 4 ? " ほか" : ""}。お見えになったら来客の受付簿で「お見えになった」を押してください。`;
 }
 
+export function eventsNote(list: { title: string; date: string; yes: number; pending: number; deadline: string | null }[]) {
+  const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
+  return `社内のイベント: ${list.map((e) => `${e.title}(${md(e.date)})出席${e.yes}人${e.pending ? `・まだ答えていない${e.pending}人${e.deadline ? `(締め切り ${md(e.deadline)})` : ""}` : ""}`).join("、")}。`;
+}
+
 export function closureNote(c: NonNullable<ReturnType<typeof upcomingClosure>> & { tasksDue?: number }) {
   const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
   return `明日から${c.days}日間お休みです(${md(c.from)}〜${md(c.to)}${c.names.length ? `・${c.names.join("・")}` : ""})。振込・入金の確認など銀行の手続きは今日中に。次の営業日は${md(c.nextBusinessDay)}です。${c.tasksDue ? `お休み中が期限のやることが${c.tasksDue}件あります(今日中に済ませるか、期限を見直してください)。` : ""}`;
@@ -89,6 +95,12 @@ export async function buildBriefingFacts(companyId: string, now = new Date()) {
   const closureAhead = closure ? { ...closure, tasksDue: await prisma.teamTask.count({ where: { companyId, status: "OPEN", dueOn: { gte: closure.from, lte: closure.to } } }) } : null;
   // 今日お休みの人(有給)と、その人の済んでいないやること・伝言・郵便物
   const offToday = (await upcomingLeaves(companyId, 0)).filter((l) => l.dates.includes(today)).map((l) => ({ name: l.name, openItems: l.items }));
+  // 1週間以内のイベントと、締め切りが3日以内で答えていない人がいるイベント
+  const soon = addDays(today, 7);
+  const deadlineSoon = addDays(today, 3);
+  const eventsSoon = (await listEvents(companyId))
+    .filter((e) => e.date >= today && (e.date <= soon || (!e.closed && e.deadline && e.deadline <= deadlineSoon && e.pending.length > 0)))
+    .map((e) => ({ title: e.title, date: e.date, yes: e.counts.YES, pending: e.closed ? 0 : e.pending.length, deadline: e.deadline }));
   // 今日の来客(取り消し・お帰りになったものは除く)
   const visitorsToday = (await visitorsOn(companyId, today)).filter((v) => v.status === "EXPECTED" || v.status === "ARRIVED").map((v) => ({ time: v.time, label: v.label, host: v.host, purpose: v.purpose, room: v.room ? `${v.room.facility} ${v.room.start}〜${v.room.end}` : null }));
   return {
@@ -97,6 +109,7 @@ export async function buildBriefingFacts(companyId: string, now = new Date()) {
     closureAhead,
     offToday,
     visitorsToday,
+    eventsSoon,
     cash,
     todos: todos.map((t) => ({ key: t.key, label: t.label, count: t.count, detail: t.detail, href: t.href, urgent: t.tone === "rose" })),
     yesterday: {
@@ -264,6 +277,8 @@ export async function generateBriefing(companyId: string, userId = "system", now
   if (facts.closureAhead && !result.notes.some((n) => n.includes("お休み"))) result = { ...result, notes: [closureNote(facts.closureAhead), ...result.notes].slice(0, 4) };
   // 今日お休みの人の知らせも、AIが書かなかったときは入れる
   if (facts.offToday?.length && !facts.offToday.some((o) => result!.notes.some((n) => n.includes(o.name)))) result = { ...result, notes: [offTodayNote(facts.offToday), ...result.notes].slice(0, 5) };
+  // 近いイベントの知らせも、AIが書かなかったときは入れる
+  if (facts.eventsSoon?.length && !facts.eventsSoon.some((e) => result!.notes.some((n) => n.includes(e.title)))) result = { ...result, notes: [...result.notes.slice(0, 4), eventsNote(facts.eventsSoon)] };
   // 今日の来客の知らせも、AIが書かなかったときは入れる
   if (facts.visitorsToday?.length && !result.notes.some((n) => n.includes("来客") || facts.visitorsToday.some((v) => n.includes(v.label)))) result = { ...result, notes: [...result.notes.slice(0, 4), visitorsNote(facts.visitorsToday)] };
   await prisma.assistantLog.create({ data: { companyId, userId, question: `朝のブリーフィング ${facts.date}`, tools: [], mode: `briefing-${mode}` } });

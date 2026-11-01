@@ -5,6 +5,9 @@ const norm = (s: string) => s.normalize("NFKC").replace(/(\d),(?=\d{3})/g, "$1")
 const plain = (s: string) => norm(s).match(/\d{2,}/g) ?? [];
 const UNIT = /(\d+(?:\.\d+)?)\s*(%|円|割|万円|か月|ヶ月|日間|営業日|年間)/g;
 
+// 1けたの数でも、数えることば(時間・人・回など)が付いていれば、元の情報にあるかを見る(「飲み放題は2時間」のような作り話を止める)
+const COUNT = /(?<![\d.])(\d)\s*(時間|分間?|人|名|回|杯|本|枚|件|週間|泊|個|台|社|か所|箇所)/g;
+
 export function inventedNumbers(output: string, source: string): string[] {
   const src = norm(source);
   const nums = new Set(plain(src));
@@ -19,6 +22,13 @@ export function inventedNumbers(output: string, source: string): string[] {
     // 「120万円」は元の情報の 1200000 と同じとみなす
     if (m[2] === "万円" && nums.has(String(Math.round(Number(m[1]) * 10000)))) continue;
     out.push(token);
+  }
+  // 元の情報に同じ「数+ことば」があるか、その数がほかの数字の一部でない形(件数の 3 など)で出てくればよい
+  const counts = new Set([...src.matchAll(COUNT)].map((m) => `${m[1]}${m[2].replace(/間$/, "")}`));
+  const singles = new Set([...src.matchAll(/(?<![\d.])(\d)(?![\d.])/g)].map((m) => m[1]));
+  for (const m of norm(output).matchAll(COUNT)) {
+    const token = `${m[1]}${m[2].replace(/間$/, "")}`;
+    if (!counts.has(token) && !singles.has(m[1])) out.push(`${m[1]}${m[2]}`);
   }
   return [...new Set(out)];
 }
