@@ -252,6 +252,7 @@ model Company {
   facilities    Facility[]
   bookings      Booking[]
   visitors      Visitor[]
+  staffQuestions StaffQuestion[]
   partyNotes           PartyNote[]
   teamTasks            TeamTask[]
   closures             CompanyClosure[]
@@ -2518,4 +2519,25 @@ model Visitor {
   createdAt      DateTime  @default(now())
 
   @@index([companyId, date])
+}
+
+// 従業員から総務への質問(AIで答えられなかったもの)。答えは「よくある質問」としてマニュアルに足せる
+model StaffQuestion {
+  id             String    @id @default(cuid())
+  companyId      String
+  company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId         String
+  userName       String
+  question       String
+  aiReply        String? // AIが答えた内容(あれば)
+  status         String    @default("OPEN") // OPEN(答え待ち) / ANSWERED
+  answer         String?
+  answeredByName String?
+  answeredAt     DateTime?
+  manualId       String? // よくある質問として足したマニュアル
+  seenAt         DateTime? // 聞いた人が答えを見た日時
+  createdAt      DateTime  @default(now())
+
+  @@index([companyId, status])
+  @@index([userId])
 }

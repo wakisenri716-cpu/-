@@ -101,6 +101,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/visitors", label: "来客の受付簿", icon: NotebookIcon },
       { href: "/minutes", label: "議事録", icon: NotebookIcon },
       { href: "/manuals", label: "マニュアル", icon: NotebookIcon },
+      { href: "/staff-questions", label: "総務への質問箱", icon: NotebookIcon },
       { href: "/policies", label: "社内規程の下書き", icon: SparkleIcon },
       { href: "/staff", label: "Clerkly従業員用", icon: DashboardIcon },
       { href: "/files", label: "書類フォルダ", icon: FolderIcon },
