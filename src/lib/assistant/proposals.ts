@@ -11,12 +11,17 @@ import { addDraftItems, sanitizeItems } from "./expenseText";
 import { EXPENSE_ACCOUNT_CODES } from "@/lib/accounting/chartOfAccounts";
 import { fixAccount, getAccountReview } from "@/lib/accountReview";
 import { termsDueDate } from "@/lib/customerTerms";
+import { matchMember, relativeDue } from "@/lib/teamTasks";
+import { findParty, memoContext } from "@/lib/phoneMemos";
+import { createVisitor, visitorLabel } from "@/lib/visitors";
+import { bookingWarnings, createBooking, listFacilities } from "@/lib/bookings";
+import { overlaps, parseTimeRange, validHM } from "@/lib/bookingText";
 
 // AIアシスタントの下書き(提案)。AIは提案を作るだけで、確定は人が画面のボタンを押したときだけ行う。
 // 提案は24時間で期限切れ。
 
 const TTL_MS = 24 * 3_600_000;
-export type ProposalKind = "INVOICE" | "JOURNAL" | "REMINDER" | "END_CONTRACT" | "LINK_PO" | "CANCEL_INVOICE" | "VENDOR_ACCOUNT" | "EXPENSE" | "FIX_ACCOUNT";
+export type ProposalKind = "INVOICE" | "JOURNAL" | "REMINDER" | "END_CONTRACT" | "LINK_PO" | "CANCEL_INVOICE" | "VENDOR_ACCOUNT" | "EXPENSE" | "FIX_ACCOUNT" | "VISITOR" | "BOOKING";
 export type ProposalView = { id: string; kind: ProposalKind; summary: string; details: string[]; status: string; resultNote: string | null };
 
 // source: MCP のときは、会社が自分のAIからつないで作った下書き(sourceName はつなぎ方の名前)
@@ -206,6 +211,72 @@ export async function proposeFixAccount(ctx: Ctx, input: Input) {
   return save(ctx, "FIX_ACCOUNT", `「${s.description.slice(0, 30)}」を${to.name}に直す`, { lineId, code: to.code }, details);
 }
 
+// 日付は YYYY-MM-DD か「明日」「金曜」などの言葉
+function dateOf(v: unknown) {
+  const today = jstDateKey(new Date());
+  const raw = str(v);
+  if (!raw) return today;
+  if (validDate(raw)) return raw;
+  const d = relativeDue(raw, today);
+  if (!d) throw new UserError(`日付「${raw}」が読めません(YYYY-MM-DD か「明日」などで)`);
+  return d;
+}
+// 時刻は HH:MM か「14時」「午後2時半」など
+function timeOf(v: unknown) {
+  const raw = str(v);
+  if (!raw) return null;
+  if (validHM(raw)) return raw;
+  const t = parseTimeRange(raw);
+  if (!t) throw new UserError(`時刻「${raw}」が読めません(HH:MM か「14時」などで)`);
+  return t.start;
+}
+const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
+
+// 来客の予定を入れる
+export async function proposeVisitor(ctx: Ctx, input: Input) {
+  const date = dateOf(input.date);
+  const time = timeOf(input.time);
+  const mc = await memoContext(ctx.companyId);
+  const visitorName = str(input.visitorName).replace(/(様|さま|さん)$/, "").slice(0, 40);
+  const companyWord = str(input.visitorCompany).slice(0, 60);
+  const party = companyWord ? findParty(mc.parties, companyWord, null) : null;
+  const visitorCompany = party?.name ?? (companyWord || null);
+  if (!visitorName && !visitorCompany) throw new UserError("来る人のお名前か会社名が必要です");
+  const hostWord = str(input.host);
+  const host = hostWord ? matchMember(mc.users, hostWord) : null;
+  if (hostWord && !host) throw new UserError(`担当の「${hostWord}」が社内の人に見つかりません(社内の人: ${mc.users.map((u) => u.name).join("、")})`);
+  const purpose = str(input.purpose).slice(0, 100);
+  const payload = { date, time, visitorName: visitorName || "ご担当者", visitorCompany, partyKind: party?.kind ?? null, partyId: party?.id ?? null, hostUserId: host?.id ?? null, purpose };
+  const label = visitorLabel(payload);
+  const details = [`日時: ${md(date)}${time ? ` ${time}` : "(時刻なし)"}`, `来る人: ${label}${party ? "(住所録の相手)" : ""}`, `担当: ${host?.name ?? "決めていない"}`, ...(purpose ? [`用件: ${purpose}`] : []), "来客の受付簿に予定として入れます。お見えになったら担当の人にメールで知らせられます"];
+  return save(ctx, "VISITOR", `${md(date)}${time ? ` ${time}` : ""} ${label}の来客の予定を入れる`, payload, details);
+}
+
+// 会議室・社用車を予約する(重なる予約があれば下書きを作らない)
+export async function proposeBooking(ctx: Ctx, input: Input) {
+  const facilities = await listFacilities(ctx.companyId);
+  if (!facilities.length) throw new UserError("予約できるもの(会議室・社用車など)がまだ登録されていません。/bookings で登録してください");
+  const word = str(input.facility);
+  const kind = /社用車|車/.test(word) ? "CAR" : /会議室|応接|ミーティング/.test(word) ? "ROOM" : null;
+  const facility =
+    facilities.find((f) => f.name === word) ??
+    facilities.find((f) => word && (f.name.includes(word) || word.includes(f.name))) ??
+    (kind && facilities.filter((f) => f.kind === kind).length === 1 ? facilities.find((f) => f.kind === kind) : undefined);
+  if (!facility) throw new UserError(`予約するもの「${word}」が決められません(予約できるもの: ${facilities.map((f) => f.name).join("、")})`);
+  const date = dateOf(input.date);
+  const start = timeOf(input.start);
+  if (!start) throw new UserError("始まりの時刻が必要です");
+  const end = timeOf(input.end) ?? `${String(Math.min(23, Number(start.slice(0, 2)) + 1)).padStart(2, "0")}:${start.slice(3)}`;
+  if (end <= start) throw new UserError("終わりの時刻を始まりより後にしてください");
+  const same = await prisma.booking.findMany({ where: { companyId: ctx.companyId, facilityId: facility.id, date } });
+  const clash = same.find((b) => overlaps(b, { start, end }));
+  if (clash) throw new UserError(`${facility.name}は ${md(date)} ${clash.start}〜${clash.end} に「${clash.title}」(${clash.userName})の予約があります。get_bookings で空きを確かめてください`);
+  const title = str(input.title).slice(0, 60) || "予約";
+  const warnings = await bookingWarnings(ctx.companyId, date);
+  const details = [`${facility.name}: ${md(date)} ${start}〜${end}`, `用件: ${title}`, ...warnings.map((w) => `注意: ${w}`), "実行した人の名前で予約します"];
+  return save(ctx, "BOOKING", `${facility.name}を ${md(date)} ${start}〜${end} で予約する`, { facilityId: facility.id, date, start, end, title }, details);
+}
+
 const view = (p: { id: string; kind: string; summary: string; payload: unknown; status: string; resultNote: string | null }): ProposalView => ({
   id: p.id,
   kind: p.kind as ProposalKind,
@@ -309,6 +380,15 @@ export async function executeProposal(companyId: string, user: { id: string; nam
       const r = await fixAccount({ name: user.name, companyId }, String(payload.lineId), String(payload.code));
       resultId = r.entryId;
       note = r.note;
+    } else if (p.kind === "VISITOR") {
+      const me = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { name: true } });
+      const v = await createVisitor({ id: user.id, companyId, name: me.name }, payload);
+      resultId = v.id;
+      note = `来客の受付簿に ${visitorLabel(v)}の予定を入れました`;
+    } else if (p.kind === "BOOKING") {
+      const r = await createBooking({ id: user.id, companyId, name: user.name }, payload);
+      resultId = r.booking.id;
+      note = `${r.booking.facility.name}を ${md(r.booking.date)} ${r.booking.start}〜${r.booking.end} で予約しました`;
     } else {
       throw new UserError("この下書きは実行できません");
     }
