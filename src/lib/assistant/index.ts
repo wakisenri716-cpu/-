@@ -225,6 +225,22 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「アルコールチェックは済んでる?」
+  if (/アルコール|酒気|飲酒/.test(q)) {
+    const r = (await run("get_alcohol_checks")) as { today: { time: string; vehicle: string; driver: string; before: string; after: string }[]; missing: { date: string; time: string; vehicle: string; driver: string; missing: string[] }[]; detectedToday: number };
+    const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
+    return {
+      reply: [
+        r.today.length ? `今日の社用車(${r.today.length}件):` : "今日の社用車の予約はありません。",
+        ...r.today.map((b) => `・${b.time} ${b.vehicle} ${b.driver}さん — 運転前: ${b.before}・運転後: ${b.after}`),
+        ...(r.detectedToday ? [`⚠ 今日、酒気が検知された記録が${r.detectedToday}件あります。運転させないでください。`] : []),
+        r.missing.length ? `記録が足りない予約(この7日): ${r.missing.map((m) => `${md(m.date)} ${m.vehicle}(${m.driver}さん・${m.missing.join("・")})`).join("、")}` : "この7日の記録漏れはありません。",
+        "記録は [アルコールチェック](/alcohol-checks) で。",
+      ].join("\n"),
+      tools: ["get_alcohol_checks"],
+      mode: "simple",
+    };
+  }
   // 「今日の来客は?」「明日お客さんは来る?」
   if (/(来客|来社|来訪|お客さん|お客様).{0,8}(は|ある|来る|いる|予定|[?？]|$)/.test(q) && !/(会議室|社用車|伝言|電話)/.test(q)) {
     const r = (await run("get_visitors", { date: q })) as { date: string; count: number; visitors: { time: string | null; visitor: string; host: string; purpose: string | null; status: string; room: string | null }[] };
