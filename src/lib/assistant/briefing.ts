@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { visitorsOn } from "@/lib/visitors";
 import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
@@ -49,6 +50,11 @@ export function offTodayNote(off: { name: string; openItems: number }[]) {
   return `今日は${names}がお休みです。${open.length ? `${open.map((o) => `${o.name}さんの済んでいないやること・伝言・郵便物が${o.openItems}件`).join("、")}あります。急ぎのものは代わりに対応してください。` : ""}`;
 }
 
+export function visitorsNote(list: { time: string | null; label: string; host: string | null }[]) {
+  const shown = list.slice(0, 4).map((v) => `${v.time ?? ""}${v.time ? " " : ""}${v.label}${v.host ? `(${v.host}さん)` : ""}`);
+  return `今日は来客が${list.length}件あります: ${shown.join("、")}${list.length > 4 ? " ほか" : ""}。お見えになったら来客の受付簿で「お見えになった」を押してください。`;
+}
+
 export function closureNote(c: NonNullable<ReturnType<typeof upcomingClosure>> & { tasksDue?: number }) {
   const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
   return `明日から${c.days}日間お休みです(${md(c.from)}〜${md(c.to)}${c.names.length ? `・${c.names.join("・")}` : ""})。振込・入金の確認など銀行の手続きは今日中に。次の営業日は${md(c.nextBusinessDay)}です。${c.tasksDue ? `お休み中が期限のやることが${c.tasksDue}件あります(今日中に済ませるか、期限を見直してください)。` : ""}`;
@@ -83,11 +89,14 @@ export async function buildBriefingFacts(companyId: string, now = new Date()) {
   const closureAhead = closure ? { ...closure, tasksDue: await prisma.teamTask.count({ where: { companyId, status: "OPEN", dueOn: { gte: closure.from, lte: closure.to } } }) } : null;
   // 今日お休みの人(有給)と、その人の済んでいないやること・伝言・郵便物
   const offToday = (await upcomingLeaves(companyId, 0)).filter((l) => l.dates.includes(today)).map((l) => ({ name: l.name, openItems: l.items }));
+  // 今日の来客(取り消し・お帰りになったものは除く)
+  const visitorsToday = (await visitorsOn(companyId, today)).filter((v) => v.status === "EXPECTED" || v.status === "ARRIVED").map((v) => ({ time: v.time, label: v.label, host: v.host, purpose: v.purpose, room: v.room ? `${v.room.facility} ${v.room.start}〜${v.room.end}` : null }));
   return {
     date: today,
     weekday: weekdayOf(today),
     closureAhead,
     offToday,
+    visitorsToday,
     cash,
     todos: todos.map((t) => ({ key: t.key, label: t.label, count: t.count, detail: t.detail, href: t.href, urgent: t.tone === "rose" })),
     yesterday: {
@@ -255,6 +264,8 @@ export async function generateBriefing(companyId: string, userId = "system", now
   if (facts.closureAhead && !result.notes.some((n) => n.includes("お休み"))) result = { ...result, notes: [closureNote(facts.closureAhead), ...result.notes].slice(0, 4) };
   // 今日お休みの人の知らせも、AIが書かなかったときは入れる
   if (facts.offToday?.length && !facts.offToday.some((o) => result!.notes.some((n) => n.includes(o.name)))) result = { ...result, notes: [offTodayNote(facts.offToday), ...result.notes].slice(0, 5) };
+  // 今日の来客の知らせも、AIが書かなかったときは入れる
+  if (facts.visitorsToday?.length && !result.notes.some((n) => n.includes("来客") || facts.visitorsToday.some((v) => n.includes(v.label)))) result = { ...result, notes: [...result.notes.slice(0, 4), visitorsNote(facts.visitorsToday)] };
   await prisma.assistantLog.create({ data: { companyId, userId, question: `朝のブリーフィング ${facts.date}`, tools: [], mode: `briefing-${mode}` } });
   return prisma.dailyBriefing.upsert({
     where: { companyId_date: { companyId, date: facts.date } },
