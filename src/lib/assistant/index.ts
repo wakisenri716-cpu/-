@@ -225,6 +225,20 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「車検はいつ?」「点検が必要な車は?」
+  if (/車検|自動車保険|任意保険|オイル交換|(車|社用車).{0,6}(点検|保険|走った|距離)/.test(q)) {
+    const r = (await run("get_vehicles")) as { vehicles: { name: string; plate: string | null; inspectionDue: string | null; insuranceDue: string | null; serviceAtKm: number | null; odometer: number | null; monthTrips: number; monthKm: number; alerts: string[] }[] };
+    if (!r.vehicles.length) return { reply: "社用車がまだ登録されていません。[会議室・社用車の予約](/bookings) で種類を「社用車」にして登録してください。", tools: ["get_vehicles"], mode: "simple" };
+    const ymd = (k: string | null) => (k ? `${Number(k.slice(0, 4))}/${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}` : "未入力");
+    return {
+      reply: [
+        ...r.vehicles.map((v) => `・${v.name}${v.plate ? `(${v.plate})` : ""}: 車検 ${ymd(v.inspectionDue)}・任意保険 ${ymd(v.insuranceDue)}・次の点検 ${v.serviceAtKm != null ? `${v.serviceAtKm.toLocaleString()}km` : "未入力"}・メーター ${v.odometer != null ? `${v.odometer.toLocaleString()}km` : "記録なし"}・今月 ${v.monthTrips}回 ${v.monthKm.toLocaleString()}km${v.alerts.length ? `\n  ⚠ ${v.alerts.join("。")}` : ""}`),
+        "[社用車の管理](/vehicles)",
+      ].join("\n"),
+      tools: ["get_vehicles"],
+      mode: "simple",
+    };
+  }
   // 「アルコールチェックは済んでる?」
   if (/アルコール|酒気|飲酒/.test(q)) {
     const r = (await run("get_alcohol_checks")) as { today: { time: string; vehicle: string; driver: string; before: string; after: string }[]; missing: { date: string; time: string; vehicle: string; driver: string; missing: string[] }[]; detectedToday: number };

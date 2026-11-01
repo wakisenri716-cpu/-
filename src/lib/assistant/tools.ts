@@ -9,6 +9,7 @@ import { listBookings, listFacilities, kindLabel } from "@/lib/bookings";
 import { freeSlots } from "@/lib/bookingText";
 import { visitorsOn, VISITOR_STATUS } from "@/lib/visitors";
 import { carBookingsOn, missingChecks, TIMINGS as ALCOHOL_TIMINGS } from "@/lib/alcoholChecks";
+import { listVehicles } from "@/lib/vehicles";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
 import { MEMO_ACTIONS, type MemoAction } from "@/lib/phoneMemoLabels";
 import { ruleCheck } from "@/lib/textCheck";
@@ -451,6 +452,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_alcohol_checks",
     description: "社用車のアルコールチェック。今日の社用車の予約ごとの運転前・運転後の記録(時刻・酒気帯びの有無)と、この7日で記録が足りない予約を返す。「アルコールチェックは済んでる?」「記録漏れはある?」などに使う。記録は /alcohol-checks を案内する。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_vehicles",
+    description: "社用車の管理。社用車ごとのナンバー・車検と任意保険の満了日・次の点検のメーター・いまのメーター・今月の回数と距離、期限が近い・過ぎたことの知らせを返す。「車検はいつ?」「点検が必要な車は?」「今月どれくらい走った?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -999,6 +1005,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         detectedToday: todays.filter((b) => b.before?.detected || b.after?.detected).length,
         link: "/alcohol-checks",
       };
+    }
+    case "get_vehicles": {
+      const list = await listVehicles(companyId);
+      return { vehicles: list.map((v) => ({ name: v.name, plate: v.plate, inspectionDue: v.inspectionDue, insuranceDue: v.insuranceDue, serviceAtKm: v.serviceAtKm, odometer: v.odometer, monthTrips: v.monthTrips, monthKm: v.monthKm, alerts: v.alerts.map((a) => a.text) })), link: "/vehicles" };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);

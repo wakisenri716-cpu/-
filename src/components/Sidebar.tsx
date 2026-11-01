@@ -99,6 +99,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/handover", label: "引き継ぎメモ", icon: NotebookIcon },
       { href: "/bookings", label: "会議室・社用車の予約", icon: CalendarIcon },
       { href: "/alcohol-checks", label: "アルコールチェック", icon: NotebookIcon },
+      { href: "/vehicles", label: "社用車の管理", icon: NotebookIcon },
       { href: "/visitors", label: "来客の受付簿", icon: NotebookIcon },
       { href: "/minutes", label: "議事録", icon: NotebookIcon },
       { href: "/manuals", label: "マニュアル", icon: NotebookIcon },
