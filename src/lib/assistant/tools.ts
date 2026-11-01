@@ -10,6 +10,7 @@ import { freeSlots } from "@/lib/bookingText";
 import { visitorsOn, VISITOR_STATUS } from "@/lib/visitors";
 import { carBookingsOn, missingChecks, TIMINGS as ALCOHOL_TIMINGS } from "@/lib/alcoholChecks";
 import { listVehicles } from "@/lib/vehicles";
+import { listEvents } from "@/lib/companyEvents";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
 import { MEMO_ACTIONS, type MemoAction } from "@/lib/phoneMemoLabels";
 import { ruleCheck } from "@/lib/textCheck";
@@ -457,6 +458,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_vehicles",
     description: "社用車の管理。社用車ごとのナンバー・車検と任意保険の満了日・次の点検のメーター・いまのメーター・今月の回数と距離、期限が近い・過ぎたことの知らせを返す。「車検はいつ?」「点検が必要な車は?」「今月どれくらい走った?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_events",
+    description: "社内のイベント(忘年会・歓迎会など)。これからと30日以内のイベントの日時・場所・会費・締め切り、出席・欠席・未定の人数、まだ答えていない人、会費を受け取った人数と金額、会社の負担を返す。「忘年会の出欠は?」「何人来る?」「会費は集まった?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1009,6 +1015,13 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_vehicles": {
       const list = await listVehicles(companyId);
       return { vehicles: list.map((v) => ({ name: v.name, plate: v.plate, inspectionDue: v.inspectionDue, insuranceDue: v.insuranceDue, serviceAtKm: v.serviceAtKm, odometer: v.odometer, monthTrips: v.monthTrips, monthKm: v.monthKm, alerts: v.alerts.map((a) => a.text) })), link: "/vehicles" };
+    }
+    case "get_events": {
+      const list = await listEvents(companyId);
+      return {
+        events: list.map((e) => ({ title: e.title, date: e.date, time: e.time, place: e.place, fee: e.fee, deadline: e.deadline, closed: e.closed, yes: e.answers.filter((a) => a.answer === "YES").map((a) => a.userName), no: e.counts.NO, maybe: e.counts.MAYBE, notAnswered: e.pending.map((p) => p.name), paid: e.paidCount, collected: e.collected, cost: e.cost, companyShare: e.companyShare, posted: !!e.journalEntryId })),
+        link: "/events",
+      };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);

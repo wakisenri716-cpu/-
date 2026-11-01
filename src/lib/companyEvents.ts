@@ -8,6 +8,8 @@ import { MailError, appUrl, sendMail } from "@/lib/mail";
 import { relativeDue } from "@/lib/teamTasks";
 import { parseTimeRange, validHM } from "@/lib/bookingText";
 import { createAnnouncement } from "@/lib/announcements";
+import { ensureAccount } from "@/lib/accounting/accounts";
+import { createManualJournal } from "@/lib/accounting/journal";
 
 // 社内のイベント(忘年会・歓迎会など)の出欠: 「12/20 19時 忘年会 居酒屋さくら 会費5000円 締切12/10」のように1行で作り、
 // 案内(AIで下書きもできる)を社内のお知らせに出す。従業員はClerkly従業員用で出欠を答え、総務は会費の受け取りと答えていない人への催促をする。
@@ -183,6 +185,7 @@ export async function listEvents(companyId: string) {
       pending: people.filter((p) => !answered.has(p.id)).map((p) => ({ id: p.id, name: p.name })),
       paidCount: yes.filter((a) => a.paid).length,
       collected: e.fee ? yes.filter((a) => a.paid).length * e.fee : 0,
+      companyShare: e.cost ? Math.max(0, e.cost - (e.fee ? yes.filter((a) => a.paid).length * e.fee : 0)) : null,
     };
   });
 }
@@ -215,6 +218,34 @@ export async function updateEvent(me: Me, eventId: string, raw: Record<string, u
     if (!a) throw new UserError("出欠の答えがありません");
     await prisma.eventAnswer.update({ where: { id: a.id }, data: { paid: raw.paid === true } });
     return { ok: true };
+  }
+  if (raw.action === "cost") {
+    if (e.journalEntryId) throw new UserError("会社の負担分はもう仕訳しました。直すときは仕訳帳で取り消してください");
+    const s = String(raw.cost ?? "").replace(/[,円\s]/g, "");
+    if (s && !/^\d{1,8}$/.test(s)) throw new UserError("かかった金額を正しく入れてください");
+    await prisma.companyEvent.update({ where: { id: eventId }, data: { cost: s ? Number(s) : null } });
+    return { ok: true };
+  }
+  if (raw.action === "post") {
+    // 会社の負担分(かかった金額 − 受け取った会費)を福利厚生費として仕訳する
+    if (e.journalEntryId) throw new UserError("会社の負担分はもう仕訳しました");
+    if (!e.cost) throw new UserError("先にかかった金額を入れてください");
+    const answers = await prisma.eventAnswer.findMany({ where: { eventId, answer: "YES" } });
+    const collected = (e.fee ?? 0) * answers.filter((a) => a.paid).length;
+    const share = e.cost - collected;
+    if (share <= 0) throw new UserError("会費でまかなえているので、会社の負担はありません");
+    const payFrom = raw.payFrom === "1020" ? "1020" : "1010";
+    const [expense, cash] = await prisma.$transaction(async (tx) => [await ensureAccount(tx, me.companyId, "5125"), await ensureAccount(tx, me.companyId, payFrom)]);
+    const entry = await createManualJournal(me.companyId, {
+      date: new Date(`${e.date}T00:00:00Z`),
+      description: `${e.title}(${jpDate(e.date)})の会社負担 参加${answers.length}人・かかった金額${e.cost.toLocaleString()}円・会費${collected.toLocaleString()}円`,
+      lines: [
+        { accountId: expense.id, debit: share, credit: 0 },
+        { accountId: cash.id, debit: 0, credit: share },
+      ],
+    });
+    await prisma.companyEvent.update({ where: { id: eventId }, data: { journalEntryId: entry.id } });
+    return { entryId: entry.id, share };
   }
   if (raw.action === "close") {
     await prisma.companyEvent.update({ where: { id: eventId }, data: { closed: raw.closed !== false } });
