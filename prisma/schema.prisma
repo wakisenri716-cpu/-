@@ -2473,6 +2473,11 @@ model Facility {
   kind      String    @default("ROOM") // ROOM(会議室) / CAR(社用車) / OTHER
   note      String?
   active    Boolean   @default(true)
+  // 社用車の管理(CAR のときだけ使う)
+  plate          String? // ナンバー
+  inspectionDue  String? // 車検の満了日 YYYY-MM-DD
+  insuranceDue   String? // 任意保険の満了日 YYYY-MM-DD
+  serviceAtKm    Int? // 次の点検・オイル交換のメーター(km)
   createdAt DateTime  @default(now())
   bookings  Booking[]
 
