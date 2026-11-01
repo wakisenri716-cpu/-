@@ -14,6 +14,7 @@ type Party = {
   contactName: string | null;
   honorific: string | null;
   phone: string | null;
+  active?: boolean;
 };
 
 const KIND = { customer: "顧客", vendor: "取引先" } as const;
@@ -56,7 +57,7 @@ export default function LettersPage() {
         </p>
         <p className="mt-2 text-sm">
           <Link href="/letters/greeting" className="text-indigo-700 hover:underline">
-            挨拶状・お礼状を作る(お礼・年末年始の休業・移転・担当者の交代・お詫び・新しいご案内)→
+            挨拶状・お礼状を作る(お礼・年末年始の休業・年末のご挨拶・年賀状・喪中・移転・担当者の交代・お詫び・新しいご案内)→
           </Link>
         </p>
       </div>
@@ -79,6 +80,9 @@ export default function LettersPage() {
         <button onClick={() => setSelected(new Set(withAddress.map(key)))} className="text-xs text-indigo-700 hover:underline">
           住所のある相手をすべて選ぶ
         </button>
+        <button onClick={() => setSelected(new Set(withAddress.filter((p) => p.active).map(key)))} className="text-xs text-indigo-700 hover:underline">
+          この1年に取引のあった相手を選ぶ(年賀状・年末のご挨拶に)
+        </button>
         <button onClick={() => setSelected(new Set())} className="text-xs text-slate-500 hover:underline">
           選択をやめる
         </button>
@@ -100,6 +104,7 @@ export default function LettersPage() {
                 <div className="font-medium">
                   {p.name}
                   <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">{KIND[p.kind]}</span>
+                  {p.active && <span className="ml-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">この1年に取引あり</span>}
                 </div>
                 <div className="text-xs text-slate-500">
                   {p.address ? `〒${p.postalCode ?? "   -    "} ${p.address}` : <span className="text-amber-700">住所が未入力です</span>}

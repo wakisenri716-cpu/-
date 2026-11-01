@@ -9,6 +9,7 @@ import type { MailSender } from "@/lib/greetingMailText";
 type Kinds = typeof GREETING_KINDS;
 type Party = { kind: "customer" | "vendor"; id: string; name: string };
 type Letter = {
+  kind?: GreetingKind;
   title: string;
   date: string;
   to: { lines: string[]; main: string } | null;
@@ -21,7 +22,7 @@ type Letter = {
   notes: string[];
   mode: "claude" | "template";
 };
-const ORDER: GreetingKind[] = ["THANKS", "HOLIDAY", "CLOSURE", "MOVE", "PERSON", "APOLOGY", "LAUNCH"];
+const ORDER: GreetingKind[] = ["THANKS", "HOLIDAY", "YEAR_END", "NEW_YEAR", "MOURNING", "CLOSURE", "MOVE", "PERSON", "APOLOGY", "LAUNCH"];
 const jp = (key: string) => `${Number(key.slice(0, 4))}年${Number(key.slice(5, 7))}月${Number(key.slice(8, 10))}日`;
 
 export default function GreetingView({ kinds, parties, today, ai, mail, initial }: { kinds: Kinds; parties: Party[]; today: string; ai: boolean; mail: { recipients: MailRecipient[]; me: Omit<MailSender, "sender"> } | null; initial?: { kind: GreetingKind; fields: Record<string, string> } }) {
@@ -134,7 +135,8 @@ export default function GreetingView({ kinds, parties, today, ai, mail, initial 
             <PrintButton variant="outline" />
           </div>
           <article className="mx-auto max-w-[210mm] space-y-5 bg-white p-8 text-[13.5px] leading-relaxed text-slate-900 shadow-sm ring-1 ring-slate-200 sm:p-[20mm] print:max-w-none print:p-0 print:shadow-none print:ring-0">
-            <p className="text-right">{jp(letter.date)}</p>
+            {/* 年賀状・喪中のご挨拶は、日付を最後(結び)に書く */}
+            {letter.kind !== "NEW_YEAR" && letter.kind !== "MOURNING" && <p className="text-right">{jp(letter.date)}</p>}
             <div className="flex flex-wrap justify-between gap-4">
               <div>
                 {letter.to ? (

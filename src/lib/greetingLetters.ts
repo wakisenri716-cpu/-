@@ -13,7 +13,7 @@ const MODEL = process.env.ANTHROPIC_ASSISTANT_MODEL || "claude-opus-5-5";
 const DAILY_LIMIT = Number(process.env.ASSISTANT_DAILY_LIMIT || 100);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export type GreetingKind = "THANKS" | "HOLIDAY" | "CLOSURE" | "MOVE" | "PERSON" | "APOLOGY" | "LAUNCH";
+export type GreetingKind = "THANKS" | "HOLIDAY" | "CLOSURE" | "MOVE" | "PERSON" | "APOLOGY" | "LAUNCH" | "YEAR_END" | "NEW_YEAR" | "MOURNING";
 type Field = { key: string; label: string; placeholder: string; required?: boolean; multiline?: boolean };
 export const GREETING_KINDS: Record<GreetingKind, { title: string; subject: string; fields: Field[] }> = {
   THANKS: { title: "お礼状", subject: "御礼", fields: [{ key: "what", label: "何へのお礼か", placeholder: "例: 先日のご来社 / このたびのご注文", required: true }] },
@@ -68,6 +68,34 @@ export const GREETING_KINDS: Record<GreetingKind, { title: string; subject: stri
       { key: "detail", label: "内容・始める日", placeholder: "例: 毎月10日に季節の焼き菓子を5種お届け。11月から受付開始", multiline: true },
     ],
   },
+  YEAR_END: {
+    title: "年末のご挨拶(本年のお礼)",
+    subject: "年末のご挨拶",
+    fields: [
+      { key: "thanks", label: "今年お世話になったこと", placeholder: "例: 新店舗の立ち上げにご協力いただいたこと" },
+      { key: "period", label: "年末年始の休業期間", placeholder: "例: 2026年12月29日(火)〜2027年1月4日(月)" },
+    ],
+  },
+  NEW_YEAR: {
+    title: "新年のご挨拶(年賀状)",
+    subject: "謹賀新年",
+    fields: [{ key: "message", label: "ひとこと", placeholder: "例: 本年は新しい焼き菓子の定期便を始めます" }],
+  },
+  MOURNING: {
+    title: "喪中のご挨拶(年賀欠礼)",
+    subject: "喪中のご挨拶",
+    fields: [
+      { key: "who", label: "亡くなった方(続柄・お名前)", placeholder: "例: 弊社代表取締役 山田太郎", required: true },
+      { key: "when", label: "亡くなった月", placeholder: "例: 本年八月" },
+      { key: "age", label: "享年", placeholder: "例: 七十八歳" },
+    ],
+  },
+};
+
+// 新年の年(12月に作るときは翌年)を令和で
+export const newYearLabel = (date: string) => {
+  const y = Number(date.slice(0, 4)) + (Number(date.slice(5, 7)) >= 11 ? 1 : 0);
+  return `令和${y - 2018}年 元旦`;
 };
 
 // 時候の挨拶(月ごとの改まった言い方)
@@ -125,6 +153,36 @@ export function templateLetter(kind: GreetingKind, f: Record<string, string>, da
         opening: `拝啓 ${seasonal(date)}、貴社ますますご清栄のこととお慶び申し上げます。`,
         body: [`このたびは、${f.what.replace(/。$/, "")}。多大なるご迷惑をおかけいたしましたことを、心より深くお詫び申し上げます。`, ...(f.action ? [`今後は、${f.action.replace(/。$/, "")}。二度とこのようなことのないよう、社員一同細心の注意を払ってまいります。`] : ["今後は二度とこのようなことのないよう、社員一同細心の注意を払ってまいります。"]), "何卒ご容赦くださいますよう、重ねてお願い申し上げます。"],
         closing,
+        notes: [],
+      };
+    case "YEAR_END":
+      return {
+        subject,
+        opening,
+        body: [
+          `さて、本年も残りわずかとなりました。本年中は${f.thanks ? `${f.thanks.replace(/。$/, "")}をはじめ、` : ""}格別のお引き立てを賜り、誠にありがとうございました。`,
+          "来年も皆様のご期待に添えるよう、社員一同より一層努めてまいりますので、変わらぬご愛顧を賜りますようお願い申し上げます。",
+          "皆様のご健勝とご繁栄を心よりお祈り申し上げます。",
+        ],
+        closing,
+        notes: f.period ? [`年末年始の休業期間: ${f.period}`] : [],
+      };
+    case "NEW_YEAR":
+      // 年賀状は頭語・時候の挨拶・結語を使わない
+      return {
+        subject,
+        opening: "謹んで新春のお慶びを申し上げます",
+        body: ["旧年中は格別のご高配を賜り、厚く御礼申し上げます。", ...(f.message ? [`${f.message.replace(/。$/, "")}。`] : []), "本年も変わらぬご愛顧を賜りますよう、よろしくお願い申し上げます。", "皆様のご健康とご多幸を心よりお祈り申し上げます。"],
+        closing: newYearLabel(date),
+        notes: [],
+      };
+    case "MOURNING":
+      // 喪中のご挨拶は時候の挨拶・お祝いのことばを使わない
+      return {
+        subject,
+        opening: "喪中につき年末年始のご挨拶をご遠慮申し上げます",
+        body: [`${f.when ? `${f.when}に` : "本年"}${f.who}が${f.age ? `${f.age}にて` : ""}永眠いたしました。`, "ここに本年中に賜りましたご厚情に深く御礼申し上げますとともに、明年も変わらぬご交誼のほどお願い申し上げます。"],
+        closing: `令和${Number(date.slice(0, 4)) - 2018}年 ${Number(date.slice(5, 7))}月`,
         notes: [],
       };
     case "LAUNCH":
