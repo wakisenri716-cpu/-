@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export type Proposal = { id: string; kind: "INVOICE" | "JOURNAL" | "REMINDER" | "END_CONTRACT" | "LINK_PO" | "CANCEL_INVOICE" | "VENDOR_ACCOUNT" | "EXPENSE" | "FIX_ACCOUNT"; summary: string; details: string[]; status: string; resultNote: string | null };
+export type Proposal = { id: string; kind: "INVOICE" | "JOURNAL" | "REMINDER" | "END_CONTRACT" | "LINK_PO" | "CANCEL_INVOICE" | "VENDOR_ACCOUNT" | "EXPENSE" | "FIX_ACCOUNT" | "VISITOR" | "BOOKING"; summary: string; details: string[]; status: string; resultNote: string | null };
 
 const KIND_LABEL: Record<Proposal["kind"], string> = {
   INVOICE: "請求書の下書き",
@@ -14,6 +14,8 @@ const KIND_LABEL: Record<Proposal["kind"], string> = {
   VENDOR_ACCOUNT: "取引先の科目",
   EXPENSE: "経費の入力",
   FIX_ACCOUNT: "科目の振替",
+  VISITOR: "来客の予定",
+  BOOKING: "会議室・社用車の予約",
 };
 const ACTION_LABEL: Record<Proposal["kind"], string> = {
   INVOICE: "この内容で請求書を発行する",
@@ -25,6 +27,8 @@ const ACTION_LABEL: Record<Proposal["kind"], string> = {
   VENDOR_ACCOUNT: "この科目にする",
   EXPENSE: "経費精算に入れる",
   FIX_ACCOUNT: "振替の仕訳を作って直す",
+  VISITOR: "来客の受付簿に入れる",
+  BOOKING: "この内容で予約する",
 };
 
 // AIの下書き。人がボタンを押したときだけ実行する

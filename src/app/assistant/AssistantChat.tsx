@@ -55,6 +55,8 @@ const TOOL_LABEL: Record<string, string> = {
   propose_vendor_account: "取引先の科目",
   propose_expense: "経費の入力",
   propose_fix_account: "科目の振替",
+  propose_visitor: "来客の予定",
+  propose_booking: "会議室・社用車の予約",
   get_account_review: "科目の見直し",
   get_receipt_forecast: "入金予測",
   get_payment_plan: "支払計画",

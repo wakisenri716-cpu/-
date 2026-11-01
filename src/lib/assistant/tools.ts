@@ -20,7 +20,7 @@ import { getSalesAnalysis } from "@/lib/accounting/salesAnalysis";
 import { getBudgetProgress } from "@/lib/accounting/budgetProgress";
 import { getCashBalance, getTodos } from "@/lib/dashboard";
 import { getFiscalStartMonth, nextDay, resolvePeriod, toRange } from "@/lib/accounting/period";
-import { proposeEndContract, proposeExpense, proposeFixAccount, proposeInvoice, proposeJournal, proposePoAction, proposeReminder, proposeVendorAccount } from "./proposals";
+import { proposeEndContract, proposeExpense, proposeFixAccount, proposeInvoice, proposeJournal, proposePoAction, proposeReminder, proposeVendorAccount, proposeVisitor, proposeBooking } from "./proposals";
 import { findAnomalies } from "@/lib/anomalies";
 import { getCollections, STAGE_LABELS } from "@/lib/collections";
 import { listContracts, CONTRACT_KINDS } from "@/lib/contracts";
@@ -215,6 +215,38 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "propose_vendor_account",
     description: "取引先(支払先)のいつもの勘定科目を決める下書きを作る(まだ変えない)。「〇〇はいつも通信費にして」などに使う。次からその取引先の経費・請求書をAIが読み取るときにこの科目を使う。経費の科目(旅費交通費・通信費・消耗品費・会議費・交際費・地代家賃・水道光熱費・広告宣伝費・支払手数料・雑費など)だけ指定できる。",
     input_schema: { type: "object", properties: { vendor: { type: "string", description: "取引先の名前" }, account: { type: "string", description: "勘定科目の名前かコード" } }, required: ["vendor", "account"] },
+  },
+  {
+    name: "propose_visitor",
+    description: "来客の予定を来客の受付簿に入れる下書きを作る(まだ入れない)。「明日14時にさくら商事の佐藤様が来る、担当は山田さん」などに使う。会議室も押さえるときは propose_booking も一緒に使う。",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "日付(YYYY-MM-DD か「明日」「金曜」など。省略すると今日)" },
+        time: { type: "string", description: "時刻(HH:MM か「14時」など。任意)" },
+        visitorName: { type: "string", description: "来る人のお名前(様は付けない)" },
+        visitorCompany: { type: "string", description: "来る人の会社名(任意)" },
+        host: { type: "string", description: "社内の担当の人の名前(任意)" },
+        purpose: { type: "string", description: "用件(任意)" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "propose_booking",
+    description: "会議室・社用車を予約する下書きを作る(まだ予約しない)。「明日14時から1時間 会議室Aを押さえて」などに使う。同じものの時間が重なる予約があると作れないので、先に get_bookings で空きを確かめるとよい。",
+    input_schema: {
+      type: "object",
+      properties: {
+        facility: { type: "string", description: "予約するもの(会議室A・社用車など)" },
+        date: { type: "string", description: "日付(YYYY-MM-DD か「明日」など。省略すると今日)" },
+        start: { type: "string", description: "始まり(HH:MM か「14時」など)" },
+        end: { type: "string", description: "終わり(HH:MM。省略すると1時間)" },
+        title: { type: "string", description: "用件" },
+      },
+      required: ["facility", "start"],
+      additionalProperties: false,
+    },
   },
   {
     name: "propose_expense",
@@ -540,6 +572,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
       return proposeExpense(ctx, input);
     case "propose_fix_account":
       return proposeFixAccount(ctx, input);
+    case "propose_visitor":
+      return proposeVisitor(ctx, input);
+    case "propose_booking":
+      return proposeBooking(ctx, input);
     case "get_receipt_forecast": {
       const f = await getReceiptForecast(companyId);
       return {
