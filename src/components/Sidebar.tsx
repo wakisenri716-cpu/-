@@ -93,6 +93,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/review", label: "レビューキュー", icon: InboxIcon },
       { href: "/requests", label: "申請・稟議", icon: StampIcon },
       { href: "/notices", label: "社内のお知らせ", icon: MegaphoneIcon },
+      { href: "/events", label: "社内のイベント", icon: MegaphoneIcon },
       { href: "/tasks", label: "社内のやること", icon: NotebookIcon },
       { href: "/phone-memos", label: "伝言メモ", icon: NotebookIcon },
       { href: "/mail-log", label: "郵便物・荷物", icon: MailIcon },
@@ -261,6 +262,7 @@ const EMPLOYEE_SECTIONS: NavSection[] = [
       { href: "/worklogs", label: "日報(工数)", icon: NotebookIcon },
       { href: "/requests", label: "申請・稟議", icon: StampIcon },
       { href: "/notices", label: "社内のお知らせ", icon: MegaphoneIcon },
+      { href: "/staff/events", label: "社内のイベント(出欠)", icon: MegaphoneIcon },
     ],
   },
 ];
