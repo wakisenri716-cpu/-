@@ -2559,6 +2559,8 @@ model AlcoholCheck {
   value       String? // 検知器の数値(mg/L)
   checkerName String // 確認した人
   note        String?
+  odometer    Int? // メーター(km)。運転前は出発時、運転後は帰着時
+  destination String? // 行き先(運転日誌用)
   checkedAt   DateTime @default(now())
 
   @@index([companyId, date])

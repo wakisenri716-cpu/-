@@ -52,7 +52,9 @@ export async function parseBooking(companyId: string, text: string) {
       const same = kind ? facilities.filter((f) => f.kind === kind) : [];
       return same.length === 1 ? same[0] : null;
     })();
-  const date = relativeDue(t, today) ?? today;
+  // 「昨日」「一昨日」(あとから記録するとき)も読む
+  const back = /一昨日|おととい/.test(t) ? 2 : /昨日|きのう/.test(t) ? 1 : 0;
+  const date = back ? new Date(Date.parse(`${today}T00:00:00Z`) - back * 86_400_000).toISOString().slice(0, 10) : (relativeDue(t, today) ?? today);
   const time = parseTimeRange(t);
   const title =
     t
@@ -61,7 +63,7 @@ export async function parseBooking(companyId: string, text: string) {
       .replace(/\d{1,2}\s*時間(半)?|\d{2,3}\s*分間?/g, " ")
       .replace(/(午前|午後)?\s*\d{1,2}(?::\d{2}|時(?:半|\d{1,2}分)?)\s*(?:から|〜|~|-|ー|–)?\s*((午前|午後)?\s*\d{1,2}(?::\d{2}|時(?:半|\d{1,2}分)?)\s*(まで)?)?/g, " ")
       .replace(/\d{1,2}\s*時間(半)?|\d{2,3}\s*分間?/g, " ")
-      .replace(/今日|本日|明日|あした|明後日|あさって|(今週|来週|再来週)?の?\s*[月火水木金土日]曜日?|\d{1,2}\/\d{1,2}|\d{1,2}月\d{1,2}日/g, " ")
+      .replace(/一昨日|おととい|昨日|きのう|今日|本日|明日|あした|明後日|あさって|(今週|来週|再来週)?の?\s*[月火水木金土日]曜日?|\d{1,2}\/\d{1,2}|\d{1,2}月\d{1,2}日/g, " ")
       .replace(/(を|で|に)?\s*(予約|おさえ|押さえ)(して|したい|お願い|する)?.*$/, " ")
       // 「会議室」「社用車」とだけ書いた言葉は用件に入れない
       .replace(/(^|\s)(会議室|社用車|車|応接室)(?=\s|$)/g, " ")

@@ -24,6 +24,14 @@ export function parseValue(v: unknown): number | null {
   return Number(s);
 }
 
+// メーター(km)。空なら null
+export function parseOdometer(v: unknown): number | null {
+  const s = String(v ?? "").normalize("NFKC").replace(/[,\s]|km/gi, "");
+  if (!s) return null;
+  if (!/^\d{1,7}$/.test(s)) throw new UserError("メーターは km の数字で入れてください(例: 12345)");
+  return Number(s);
+}
+
 export async function recordCheck(user: { companyId: string; name: string }, raw: Record<string, unknown>) {
   const timing: Timing = raw.timing === "AFTER" ? "AFTER" : "BEFORE";
   const method: Method = raw.method === "VIDEO" || raw.method === "PHONE" ? raw.method : "FACE";
@@ -53,12 +61,18 @@ export async function recordCheck(user: { companyId: string; name: string }, raw
     driverId = m.id;
     driverName = m.name;
   }
+  const odometer = parseOdometer(raw.odometer);
+  // 帰着のメーターは、同じ予約(なければ同じ日・同じ車・同じ人)の出発のメーターより小さくできない
+  if (timing === "AFTER" && odometer !== null) {
+    const start = await prisma.alcoholCheck.findFirst({ where: { companyId: user.companyId, timing: "BEFORE", odometer: { not: null }, ...(bookingId ? { bookingId } : { date, vehicle, driverName }) }, orderBy: { checkedAt: "desc" } });
+    if (start?.odometer != null && odometer < start.odometer) throw new UserError(`帰着のメーター(${odometer}km)が出発のメーター(${start.odometer}km)より小さくなっています`);
+  }
   if (!DATE.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) throw new UserError("日付を正しく入れてください");
   if (date > jstDateKey(new Date())) throw new UserError("先の日のチェックは記録できません");
   if (!driverName) throw new UserError("運転する人を入れてください");
   if (!vehicle) throw new UserError("車(名前かナンバー)を入れてください");
   return prisma.alcoholCheck.create({
-    data: { companyId: user.companyId, date, timing, driverId, driverName, vehicle, bookingId, method, detected, value: value === null ? null : value.toFixed(2), checkerName: user.name, note: clean(raw.note, 200) || null },
+    data: { companyId: user.companyId, date, timing, driverId, driverName, vehicle, bookingId, method, detected, value: value === null ? null : value.toFixed(2), checkerName: user.name, note: clean(raw.note, 200) || null, odometer, destination: clean(raw.destination, 60) || null },
   });
 }
 
@@ -109,4 +123,46 @@ export function checksCsv(rows: Awaited<ReturnType<typeof listChecks>>) {
     ["日付", "時刻", "運転前・後", "運転者", "車", "確認の方法", "酒気帯び", "検知器の数値(mg/L)", "確認者", "メモ"],
     ...[...rows].reverse().map((c) => [c.date, time(c.checkedAt), TIMINGS[c.timing as Timing] ?? c.timing, c.driverName, c.vehicle, METHODS[c.method as Method] ?? c.method, c.detected ? "あり" : "なし", c.value ?? "", c.checkerName, c.note ?? ""]),
   ];
+}
+
+// ---- 運転日誌 ----
+// 運転前と運転後の記録を1回の運転としてまとめる(同じ予約、なければ同じ日・同じ車・同じ人の前→後の順)
+type CheckRow = Awaited<ReturnType<typeof listChecks>>[number];
+export function pairTrips(rows: CheckRow[]) {
+  const sorted = [...rows].sort((a, b) => a.checkedAt.getTime() - b.checkedAt.getTime());
+  const used = new Set<string>();
+  const trips: { date: string; vehicle: string; driverName: string; start: Date | null; end: Date | null; odometerStart: number | null; odometerEnd: number | null; distance: number | null; destination: string | null; detected: boolean }[] = [];
+  for (const before of sorted.filter((c) => c.timing === "BEFORE")) {
+    const after = sorted.find((c) => !used.has(c.id) && c.timing === "AFTER" && c.checkedAt >= before.checkedAt && (before.bookingId ? c.bookingId === before.bookingId : !c.bookingId && c.date === before.date && c.vehicle === before.vehicle && c.driverName === before.driverName));
+    if (after) used.add(after.id);
+    const distance = before.odometer != null && after?.odometer != null ? after.odometer - before.odometer : null;
+    trips.push({ date: before.date, vehicle: before.vehicle, driverName: before.driverName, start: before.checkedAt, end: after?.checkedAt ?? null, odometerStart: before.odometer, odometerEnd: after?.odometer ?? null, distance, destination: before.destination ?? after?.destination ?? null, detected: before.detected || !!after?.detected });
+  }
+  // 運転前の記録がない運転後
+  for (const after of sorted.filter((c) => c.timing === "AFTER" && !used.has(c.id))) trips.push({ date: after.date, vehicle: after.vehicle, driverName: after.driverName, start: null, end: after.checkedAt, odometerStart: null, odometerEnd: after.odometer, distance: null, destination: after.destination, detected: after.detected });
+  return trips.sort((a, b) => ((a.start ?? a.end)!.getTime() - (b.start ?? b.end)!.getTime()));
+}
+
+export function tripTotals(trips: ReturnType<typeof pairTrips>) {
+  const map = new Map<string, { vehicle: string; trips: number; distance: number }>();
+  for (const t of trips) {
+    const v = map.get(t.vehicle) ?? { vehicle: t.vehicle, trips: 0, distance: 0 };
+    v.trips++;
+    v.distance += t.distance ?? 0;
+    map.set(t.vehicle, v);
+  }
+  return [...map.values()].sort((a, b) => b.distance - a.distance);
+}
+
+// 車ごとの最後のメーター(次の出発のメーターの目安)
+export async function lastOdometers(companyId: string) {
+  const rows = await prisma.alcoholCheck.findMany({ where: { companyId, odometer: { not: null } }, orderBy: { checkedAt: "desc" }, select: { vehicle: true, odometer: true }, take: 500 });
+  const out: Record<string, number> = {};
+  for (const r of rows) if (!(r.vehicle in out) && r.odometer != null) out[r.vehicle] = r.odometer;
+  return out;
+}
+
+export function tripsCsv(trips: ReturnType<typeof pairTrips>) {
+  const time = (d: Date | null) => (d ? d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Tokyo" }) : "");
+  return [["日付", "車", "運転者", "出発", "帰着", "出発時のメーター(km)", "帰着時のメーター(km)", "走った距離(km)", "行き先", "酒気帯び"], ...trips.map((t) => [t.date, t.vehicle, t.driverName, time(t.start), time(t.end), t.odometerStart ?? "", t.odometerEnd ?? "", t.distance ?? "", t.destination ?? "", t.detected ? "あり" : "なし"])];
 }

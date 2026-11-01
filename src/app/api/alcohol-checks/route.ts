@@ -2,7 +2,7 @@ import { requireCompanyId, requireMember } from "@/lib/auth/session";
 import { respond } from "@/lib/shifts/http";
 import { csvResponse } from "@/lib/csv";
 import { jstDateKey } from "@/lib/jst";
-import { checksCsv, listChecks, recordCheck, TIMINGS, type Timing } from "@/lib/alcoholChecks";
+import { checksCsv, listChecks, pairTrips, recordCheck, tripsCsv, tripTotals, TIMINGS, type Timing } from "@/lib/alcoholChecks";
 import { audit } from "@/lib/audit";
 
 const monthRange = (month: string) => {
@@ -10,7 +10,7 @@ const monthRange = (month: string) => {
   return { from: `${month}-01`, to: new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10) };
 };
 
-// ?month=YYYY-MM(既定は今月)、&format=csv で記録簿のCSV
+// ?month=YYYY-MM(既定は今月)、&format=csv で記録簿のCSV、&format=log-csv で運転日誌のCSV
 export async function GET(request: Request) {
   const companyId = await requireCompanyId();
   const url = new URL(request.url);
@@ -19,7 +19,9 @@ export async function GET(request: Request) {
   const { from, to } = monthRange(month);
   const rows = await listChecks(companyId, from, to);
   if (url.searchParams.get("format") === "csv") return csvResponse(`アルコールチェック記録簿_${month}.csv`, checksCsv(rows));
-  return respond(async () => ({ month, checks: rows }));
+  if (url.searchParams.get("format") === "log-csv") return csvResponse(`運転日誌_${month}.csv`, tripsCsv(pairTrips(rows)));
+  const trips = pairTrips(rows);
+  return respond(async () => ({ month, checks: rows, trips, totals: tripTotals(trips) }));
 }
 
 // 記録する: { bookingId?, timing, driverId?, driverName?, vehicle?, method, value, detected, note, date }

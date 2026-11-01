@@ -2,30 +2,36 @@
 
 import { useState } from "react";
 
-type Check = { id: string; date: string; timing: string; driverName: string; vehicle: string; bookingId: string | null; method: string; detected: boolean; value: string | null; checkerName: string; note: string | null; checkedAt: string };
+type Check = { id: string; date: string; timing: string; driverName: string; vehicle: string; bookingId: string | null; method: string; detected: boolean; value: string | null; checkerName: string; note: string | null; odometer: number | null; destination: string | null; checkedAt: string };
 type CarBooking = { id: string; date: string; start: string; end: string; vehicle: string; driverName: string; title: string; before: Check | null; after: Check | null };
 type Missing = { bookingId: string; date: string; vehicle: string; driverName: string; start: string; end: string; missing: ("BEFORE" | "AFTER")[] };
-type Form = { timing: "BEFORE" | "AFTER"; driverId: string; driverName: string; vehicle: string; method: "FACE" | "VIDEO" | "PHONE"; value: string; detected: boolean; note: string; bookingId?: string; label?: string };
+type Form = { timing: "BEFORE" | "AFTER"; driverId: string; driverName: string; vehicle: string; method: "FACE" | "VIDEO" | "PHONE"; value: string; detected: boolean; note: string; odometer: string; destination: string; bookingId?: string; label?: string };
+type Trip = { date: string; vehicle: string; driverName: string; start: string | null; end: string | null; odometerStart: number | null; odometerEnd: number | null; distance: number | null; destination: string | null; detected: boolean };
+type Total = { vehicle: string; trips: number; distance: number };
 
 const TIMINGS = { BEFORE: "運転前", AFTER: "運転後" } as const;
 const METHODS = { FACE: "対面", VIDEO: "カメラ・ビデオ通話", PHONE: "電話" } as const;
 const input = "w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm";
 const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
 const hm = (iso: string) => new Date(iso).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Tokyo" });
-const blank: Form = { timing: "BEFORE", driverId: "", driverName: "", vehicle: "", method: "FACE", value: "", detected: false, note: "" };
+const blank: Form = { timing: "BEFORE", driverId: "", driverName: "", vehicle: "", method: "FACE", value: "", detected: false, note: "", odometer: "", destination: "" };
 
-export default function AlcoholView({ today, initialBookings, initialMissing, initialChecks, users, cars }: { today: string; initialBookings: CarBooking[]; initialMissing: Missing[]; initialChecks: Check[]; users: { id: string; name: string }[]; cars: string[] }) {
+export default function AlcoholView({ today, initialBookings, initialMissing, initialChecks, users, cars, odometers = {}, initialTrips = [], initialTotals = [] }: { today: string; initialBookings: CarBooking[]; initialMissing: Missing[]; initialChecks: Check[]; users: { id: string; name: string }[]; cars: string[]; odometers?: Record<string, number>; initialTrips?: Trip[]; initialTotals?: Total[] }) {
   const [bookings, setBookings] = useState(initialBookings);
   const [missing, setMissing] = useState(initialMissing);
   const [checks, setChecks] = useState(initialChecks);
   const [form, setForm] = useState<Form | null>(null);
+  const [trips, setTrips] = useState(initialTrips);
+  const [totals, setTotals] = useState(initialTotals);
+  const [lastKm, setLastKm] = useState(odometers);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<{ text: string; danger: boolean } | null>(null);
 
   // 予約から開くと、運転する人と車は予約のとおり
   const openFor = (b: { id: string; vehicle: string; driverName: string; date: string; start: string; end: string }, timing: "BEFORE" | "AFTER") => {
-    setForm({ ...blank, timing, bookingId: b.id, vehicle: b.vehicle, driverName: b.driverName, label: `${md(b.date)} ${b.start}〜${b.end} ${b.vehicle}(${b.driverName})` });
+    // 出発のメーターは、その車の最後のメーターを入れておく
+    setForm({ ...blank, timing, bookingId: b.id, vehicle: b.vehicle, driverName: b.driverName, odometer: timing === "BEFORE" && lastKm[b.vehicle] != null ? String(lastKm[b.vehicle]) : "", label: `${md(b.date)} ${b.start}〜${b.end} ${b.vehicle}(${b.driverName})` });
     setError(null);
     setFlash(null);
   };
@@ -35,7 +41,7 @@ export default function AlcoholView({ today, initialBookings, initialMissing, in
     setBusy(true);
     setError(null);
     try {
-      const body = form.bookingId ? { bookingId: form.bookingId, timing: form.timing, method: form.method, value: form.value, detected: form.detected, note: form.note } : { ...form, driverName: form.driverId ? "" : form.driverName };
+      const body = form.bookingId ? { bookingId: form.bookingId, timing: form.timing, method: form.method, value: form.value, detected: form.detected, note: form.note, odometer: form.odometer, destination: form.destination } : { ...form, driverName: form.driverId ? "" : form.driverName };
       const res = await fetch("/api/alcohol-checks", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "記録できませんでした");
@@ -47,6 +53,13 @@ export default function AlcoholView({ today, initialBookings, initialMissing, in
       }
       setFlash(c.detected ? { text: `${c.driverName}さんから酒気が検知されました(${c.value ?? "数値なし"} mg/L)。運転させないでください。記録は残しました。`, danger: true } : { text: `${c.driverName}さんの${TIMINGS[c.timing as "BEFORE"]}のチェックを記録しました(酒気帯びなし)`, danger: false });
       setForm(null);
+      if (c.odometer != null) setLastKm((m) => ({ ...m, [c.vehicle]: c.odometer! }));
+      // 運転日誌を読み直す
+      const log = await fetch(`/api/alcohol-checks?month=${today.slice(0, 7)}`).then((r) => (r.ok ? r.json() : null));
+      if (log) {
+        setTrips(log.trips);
+        setTotals(log.totals);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "記録できませんでした");
     } finally {
@@ -158,6 +171,8 @@ export default function AlcoholView({ today, initialBookings, initialMissing, in
               ))}
             </select>
             <input aria-label="検知器の数値" inputMode="decimal" placeholder="検知器の数値 mg/L(例: 0.00)" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className={input} />
+            <input aria-label="メーター" inputMode="numeric" placeholder={form.timing === "BEFORE" ? "出発時のメーター km(任意)" : "帰着時のメーター km(任意)"} value={form.odometer} onChange={(e) => setForm({ ...form, odometer: e.target.value })} className={input} />
+            {form.timing === "BEFORE" && <input aria-label="行き先" placeholder="行き先(任意)" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} className={input} />}
             <input aria-label="メモ" placeholder="メモ(任意)" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className={input} />
           </div>
           <label className="flex items-center gap-1.5">
@@ -175,6 +190,41 @@ export default function AlcoholView({ today, initialBookings, initialMissing, in
           </div>
         </section>
       )}
+
+      <section className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold">今月の運転日誌({trips.length}回)</h2>
+          <a href={`/api/alcohol-checks?month=${today.slice(0, 7)}&format=log-csv`} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs hover:bg-slate-50">
+            運転日誌をCSVで出す
+          </a>
+        </div>
+        {totals.length > 0 && (
+          <p className="mt-2 flex flex-wrap gap-2">
+            {totals.map((t) => (
+              <span key={t.vehicle} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700">
+                {t.vehicle}: {t.trips}回・{t.distance.toLocaleString()}km
+              </span>
+            ))}
+          </p>
+        )}
+        {trips.length ? (
+          <ul className="mt-2 divide-y divide-slate-100">
+            {[...trips].reverse().map((t, i) => (
+              <li key={i} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                <span className="tabular-nums text-slate-600">
+                  {md(t.date)} {t.start ? hm(t.start) : "--:--"}〜{t.end ? hm(t.end) : "--:--"}
+                </span>
+                <span className="font-medium">{t.vehicle}</span>
+                <span>{t.driverName}</span>
+                {t.destination && <span className="text-slate-600">{t.destination}</span>}
+                <span className="ml-auto tabular-nums text-slate-700">{t.distance != null ? `${t.distance.toLocaleString()}km` : t.end ? "距離なし" : "運転中・帰着の記録なし"}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-slate-500">今月の運転はまだありません。</p>
+        )}
+      </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
