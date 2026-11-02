@@ -225,6 +225,20 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「お歳暮は誰に送った?」「お礼がまだのお歳暮は?」
+  if (/歳暮|中元|贈答/.test(q)) {
+    const r = (await run("get_gifts")) as { year: number; records: { date: string; season: string; direction: string; party: string; item: string | null; amount: number | null; thanked: boolean | null }[]; seasons: { season: string; sent: number; sentTotal: number; received: number; notYet: string[]; notReturned: string[] }[] };
+    const unthanked = r.records.filter((x) => x.thanked === false);
+    return {
+      reply: [
+        ...r.seasons.map((s) => `・${r.year}年の${s.season}: 送った ${s.sent}件${s.sentTotal ? `(${s.sentTotal.toLocaleString()}円)` : ""}・いただいた ${s.received}件${s.notYet.length ? `\n  去年送ったのに今年まだ: ${s.notYet.join("、")}` : ""}${s.notReturned.length ? `\n  いただいたのに送っていない: ${s.notReturned.join("、")}` : ""}`),
+        unthanked.length ? `お礼がまだ: ${unthanked.map((x) => `${x.party}(${x.season}${x.item ? `・${x.item}` : ""})`).join("、")}` : "お礼がまだのものはありません。",
+        "[贈答品の記録](/gifts)",
+      ].join("\n"),
+      tools: ["get_gifts"],
+      mode: "simple",
+    };
+  }
   // 「忘年会の出欠は?」「何人来る?」
   if (/(忘年会|新年会|歓迎会|送別会|懇親会|社員旅行|飲み会|イベント).{0,10}(出欠|出席|参加|何人|会費|答えて)/.test(q)) {
     const r = (await run("get_events")) as { events: { title: string; date: string; time: string | null; place: string | null; fee: number | null; deadline: string | null; closed: boolean; yes: string[]; no: number; maybe: number; notAnswered: string[]; paid: number; collected: number }[] };

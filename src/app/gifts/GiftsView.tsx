@@ -108,7 +108,14 @@ export default function GiftsView({ initial }: { initial: Data }) {
             </h2>
             {s.notYet.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-amber-800">去年送ったのに、今年まだの相手</p>
+                <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-amber-800">
+                  去年送ったのに、今年まだの相手
+                  {s.notYet.some((p) => p.partyKind && p.partyId) && (
+                    <Link href={`/letters/labels?keys=${s.notYet.filter((p) => p.partyKind && p.partyId).map((p) => `${p.partyKind}:${p.partyId}`).join(",")}`} className="font-normal text-indigo-700 underline">
+                      この相手の宛名ラベルを印刷
+                    </Link>
+                  )}
+                </p>
                 <ul className="mt-1 space-y-1">
                   {s.notYet.map((p) => (
                     <li key={`${p.partyId ?? p.partyName}`} className="flex flex-wrap items-center gap-2">
