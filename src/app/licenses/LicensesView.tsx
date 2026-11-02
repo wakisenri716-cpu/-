@@ -127,7 +127,7 @@ export default function LicensesView({ initial, users }: { initial: Data; users:
                 <span className={`rounded-full px-2 py-0.5 text-xs ${l.state === "EXPIRED" ? "bg-rose-50 text-rose-800 ring-1 ring-rose-200" : l.state === "SOON" ? "bg-amber-50 text-amber-900 ring-1 ring-amber-200" : "bg-slate-100 text-slate-600"}`}>
                   {l.state === "EXPIRED" ? `${ymd(l.expiresOn)}に切れています` : l.state === "SOON" ? `${ymd(l.expiresOn)}まで(あと${l.days}日)` : ymd(l.expiresOn)}
                 </span>
-                {l.checkedOn && <span className="text-xs text-slate-500">確認 {ymd(l.checkedOn)}</span>}
+                {l.checkedOn ? <span className="text-xs text-slate-500">確認 {ymd(l.checkedOn)}</span> : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">原本の確認まだ</span>}
                 <span className="ml-auto flex gap-2">
                   <button onClick={() => setDraft({ id: l.id, holderUserId: l.holderUserId, holderName: l.holderName, name: l.name, number: l.number, expiresOn: l.expiresOn, checkedOn: l.checkedOn })} className="text-xs text-indigo-700 hover:underline">
                     直す(更新)

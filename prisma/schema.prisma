@@ -2668,6 +2668,7 @@ model StaffLicense {
   expiresOn    String? // 有効期限 YYYY-MM-DD(期限のない資格は空)
   checkedOn    String? // 免許証などの原本・写しを確かめた日
   note         String?
+  remindedFor  String? // 本人に期限のお知らせメールを送った有効期限(同じ期限で二度送らない)
   createdByName String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
