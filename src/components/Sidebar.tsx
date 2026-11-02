@@ -92,6 +92,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/account-review", label: "科目の見直し", icon: SparkleIcon },
       { href: "/review", label: "レビューキュー", icon: InboxIcon },
       { href: "/requests", label: "申請・稟議", icon: StampIcon },
+      { href: "/office", label: "総務のきょう", icon: DashboardIcon },
       { href: "/notices", label: "社内のお知らせ", icon: MegaphoneIcon },
       { href: "/events", label: "社内のイベント", icon: MegaphoneIcon },
       { href: "/supplies", label: "備品・消耗品の購入依頼", icon: ReceiptIcon },
