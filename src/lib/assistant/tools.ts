@@ -13,6 +13,7 @@ import { listVehicles } from "@/lib/vehicles";
 import { listEvents } from "@/lib/companyEvents";
 import { listSupplyRequests } from "@/lib/supplyRequests";
 import { listLicenses } from "@/lib/staffLicenses";
+import { listApplicants, STATUS as APPLICANT_STATUS, type Status as ApplicantStatus } from "@/lib/applicants";
 import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
 import { MEMO_ACTIONS, type MemoAction } from "@/lib/phoneMemoLabels";
@@ -481,6 +482,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_licenses",
     description: "社員の資格・免許の管理。記録している資格・免許(持っている人・名前・有効期限・期限が近い/切れた)と、社用車を運転したのに運転免許を確かめられない人を返す。「免許が切れそうな人は?」「誰がフォークリフトの資格を持ってる?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_applicants",
+    description: "採用の応募者。選考中・最近終わった応募者の名前・応募した仕事・応募経路・状態(応募・面接・内定・入社・不採用・辞退)・応募日・面接の日時と面接する人を返す(電話・メールは返さない)。「応募は何人来てる?」「今週の面接は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1061,6 +1067,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_licenses": {
       const d = await listLicenses(companyId);
       return { licenses: d.licenses.map((l) => ({ holder: l.holderName, name: l.name, expiresOn: l.expiresOn, state: l.state === "EXPIRED" ? "切れている" : l.state === "SOON" ? `あと${l.days}日` : "問題なし" })), unlicensedDrivers: d.unlicensedDrivers, link: "/licenses" };
+    }
+    case "get_applicants": {
+      const d = await listApplicants(companyId);
+      return { applicants: d.applicants.map((a) => ({ name: a.name, position: a.position, source: a.source, status: APPLICANT_STATUS[a.status as ApplicantStatus] ?? a.status, appliedOn: a.appliedOn, interview: a.interviewDate ? `${a.interviewDate} ${a.interviewTime ?? ""}`.trim() : null, interviewer: a.interviewerName })), link: "/applicants" };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);

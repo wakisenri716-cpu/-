@@ -201,6 +201,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/hr-procedures", label: "入社・退職の手続き", icon: ChecklistIcon },
       { href: "/licenses", label: "資格・免許の管理", icon: ChecklistIcon },
       { href: "/job-posting", label: "求人票の下書き", icon: SparkleIcon },
+      { href: "/applicants", label: "採用の応募者", icon: ChecklistIcon },
     ],
   },
   {
