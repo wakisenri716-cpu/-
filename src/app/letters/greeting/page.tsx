@@ -12,12 +12,12 @@ import GreetingView from "./GreetingView";
 
 export const dynamic = "force-dynamic";
 
-export default async function GreetingPage({ searchParams }: { searchParams: Promise<{ closure?: string }> }) {
+export default async function GreetingPage({ searchParams }: { searchParams: Promise<{ closure?: string; thanks?: string; party?: string }> }) {
   const companyId = await requireCompanyId();
   const user = await requireMember();
   // 会社の休業日から来たときは「休業のお知らせ」を入れておく
-  const { closure } = await searchParams;
-  let initial: { kind: "CLOSURE"; fields: Record<string, string> } | undefined;
+  const { closure, thanks, party } = await searchParams;
+  let initial: { kind: "CLOSURE" | "THANKS"; fields: Record<string, string>; party?: string } | undefined;
   if (typeof closure === "string" && /^\d{4}-\d{2}-\d{2}$/.test(closure)) {
     const list = await listClosures(companyId);
     const group = groupClosures(list).find((g) => g.dates[0] === closure);
@@ -26,6 +26,8 @@ export default async function GreetingPage({ searchParams }: { searchParams: Pro
       initial = { kind: "CLOSURE", fields: { name: n.name, period: n.period, restart: n.restartText } };
     }
   }
+  // 贈答品の記録から来たときは「お礼状」を入れておく
+  if (!initial && typeof thanks === "string" && thanks.trim()) initial = { kind: "THANKS", fields: { what: thanks.trim().slice(0, 120) }, party: typeof party === "string" && /^(customer|vendor):[\w-]+$/.test(party) ? party : undefined };
   const canSend = user.role === "ADMIN" || user.role === "ACCOUNTANT";
   const [parties, ai, recipients, company] = await Promise.all([
     listAddressBook(companyId),

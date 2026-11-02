@@ -255,6 +255,7 @@ model Company {
   staffQuestions StaffQuestion[]
   alcoholChecks AlcoholCheck[]
   companyEvents CompanyEvent[]
+  gifts         GiftRecord[]
   partyNotes           PartyNote[]
   teamTasks            TeamTask[]
   closures             CompanyClosure[]
@@ -2606,4 +2607,26 @@ model EventAnswer {
   updatedAt DateTime     @updatedAt
 
   @@unique([eventId, userId])
+}
+
+// 贈答品の記録(お歳暮・お中元など。送ったもの・いただいたもの)
+model GiftRecord {
+  id            String    @id @default(cuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  direction     String // SENT(送った) / RECEIVED(いただいた)
+  season        String // OSEIBO(お歳暮) / OCHUGEN(お中元) / OTHER
+  year          Int
+  date          String // YYYY-MM-DD
+  partyKind     String? // customer / vendor
+  partyId       String?
+  partyName     String
+  item          String?
+  amount        Int? // 送ったものの金額(円)
+  thankedAt     DateTime? // いただいたものにお礼をした日時
+  note          String?
+  createdByName String
+  createdAt     DateTime  @default(now())
+
+  @@index([companyId, year])
 }
