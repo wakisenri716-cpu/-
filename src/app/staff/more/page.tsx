@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/requests", label: "申請・稟議(有給など)", icon: StampIcon },
   { href: "/notices", label: "社内のお知らせ", icon: MegaphoneIcon },
   { href: "/staff/events", label: "社内のイベント(出欠)", icon: MegaphoneIcon },
+  { href: "/staff/supplies", label: "備品・消耗品の購入依頼", icon: ReceiptIcon },
   { href: "/worklogs", label: "日報(工数)", icon: NotebookIcon },
   { href: "/account", label: "アカウント・パスワード", icon: KeyIcon },
   { href: "/guide", label: "使い方ガイド", icon: BookIcon },
