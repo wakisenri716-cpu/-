@@ -11,6 +11,7 @@ import { visitorsOn, VISITOR_STATUS } from "@/lib/visitors";
 import { carBookingsOn, missingChecks, TIMINGS as ALCOHOL_TIMINGS } from "@/lib/alcoholChecks";
 import { listVehicles } from "@/lib/vehicles";
 import { listEvents } from "@/lib/companyEvents";
+import { listSupplyRequests } from "@/lib/supplyRequests";
 import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
 import { MEMO_ACTIONS, type MemoAction } from "@/lib/phoneMemoLabels";
@@ -469,6 +470,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_gifts",
     description: "贈答品の記録(お歳暮・お中元)。今年の送ったもの・いただいたもの(相手・品物・金額・お礼をしたか)と、季節ごとの「去年送ったのに今年まだの相手」「いただいたのにこちらから送っていない相手」を返す。「お歳暮は誰に送った?」「お礼がまだのお歳暮は?」「去年送った相手で今年まだなのは?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_supply_requests",
+    description: "備品・消耗品の購入依頼。依頼中のものを品物ごとにまとめた数・至急かどうか・頼んだ人・前に発注した単価と発注先と、発注した・届いた・見送ったもの(30日)を返す。「購入依頼は来てる?」「至急の依頼は?」などに使う。発注は /supplies を案内する。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1036,6 +1042,14 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         records: d.records.map((r) => ({ date: r.date, season: GIFT_SEASONS[r.season as GiftSeason] ?? r.season, direction: r.direction === "RECEIVED" ? "いただいた" : "送った", party: r.partyName, item: r.item, amount: r.amount, thanked: r.direction === "RECEIVED" ? !!r.thankedAt : null })),
         seasons: d.seasons.map((s) => ({ season: s.label, sent: s.sentCount, sentTotal: s.sentTotal, received: s.receivedCount, notYet: s.notYet.map((p) => p.partyName), notReturned: s.notReturned.map((p) => p.partyName) })),
         link: "/gifts",
+      };
+    }
+    case "get_supply_requests": {
+      const d = await listSupplyRequests(companyId);
+      return {
+        open: d.groups.map((g) => ({ item: g.item, quantity: g.quantity, unit: g.unit, urgent: g.urgent, requestedBy: [...new Set(g.requests.map((r) => r.userName))], lastPrice: g.last ? `${g.last.vendor} ${g.last.unitPrice}円` : null })),
+        ordered: d.others.filter((r) => r.status === "ORDERED").map((r) => `${r.item} ${r.quantity}${r.unit ?? ""}(${r.userName})`),
+        link: "/supplies",
       };
     }
     case "get_mail_items": {

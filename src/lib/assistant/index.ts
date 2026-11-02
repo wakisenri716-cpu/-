@@ -225,6 +225,20 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「購入依頼は来てる?」「至急の依頼は?」
+  if (/購入依頼|備品|消耗品/.test(q)) {
+    const r = (await run("get_supply_requests")) as { open: { item: string; quantity: number; unit: string | null; urgent: boolean; requestedBy: string[]; lastPrice: string | null }[]; ordered: string[] };
+    return {
+      reply: [
+        r.open.length ? `依頼中(${r.open.length}品):` : "依頼中の購入依頼はありません。",
+        ...r.open.map((g) => `・${g.urgent ? "【至急】" : ""}${g.item} ${g.quantity}${g.unit ?? ""}(${g.requestedBy.join("・")})${g.lastPrice ? ` 前回: ${g.lastPrice}` : ""}`),
+        ...(r.ordered.length ? [`発注済みで届いていないもの: ${r.ordered.join("、")}`] : []),
+        "[備品・消耗品の購入依頼](/supplies)",
+      ].join("\n"),
+      tools: ["get_supply_requests"],
+      mode: "simple",
+    };
+  }
   // 「お歳暮は誰に送った?」「お礼がまだのお歳暮は?」
   if (/歳暮|中元|贈答/.test(q)) {
     const r = (await run("get_gifts")) as { year: number; records: { date: string; season: string; direction: string; party: string; item: string | null; amount: number | null; thanked: boolean | null }[]; seasons: { season: string; sent: number; sentTotal: number; received: number; notYet: string[]; notReturned: string[] }[] };
