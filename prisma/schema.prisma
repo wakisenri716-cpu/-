@@ -256,6 +256,7 @@ model Company {
   alcoholChecks AlcoholCheck[]
   companyEvents CompanyEvent[]
   gifts         GiftRecord[]
+  supplyRequests SupplyRequest[]
   partyNotes           PartyNote[]
   teamTasks            TeamTask[]
   closures             CompanyClosure[]
@@ -2629,4 +2630,26 @@ model GiftRecord {
   createdAt     DateTime  @default(now())
 
   @@index([companyId, year])
+}
+
+// 備品・消耗品の購入依頼(従業員から総務へ。まとめて発注書にする)
+model SupplyRequest {
+  id              String   @id @default(cuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId          String
+  userName        String
+  item            String
+  quantity        Float    @default(1)
+  unit            String?
+  note            String?
+  urgent          Boolean  @default(false)
+  status          String   @default("OPEN") // OPEN(依頼中) / ORDERED(発注した) / DONE(届いた) / REJECTED(見送り)
+  purchaseOrderId String?
+  reply           String? // 見送りの理由など
+  handledByName   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([companyId, status])
 }
