@@ -257,6 +257,7 @@ model Company {
   companyEvents CompanyEvent[]
   gifts         GiftRecord[]
   supplyRequests SupplyRequest[]
+  staffLicenses StaffLicense[]
   partyNotes           PartyNote[]
   teamTasks            TeamTask[]
   closures             CompanyClosure[]
@@ -2652,4 +2653,24 @@ model SupplyRequest {
   updatedAt       DateTime @updatedAt
 
   @@index([companyId, status])
+}
+
+// 社員の資格・免許(運転免許・フォークリフト・衛生管理者など)と有効期限
+model StaffLicense {
+  id           String   @id @default(cuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  holderUserId String?
+  holderName   String
+  name         String // 資格・免許の名前
+  kind         String   @default("OTHER") // DRIVING(運転免許) / OTHER
+  number       String? // 番号(下4けたなど)
+  expiresOn    String? // 有効期限 YYYY-MM-DD(期限のない資格は空)
+  checkedOn    String? // 免許証などの原本・写しを確かめた日
+  note         String?
+  createdByName String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([companyId])
 }

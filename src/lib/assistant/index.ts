@@ -225,6 +225,23 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「免許が切れそうな人は?」「フォークリフトの資格を持っている人は?」
+  if (/免許|資格(?!取得|喪失)/.test(q) && !/資格取得届|資格喪失届/.test(q)) {
+    const r = (await run("get_licenses")) as { licenses: { holder: string; name: string; expiresOn: string | null; state: string }[]; unlicensedDrivers: { name: string; reason: string }[] };
+    const word = q.match(/([\p{sc=Han}\p{sc=Katakana}ー]{2,})(?:の)?(?:資格|免許)/u)?.[1];
+    const hits = word && !/運転|社員|期限/.test(word) ? r.licenses.filter((l) => l.name.includes(word)) : [];
+    const alerts = r.licenses.filter((l) => l.state !== "問題なし");
+    return {
+      reply: [
+        ...(hits.length ? [`${word}: ${hits.map((l) => `${l.holder}さん(${l.expiresOn ? `${l.expiresOn}まで` : "期限なし"})`).join("、")}`] : []),
+        alerts.length ? `期限が近い・切れている: ${alerts.map((l) => `${l.holder}さんの${l.name}(${l.state})`).join("、")}` : "期限が近い資格・免許はありません。",
+        ...(r.unlicensedDrivers.length ? [`運転免許を確かめられない社用車の運転者: ${r.unlicensedDrivers.map((d) => `${d.name}(${d.reason})`).join("、")}`] : []),
+        "[資格・免許の管理](/licenses)",
+      ].join("\n"),
+      tools: ["get_licenses"],
+      mode: "simple",
+    };
+  }
   // 「購入依頼は来てる?」「至急の依頼は?」
   if (/購入依頼|備品|消耗品/.test(q)) {
     const r = (await run("get_supply_requests")) as { open: { item: string; quantity: number; unit: string | null; urgent: boolean; requestedBy: string[]; lastPrice: string | null }[]; ordered: string[] };
