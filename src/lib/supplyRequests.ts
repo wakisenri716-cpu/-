@@ -44,10 +44,15 @@ export function splitSupplyText(text: string): SupplyItem[] {
     .split(/\n|[、,・]|(?:それと|あと|および|及び)|と(?=\s*\S)/)
     .map((x) => x.replace(/(も|を|が)?\s*(お願いします|ください|下さい|ほしい|欲しい|頼みます|お願い)?[。.!!]*$/, "").trim())
     .filter((x) => x.replace(/至急|急ぎ|すぐ|今日中/g, "").trim().length > 0);
-  const items = parts.slice(0, 20).map((x) => {
+  // 「ボールペン 黒 10本・赤 5本」の「赤」のように色・大きさだけのものは、前の品物の名前を引き継ぐ
+  const MOD = /^(黒|赤|青|白|緑|黄|ピンク|オレンジ|紫|茶|グレー|大|中|小|S|M|L|LL|XL|A3|A4|A5|B4|B5|0\.\d+mm?)$/i;
+  const items: SupplyItem[] = [];
+  for (const x of parts.slice(0, 20)) {
     const p = parseSupplyText(x);
-    return { ...p, urgent: p.urgent || urgent };
-  });
+    const prev = items[items.length - 1];
+    const item = prev && MOD.test(p.item) ? `${prev.item.split(" ").filter((w) => !MOD.test(w)).join(" ")} ${p.item}` : p.item;
+    items.push({ ...p, item, unit: p.unit ?? (prev && MOD.test(p.item) ? prev.unit : null), urgent: p.urgent || urgent });
+  }
   if (!items.length) throw new UserError("品物の名前を書いてください");
   return items;
 }
