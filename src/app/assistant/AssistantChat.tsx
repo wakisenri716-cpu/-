@@ -46,6 +46,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_vehicles: "社用車の管理",
   get_events: "社内のイベント",
   get_gifts: "贈答品の記録",
+  get_supply_requests: "備品・消耗品の購入依頼",
   get_purchase_prices: "仕入値の履歴",
   get_meeting_slots: "日程調整",
   check_text: "文章チェック",
