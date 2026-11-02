@@ -29,6 +29,7 @@ import { countVehicleAlerts } from "@/lib/vehicles";
 import { countEventsNeedingReminder } from "@/lib/companyEvents";
 import { countUnthanked } from "@/lib/gifts";
 import { countOpenSupplyRequests } from "@/lib/supplyRequests";
+import { countLicenseAlerts } from "@/lib/staffLicenses";
 import { countHandoverDue } from "@/lib/handover";
 import { countDueTasks } from "@/lib/teamTasks";
 import { countQuoteFollowups } from "@/lib/quoteFollowup";
@@ -121,7 +122,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions, hrAlerts, calendarAlerts, memos, quoteFollow, dueTasks, waitingMail, handoverDue, visitorsToday, openQuestions, missingAlcohol, vehicleAlerts, eventReminders, unthankedGifts, supplies] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions, hrAlerts, calendarAlerts, memos, quoteFollow, dueTasks, waitingMail, handoverDue, visitorsToday, openQuestions, missingAlcohol, vehicleAlerts, eventReminders, unthankedGifts, supplies, licenseAlerts] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -175,6 +176,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     !user || user.role === "ADMIN" || user.role === "ACCOUNTANT" ? countEventsNeedingReminder(companyId) : Promise.resolve(0),
     !user || user.role === "ADMIN" || user.role === "ACCOUNTANT" ? countUnthanked(companyId) : Promise.resolve(0),
     !user || user.role === "ADMIN" || user.role === "ACCOUNTANT" ? countOpenSupplyRequests(companyId) : Promise.resolve({ count: 0, urgent: 0 }),
+    !user || user.role === "ADMIN" || user.role === "ACCOUNTANT" ? countLicenseAlerts(companyId) : Promise.resolve(0),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
@@ -228,6 +230,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     { key: "events", label: "社内のイベントの出欠", detail: "出欠の締め切りが近い(または過ぎた)イベントに、まだ答えていない人がいます。催促するか、出欠を締めてください", count: eventReminders, href: "/events", tone: "amber" },
     { key: "gifts", label: "お礼がまだの贈答品", detail: "いただいたお歳暮・お中元などに、まだお礼をしていません。お礼状を作るか、お礼をしたら「お礼をした」にしてください", count: unthankedGifts, href: "/gifts", tone: "amber" },
     { key: "supplies", label: "備品・消耗品の購入依頼", detail: `${supplies.urgent ? `至急が${supplies.urgent}件あります。` : ""}従業員から頼まれたものがあります。まとめて発注書にできます`, count: supplies.count, href: "/supplies", tone: supplies.urgent ? "rose" : "amber" },
+    { key: "licenses", label: "資格・免許の期限", detail: "有効期限が近い(または切れた)資格・免許か、運転免許を確かめられない社用車の運転者がいます", count: licenseAlerts, href: "/licenses", tone: "rose" },
     { key: "staffQuestions", label: "従業員からの質問", detail: "AIで答えがわからなかった質問が届いています。答えて「よくある質問」に足すと、次からはAIが答えられます", count: openQuestions, href: "/staff-questions", tone: "amber" },
     { key: "visitors", label: user ? "今日の自分あての来客" : "今日の来客", detail: "まだお見えになっていない来客の予定があります。お見えになったら「お見えになった」を押すと担当の人に知らせます", count: visitorsToday, href: "/visitors", tone: "amber" },
     { key: "mailLog", label: user ? "届いている自分あての郵便物・荷物" : "まだ渡していない郵便物・荷物", detail: [waitingMail.important ? `書留・役所から・請求書が${waitingMail.important}件あります。` : "", waitingMail.stale ? `届いてから3日以上たったものが${waitingMail.stale}件あります。` : "", "受け取ったら「渡した」に"].join(""), count: waitingMail.count, href: "/mail-log", tone: waitingMail.important || waitingMail.stale ? "rose" : "amber" },
