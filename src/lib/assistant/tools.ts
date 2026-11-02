@@ -11,6 +11,7 @@ import { visitorsOn, VISITOR_STATUS } from "@/lib/visitors";
 import { carBookingsOn, missingChecks, TIMINGS as ALCOHOL_TIMINGS } from "@/lib/alcoholChecks";
 import { listVehicles } from "@/lib/vehicles";
 import { listEvents } from "@/lib/companyEvents";
+import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
 import { MEMO_ACTIONS, type MemoAction } from "@/lib/phoneMemoLabels";
 import { ruleCheck } from "@/lib/textCheck";
@@ -463,6 +464,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_events",
     description: "社内のイベント(忘年会・歓迎会など)。これからと30日以内のイベントの日時・場所・会費・締め切り、出席・欠席・未定の人数、まだ答えていない人、会費を受け取った人数と金額、会社の負担を返す。「忘年会の出欠は?」「何人来る?」「会費は集まった?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_gifts",
+    description: "贈答品の記録(お歳暮・お中元)。今年の送ったもの・いただいたもの(相手・品物・金額・お礼をしたか)と、季節ごとの「去年送ったのに今年まだの相手」「いただいたのにこちらから送っていない相手」を返す。「お歳暮は誰に送った?」「お礼がまだのお歳暮は?」「去年送った相手で今年まだなのは?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1021,6 +1027,15 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
       return {
         events: list.map((e) => ({ title: e.title, date: e.date, time: e.time, place: e.place, fee: e.fee, deadline: e.deadline, closed: e.closed, yes: e.answers.filter((a) => a.answer === "YES").map((a) => a.userName), no: e.counts.NO, maybe: e.counts.MAYBE, notAnswered: e.pending.map((p) => p.name), paid: e.paidCount, collected: e.collected, cost: e.cost, companyShare: e.companyShare, posted: !!e.journalEntryId })),
         link: "/events",
+      };
+    }
+    case "get_gifts": {
+      const d = await listGifts(companyId, Number(jstDateKey(new Date()).slice(0, 4)));
+      return {
+        year: d.year,
+        records: d.records.map((r) => ({ date: r.date, season: GIFT_SEASONS[r.season as GiftSeason] ?? r.season, direction: r.direction === "RECEIVED" ? "いただいた" : "送った", party: r.partyName, item: r.item, amount: r.amount, thanked: r.direction === "RECEIVED" ? !!r.thankedAt : null })),
+        seasons: d.seasons.map((s) => ({ season: s.label, sent: s.sentCount, sentTotal: s.sentTotal, received: s.receivedCount, notYet: s.notYet.map((p) => p.partyName), notReturned: s.notReturned.map((p) => p.partyName) })),
+        link: "/gifts",
       };
     }
     case "get_mail_items": {
