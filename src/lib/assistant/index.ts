@@ -225,6 +225,20 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「応募は何人来てる?」「今週の面接は?」
+  if (/応募|面接|採用/.test(q) && !/求人票/.test(q)) {
+    const r = (await run("get_applicants")) as { applicants: { name: string; position: string | null; source: string | null; status: string; appliedOn: string; interview: string | null; interviewer: string | null }[] };
+    const active = r.applicants.filter((a) => ["応募", "面接", "内定"].includes(a.status));
+    return {
+      reply: [
+        active.length ? `選考中の応募者は ${active.length}人 です:` : "選考中の応募者はいません。",
+        ...active.map((a) => `・${a.name}(${a.status}${a.position ? `・${a.position}` : ""}${a.source ? `・${a.source}` : ""}${a.interview ? `・面接 ${a.interview}${a.interviewer ? ` ${a.interviewer}` : ""}` : ""})`),
+        "[採用の応募者](/applicants)",
+      ].join("\n"),
+      tools: ["get_applicants"],
+      mode: "simple",
+    };
+  }
   // 「免許が切れそうな人は?」「フォークリフトの資格を持っている人は?」
   if (/免許|資格(?!取得|喪失)/.test(q) && !/資格取得届|資格喪失届/.test(q)) {
     const r = (await run("get_licenses")) as { licenses: { holder: string; name: string; expiresOn: string | null; state: string }[]; unlicensedDrivers: { name: string; reason: string }[] };

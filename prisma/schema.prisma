@@ -258,6 +258,7 @@ model Company {
   gifts         GiftRecord[]
   supplyRequests SupplyRequest[]
   staffLicenses StaffLicense[]
+  applicants    Applicant[]
   partyNotes           PartyNote[]
   teamTasks            TeamTask[]
   closures             CompanyClosure[]
@@ -2674,4 +2675,29 @@ model StaffLicense {
   updatedAt    DateTime @updatedAt
 
   @@index([companyId])
+}
+
+// 採用の応募者(応募から面接・内定・入社まで)
+model Applicant {
+  id              String   @id @default(cuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name            String
+  email           String?
+  phone           String?
+  position        String? // 応募した仕事
+  source          String? // 応募経路(Indeed・ハローワーク・紹介など)
+  status          String   @default("APPLIED") // APPLIED(応募) / INTERVIEW(面接) / OFFER(内定) / HIRED(入社) / REJECTED(不採用) / WITHDRAWN(辞退)
+  appliedOn       String // YYYY-MM-DD
+  interviewDate   String? // YYYY-MM-DD
+  interviewTime   String? // HH:MM
+  interviewerId   String?
+  interviewerName String?
+  visitorId       String? // 来客の受付簿に入れた面接の予定
+  note            String?
+  createdByName   String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([companyId, status])
 }
