@@ -8,6 +8,8 @@ import { myUpcomingShifts } from "@/lib/shiftRequests";
 import { getLeaveOverview } from "@/lib/leave/service";
 import { formatDays } from "@/lib/leave/rules";
 import { unreadAnnouncements } from "@/lib/announcements";
+import { mySupplyRequests, STATUS as SUPPLY_STATUS } from "@/lib/supplyRequests";
+import { myEvents, ANSWERS as EVENT_ANSWERS, type Answer as EventAnswer } from "@/lib/companyEvents";
 
 // 従業員向けのAIアシスタント: ログインしている本人のこと(シフト・有給・今月の勤務・経費精算・申請)と、
 // 社内のマニュアル・お知らせについて答える。ほかの人や会社のお金のデータには触れない(道具が本人の分しか返さない)。
@@ -38,6 +40,8 @@ export const STAFF_TOOLS: Anthropic.Beta.BetaTool[] = [
   { name: "my_requests", description: "自分が出した申請(有給・購入など)の状態を返す。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "search_manuals", description: "社内のマニュアルを言葉で探し、合うものの題名と本文の抜き出しを返す。仕事のやり方・ルールの質問に使う。", input_schema: { type: "object", properties: { query: { type: "string", description: "探す言葉" } }, required: ["query"], additionalProperties: false } },
   { name: "my_notices", description: "まだ読んでいない社内のお知らせを返す。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
+  { name: "my_supplies", description: "自分が総務に頼んだ備品・消耗品の購入依頼(品物・数・状態〈依頼中・発注しました・届きました・見送り〉・見送りの理由)を返す。新しく頼むときは /staff/supplies を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
+  { name: "my_events", description: "これからの社内のイベント(忘年会・歓迎会など)の日時・場所・会費・締め切りと、自分の出欠の答え(まだなら未回答)を返す。答えるのは /staff/events を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
 ];
 
 const minutesOf = (r: { clockIn: Date; clockOut: Date | null; breakMinutes: number }) => (r.clockOut ? Math.max(0, Math.round((r.clockOut.getTime() - r.clockIn.getTime()) / 60_000) - r.breakMinutes) : 0);
@@ -121,6 +125,14 @@ export async function runStaffTool(me: Me, name: string, input: Record<string, u
     case "my_notices": {
       const r = await unreadAnnouncements(me);
       return { unread: r.count, latest: r.latest.map((n) => n.title), link: "/notices" };
+    }
+    case "my_supplies": {
+      const rs = await mySupplyRequests(me);
+      return { requests: rs.slice(0, 15).map((r) => ({ item: r.item, quantity: r.quantity, unit: r.unit, status: SUPPLY_STATUS[r.status as keyof typeof SUPPLY_STATUS] ?? r.status, reply: r.reply, requested: jstDateKey(r.createdAt) })), link: "/staff/supplies" };
+    }
+    case "my_events": {
+      const es = await myEvents(me);
+      return { events: es.map((e) => ({ title: e.title, date: e.date, time: e.time, place: e.place, fee: e.fee, deadline: e.deadline, closed: e.closed, myAnswer: e.mine ? EVENT_ANSWERS[e.mine.answer as EventAnswer] : "未回答", paid: e.mine?.paid ?? false })), link: "/staff/events" };
     }
     default:
       throw new UserError("その道具はありません");
@@ -207,6 +219,16 @@ async function askSimple(me: Me, q: string): Promise<StaffReply> {
     const reports = r.reports as { created: string; status: string; total: number; reimbursed: string | null; returnComment: string | null }[];
     if (!reports.length) return { reply: "最近の経費精算はありません。\n[経費精算](/expenses)", tools: ["my_expenses"], mode: "simple" };
     return { reply: ["最近の経費精算:", ...reports.slice(0, 5).map((x) => `・${x.created} ${formatYen(x.total)}(${x.status}${x.reimbursed ? `・${x.reimbursed} に精算済み` : ""}${x.returnComment ? `・差戻しの理由: ${x.returnComment}` : ""})`), "[経費精算](/expenses)"].join("\n"), tools: ["my_expenses"], mode: "simple" };
+  }
+  if (/購入依頼|備品|消耗品|頼んだ(もの|物)|発注/.test(s)) {
+    const r = await run("my_supplies");
+    const rs = r.requests as { item: string; quantity: number; unit: string | null; status: string; reply: string | null }[];
+    return { reply: rs.length ? ["あなたの購入依頼:", ...rs.slice(0, 8).map((x) => `・${x.item} ${x.quantity}${x.unit ?? ""}(${x.status}${x.reply ? `・${x.reply}` : ""})`), "[購入依頼](/staff/supplies)"].join("\n") : "頼んだものはありません。ほしいものは [購入依頼](/staff/supplies) から頼めます。", tools: ["my_supplies"], mode: "simple" };
+  }
+  if (/イベント|忘年会|新年会|歓迎会|送別会|飲み会|社員旅行|出欠/.test(s)) {
+    const r = await run("my_events");
+    const es = r.events as { title: string; date: string; time: string | null; place: string | null; deadline: string | null; closed: boolean; myAnswer: string }[];
+    return { reply: es.length ? ["これからの社内のイベント:", ...es.map((e) => `・${e.title} ${e.date.slice(5).replace("-", "/")}${e.time ? ` ${e.time}` : ""}${e.place ? `・${e.place}` : ""} — あなたの答え: ${e.myAnswer}${!e.closed && e.myAnswer === "未回答" && e.deadline ? `(締め切り ${e.deadline.slice(5).replace("-", "/")})` : ""}`), "[社内のイベント](/staff/events)"].join("\n") : "これからの社内のイベントはありません。", tools: ["my_events"], mode: "simple" };
   }
   if (/申請|稟議|承認/.test(s)) {
     const r = await run("my_requests");
