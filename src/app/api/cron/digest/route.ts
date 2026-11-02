@@ -5,6 +5,7 @@ import { getTodos } from "@/lib/dashboard";
 import { appUrl, sendMail } from "@/lib/mail";
 import { generateBriefing } from "@/lib/assistant/briefing";
 import { checkWatchAlerts } from "@/lib/watchAlerts";
+import { remindExpiringLicenses } from "@/lib/staffLicenses";
 
 // 毎朝、「やること」がある会社の管理者にメールで知らせる(Vercel Cron から呼ばれる。vercel.json 参照)。
 // AIの朝のブリーフィング(今日まずやること)も作って、メールの最初に入れる。
@@ -74,5 +75,12 @@ export async function GET(request: Request) {
       console.error("AIの見張りを確かめられませんでした", error);
     }
   }
-  return NextResponse.json({ companies: companies.length, sent, watchAlerts });
+  // 資格・免許の有効期限が近い人に、本人あてに知らせる
+  let licenseReminders = 0;
+  try {
+    licenseReminders = await remindExpiringLicenses(baseUrl);
+  } catch (error) {
+    console.error("資格・免許の期限を知らせられませんでした", error);
+  }
+  return NextResponse.json({ companies: companies.length, sent, watchAlerts, licenseReminders });
 }
