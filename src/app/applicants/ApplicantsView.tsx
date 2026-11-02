@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 
-type Applicant = { id: string; name: string; email: string | null; phone: string | null; position: string | null; source: string | null; status: string; appliedOn: string; interviewDate: string | null; interviewTime: string | null; interviewerId: string | null; interviewerName: string | null; note: string | null };
+type Applicant = { id: string; name: string; email: string | null; phone: string | null; position: string | null; source: string | null; status: string; appliedOn: string; interviewDate: string | null; interviewTime: string | null; interviewerId: string | null; interviewerName: string | null; staffId?: string | null; note: string | null };
 type Data = { applicants: Applicant[]; purgeable: number };
 type Draft = { name: string; email: string | null; phone: string | null; position: string | null; source: string | null };
+type Hire = { id: string; hireDate: string; hourlyWage: string };
 type Mail = { id: string; kind: string; to: string; subject: string; body: string; mode: string };
 
 const input = "w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm";
@@ -18,6 +19,8 @@ export default function ApplicantsView({ initial, users, ai }: { initial: Data; 
   const [draft, setDraft] = useState<Draft | null>(null);
   const [sched, setSched] = useState<{ id: string; date: string; time: string; interviewerId: string } | null>(null);
   const [mail, setMail] = useState<Mail | null>(null);
+  const [hire, setHire] = useState<Hire | null>(null);
+  const [questions, setQuestions] = useState<{ id: string; list: string[]; removed: number; mode: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
@@ -75,6 +78,19 @@ export default function ApplicantsView({ initial, users, ai }: { initial: Data; 
       setMail(null);
       await reload();
     });
+  const draftQuestions = (a: Applicant, useAi: boolean) =>
+    run(`${a.id}-q`, async () => {
+      const r = await call(`/api/applicants/${a.id}`, "POST", { action: "questions", useAi });
+      setQuestions({ id: a.id, list: r.questions, removed: r.removed, mode: r.mode });
+    });
+  const saveHire = () =>
+    run("hire", async () => {
+      if (!hire) return;
+      const r = await call(`/api/applicants/${hire.id}`, "POST", { action: "hire", hireDate: hire.hireDate, hourlyWage: hire.hourlyWage });
+      setFlash(`${r.staff.name}さんを労働者名簿に${r.staff.reused ? "(同じ名前のスタッフに)" : ""}入れました。入社・退職の手続きに届出の一覧が出ます`);
+      setHire(null);
+      await reload();
+    });
   const purge = () =>
     run("purge", async () => {
       if (!confirm(`不採用・辞退から6か月たった応募者${data.purgeable}人の情報を消します。元に戻せません。よろしいですか?`)) return;
@@ -113,6 +129,9 @@ export default function ApplicantsView({ initial, users, ai }: { initial: Data; 
               面接のご案内メール
             </button>
           )}
+          <button onClick={() => draftQuestions(a, false)} disabled={!!busy} className="rounded-md border border-slate-300 bg-white px-2.5 py-1 hover:bg-slate-50">
+            面接の質問案
+          </button>
           <button onClick={() => draftMail(a, "OFFER")} disabled={!!busy} className="rounded-md border border-emerald-300 bg-white px-2.5 py-1 text-emerald-800 hover:bg-emerald-50">
             内定のメール
           </button>
@@ -120,7 +139,7 @@ export default function ApplicantsView({ initial, users, ai }: { initial: Data; 
             不採用のメール
           </button>
           {a.status === "OFFER" && (
-            <button onClick={() => setStatus(a, "HIRED")} disabled={!!busy} className="rounded-md bg-emerald-600 px-2.5 py-1 font-medium text-white">
+            <button onClick={() => setHire({ id: a.id, hireDate: "", hourlyWage: "" })} disabled={!!busy} className="rounded-md bg-emerald-600 px-2.5 py-1 font-medium text-white">
               入社した
             </button>
           )}
@@ -128,6 +147,59 @@ export default function ApplicantsView({ initial, users, ai }: { initial: Data; 
             辞退
           </button>
         </div>
+      )}
+      {questions?.id === a.id && (
+        <div className="space-y-1.5 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+            <span>
+              {questions.mode === "claude" ? "AIが仕事に合わせて作りました" : "よく使う質問です"}
+              {questions.removed ? `(就職差別につながるおそれのある質問を${questions.removed}つ外しました)` : ""}。本籍・家族・思想・宗教などは聞かないでください。
+            </span>
+            <span className="flex gap-2">
+              {ai && (
+                <button onClick={() => draftQuestions(a, true)} disabled={!!busy} className="rounded-md border border-indigo-300 bg-indigo-50 px-2.5 py-1 font-medium text-indigo-700">
+                  {busy === `${a.id}-q` ? "AIが考えています…" : "AIで仕事に合わせる"}
+                </button>
+              )}
+              <button onClick={() => setQuestions(null)} className="text-slate-500">
+                閉じる
+              </button>
+            </span>
+          </div>
+          <ol className="list-decimal space-y-0.5 pl-5">
+            {questions.list.map((q, i) => (
+              <li key={i}>{q}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {hire?.id === a.id && (
+        <div className="flex flex-wrap items-end gap-2 rounded-md bg-emerald-50 p-2">
+          <label className="text-xs text-slate-600">
+            入社日
+            <input aria-label="入社日" type="date" value={hire.hireDate} onChange={(e) => setHire({ ...hire, hireDate: e.target.value })} className="block rounded-md border border-slate-300 px-2 py-1 text-sm" />
+          </label>
+          <label className="text-xs text-slate-600">
+            時給(月給の人は目安)
+            <input aria-label="時給" inputMode="numeric" value={hire.hourlyWage} onChange={(e) => setHire({ ...hire, hourlyWage: e.target.value })} placeholder="例: 1200" className="block w-28 rounded-md border border-slate-300 px-2 py-1 text-sm" />
+          </label>
+          <button onClick={saveHire} disabled={!!busy || !hire.hireDate || !hire.hourlyWage} className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
+            労働者名簿に入れる
+          </button>
+          <button onClick={() => setHire(null)} className="text-sm text-slate-500">
+            やめる
+          </button>
+        </div>
+      )}
+      {a.status === "HIRED" && a.staffId && (
+        <p className="flex flex-wrap gap-3 text-xs">
+          <a href="/staff-records" className="text-indigo-700 underline">
+            労働者名簿
+          </a>
+          <a href="/hr-procedures" className="text-indigo-700 underline">
+            入社の手続き(届出)
+          </a>
+        </p>
       )}
       {sched?.id === a.id && (
         <div className="flex flex-wrap items-end gap-2 rounded-md bg-slate-50 p-2">

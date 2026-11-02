@@ -2694,6 +2694,7 @@ model Applicant {
   interviewerId   String?
   interviewerName String?
   visitorId       String? // 来客の受付簿に入れた面接の予定
+  staffId         String? // 入社して労働者名簿に入れたスタッフ
   note            String?
   createdByName   String
   createdAt       DateTime @default(now())
