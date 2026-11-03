@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type Category = "WATER" | "FOOD" | "TOILET" | "MEDICAL" | "OTHER";
-type Item = { id: string; name: string; category: Category; quantity: number; unit: string | null; amountPerUnit: number | null; expiresOn: string | null; place: string | null; note: string | null; state: "OK" | "SOON" | "EXPIRED"; days: number | null };
+type Item = { id: string; name: string; category: Category; quantity: number; unit: string | null; amountPerUnit: number | null; expiresOn: string | null; place: string | null; note: string | null; restockOrderId: string | null; state: "OK" | "SOON" | "EXPIRED"; days: number | null };
 type Coverage = { category: Category; label: string; unit: string; have: number; need: number; short: number; days: number | null; unknown: number };
 type Data = { today: string; people: number; staffCount: number; items: Item[]; coverage: Coverage[]; alerts: number };
 type Draft = { id?: string; name: string; category: Category; quantity: number | null; unit: string | null; amountPerUnit: number | null; expiresOn: string | null; place: string | null };
@@ -21,6 +21,8 @@ export default function StockpileView({ initial }: { initial: Data }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  type Line = { key: string; reason: "REPLACE" | "SHORT"; itemId: string | null; category: Category; description: string; quantity: number; unit: string | null; unitPrice: number | null; taxRate: number; vendor: string | null; ordered: boolean; on?: boolean };
+  const [plan, setPlan] = useState<{ lines: Line[]; vendorName: string; deliveryDate: string } | null>(null);
 
   async function call(url: string, method: string, body?: unknown) {
     const res = await fetch(url, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
@@ -49,6 +51,26 @@ export default function StockpileView({ initial }: { initial: Data }) {
       setFlash(`${item.name}を${draft.id ? "直しました" : "記録しました"}`);
       setDraft(null);
       setText("");
+      await load();
+    });
+  const openPlan = () =>
+    run("plan", async () => {
+      const r = await call(`/api/stockpile/restock${Number(people) > 0 ? `?people=${Number(people)}` : ""}`, "GET");
+      if (!r.lines.length) {
+        setFlash("入れかえ・買い足しの必要なものはありません");
+        return;
+      }
+      setPlan({ lines: r.lines.map((l: Line) => ({ ...l, on: !l.ordered })), vendorName: r.vendor ?? "", deliveryDate: "" });
+    });
+  const setLine = (key: string, patch: Partial<Line>) => plan && setPlan({ ...plan, lines: plan.lines.map((l) => (l.key === key ? { ...l, ...patch } : l)) });
+  const chosen = plan?.lines.filter((l) => l.on) ?? [];
+  const total = chosen.reduce((s, l) => s + Math.floor((l.unitPrice ?? 0) * l.quantity * (1 + l.taxRate / 100)), 0);
+  const order = () =>
+    run("order", async () => {
+      if (!plan) return;
+      const r = await call("/api/stockpile/restock", "POST", { vendorName: plan.vendorName, deliveryDate: plan.deliveryDate, lines: chosen });
+      setPlan(null);
+      setFlash(`発注書 ${r.order.orderNumber}(${r.order.totalAmount.toLocaleString()}円)を作りました。発注書の画面から印刷・送付できます`);
       await load();
     });
   const remove = (i: Item) =>
@@ -94,6 +116,55 @@ export default function StockpileView({ initial }: { initial: Data }) {
           })}
         </div>
         <p className="mt-2 text-xs text-slate-500">期限の切れたものは数えません。めやすは1人1日あたり 水3リットル・食料3食・簡易トイレ5回です。</p>
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-semibold">入れかえ・買い足し</h2>
+          <p className="text-xs text-slate-500">期限が近い・切れたものの入れかえと、3日分に足りない分を発注書の下書きにします</p>
+          <button onClick={openPlan} disabled={!!busy} className="ml-auto rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-50">
+            {busy === "plan" ? "調べています…" : "発注書の下書きを作る"}
+          </button>
+        </div>
+        {plan && (
+          <div className="space-y-2 rounded-md border border-slate-200 p-3">
+            <ul className="divide-y divide-slate-100">
+              {plan.lines.map((l) => (
+                <li key={l.key} className="flex flex-wrap items-center gap-2 py-2">
+                  <input type="checkbox" aria-label={`${l.description}を発注する`} checked={!!l.on} onChange={(e) => setLine(l.key, { on: e.target.checked })} />
+                  <span className={`rounded-full px-2 py-0.5 text-xs ${l.reason === "REPLACE" ? "bg-amber-50 text-amber-900 ring-1 ring-amber-200" : "bg-sky-50 text-sky-800 ring-1 ring-sky-200"}`}>{l.reason === "REPLACE" ? "入れかえ" : "足りない分"}</span>
+                  <input aria-label="品物" value={l.description} onChange={(e) => setLine(l.key, { description: e.target.value })} className="min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-1 text-sm" />
+                  <input aria-label="数" inputMode="numeric" value={l.quantity} onChange={(e) => setLine(l.key, { quantity: Number(e.target.value.replace(/[^\d]/g, "")) || 0 })} className="w-16 rounded-md border border-slate-300 px-2 py-1 text-right text-sm" />
+                  <span className="w-8 text-xs text-slate-500">{l.unit ?? ""}</span>
+                  <label className="flex items-center gap-1 text-xs text-slate-600">
+                    単価
+                    <input aria-label="単価" inputMode="numeric" value={l.unitPrice ?? ""} placeholder="円" onChange={(e) => setLine(l.key, { unitPrice: e.target.value === "" ? null : Number(e.target.value.replace(/[^\d]/g, "")) })} className="w-20 rounded-md border border-slate-300 px-2 py-1 text-right text-sm" />
+                  </label>
+                  <span className="text-xs text-slate-500">税{l.taxRate}%</span>
+                  {l.ordered && <span className="text-xs text-slate-500">発注済み</span>}
+                  {l.vendor && l.unitPrice != null && <span className="text-xs text-slate-400">前回 {l.vendor}</span>}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-xs text-slate-600">
+                発注先
+                <input aria-label="発注先" value={plan.vendorName} onChange={(e) => setPlan({ ...plan, vendorName: e.target.value })} className="block rounded-md border border-slate-300 px-2 py-1 text-sm" />
+              </label>
+              <label className="text-xs text-slate-600">
+                納期
+                <input aria-label="納期" type="date" value={plan.deliveryDate} onChange={(e) => setPlan({ ...plan, deliveryDate: e.target.value })} className="block rounded-md border border-slate-300 px-2 py-1 text-sm" />
+              </label>
+              <span className="ml-auto text-sm">合計(税込の目安) {total.toLocaleString()}円</span>
+              <button onClick={order} disabled={!!busy || !chosen.length} className="rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
+                {busy === "order" ? "作っています…" : `${chosen.length}品で発注書を作る`}
+              </button>
+              <button onClick={() => setPlan(null)} className="rounded-md border border-slate-300 bg-white px-3 py-2 hover:bg-slate-50">
+                やめる
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:p-6">
@@ -175,6 +246,7 @@ export default function StockpileView({ initial }: { initial: Data }) {
                   {i.state === "EXPIRED" ? `${ymd(i.expiresOn)}に切れています` : i.state === "SOON" ? `${ymd(i.expiresOn)}まで(あと${i.days}日)` : ymd(i.expiresOn)}
                 </span>
                 {i.place && <span className="text-xs text-slate-500">{i.place}</span>}
+                {i.restockOrderId && i.state !== "OK" && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs text-sky-800 ring-1 ring-sky-200">入れかえを発注済み</span>}
                 <span className="ml-auto flex gap-2">
                   <button onClick={() => setDraft({ id: i.id, name: i.name, category: i.category, quantity: i.quantity, unit: i.unit, amountPerUnit: i.amountPerUnit, expiresOn: i.expiresOn, place: i.place })} className="text-xs text-indigo-700 hover:underline">
                     直す(入れかえ)

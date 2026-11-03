@@ -2692,6 +2692,7 @@ model StockpileItem {
   expiresOn     String? // 賞味期限・使用期限 YYYY-MM-DD
   place         String? // 置き場所
   note          String?
+  restockOrderId String? // 入れかえ・買い足しで発注書を作ったとき(期限を直すと空に戻す)
   createdByName String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
