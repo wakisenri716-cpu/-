@@ -17,6 +17,7 @@ type Home = {
   toAnswer?: { id: string; title: string; date: string; deadline: string | null }[];
   newAnswers?: number;
   safety?: { id: string; title: string; answered: boolean }[];
+  surveys?: number;
 };
 
 const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8))}`;
@@ -74,6 +75,11 @@ export default function StaffHome() {
           <span className="mt-0.5 block text-rose-700">
             {data.toAnswer.map((e) => `${e.title}(${md(e.date)}${e.deadline ? `・締め切り ${md(e.deadline)}` : ""})`).join("、")} ›
           </span>
+        </Link>
+      )}
+      {!!data.surveys && (
+        <Link href="/staff/surveys" className="block rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm font-semibold text-indigo-800 shadow-sm">
+          答えていない社内アンケートが{data.surveys}件あります ›
         </Link>
       )}
       {!!data.newAnswers && (
