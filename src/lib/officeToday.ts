@@ -18,6 +18,7 @@ import { upcomingLeaves } from "@/lib/handover";
 import { countHealthTodos } from "@/lib/healthChecks";
 import { countStockAlerts } from "@/lib/stockpile";
 import { countSafetyTodos } from "@/lib/safetyChecks";
+import { openSurveySummary } from "@/lib/surveys";
 
 // 総務のきょう: 来客・会議室と社用車・アルコールチェック・郵便物・伝言・購入依頼・質問・イベント・資格・健康診断・採用・休む人を1つの画面にまとめる。
 // AIが使えるときは、今日いちばん気をつけることを短くまとめる(元の数字にない数字が入ったら決まった文に戻す)。
@@ -28,7 +29,7 @@ const DAILY_LIMIT = Number(process.env.ASSISTANT_DAILY_LIMIT || 100);
 export async function officeFacts(companyId: string) {
   const today = jstDateKey(new Date());
   const soon = new Date(Date.parse(`${today}T00:00:00Z`) + 14 * 86_400_000).toISOString().slice(0, 10);
-  const [visitors, bookings, cars, missing, mail, memos, supplies, questions, events, licenses, applicants, vehicles, gifts, leaves, health, stock, safety] = await Promise.all([
+  const [visitors, bookings, cars, missing, mail, memos, supplies, questions, events, licenses, applicants, vehicles, gifts, leaves, health, stock, safety, surveys] = await Promise.all([
     visitorsOn(companyId, today),
     listBookings(companyId, today, 1),
     carBookingsOn(companyId, today),
@@ -46,6 +47,7 @@ export async function officeFacts(companyId: string) {
     countHealthTodos(companyId),
     countStockAlerts(companyId),
     countSafetyTodos(companyId),
+    openSurveySummary(companyId),
   ]);
   return {
     today,
@@ -71,6 +73,7 @@ export async function officeFacts(companyId: string) {
     safetyWaiting: safety.waiting,
     safetyHelp: safety.help,
     safetyDrill: safety.drill,
+    surveys: surveys.map((x) => ({ title: x.title, responses: x.responses, total: x.total, deadline: x.deadline })),
     offToday: leaves.filter((l) => l.dates.includes(today)).map((l) => l.name),
   };
 }

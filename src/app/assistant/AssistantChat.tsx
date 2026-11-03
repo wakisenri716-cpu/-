@@ -51,6 +51,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_health_checks: "健康診断",
   get_stockpile: "防災の備蓄品",
   get_safety_checks: "安否確認",
+  get_surveys: "社内アンケート",
   get_applicants: "採用の応募者",
   get_purchase_prices: "仕入値の履歴",
   get_meeting_slots: "日程調整",

@@ -236,7 +236,7 @@ export async function listSurveys(companyId: string) {
   return rows.map((s) => ({ id: s.id, title: s.title, anonymous: s.anonymous, deadline: s.deadline, open: isOpen(s), responses: s._count.responses, createdAt: s.createdAt }));
 }
 
-export async function updateSurvey(me: Me, id: string, raw: Record<string, unknown>) {
+export async function updateSurvey(me: Me, id: string, raw: Record<string, unknown>, request?: Request) {
   if (!canManage(me.role)) throw new UserError("アンケートは管理者・経理担当が扱えます");
   const s = await prisma.survey.findFirst({ where: { id, companyId: me.companyId } });
   if (!s) throw new UserError("見つかりません");
@@ -245,6 +245,30 @@ export async function updateSurvey(me: Me, id: string, raw: Record<string, unkno
     return { ok: true };
   }
   if (raw.action === "summary") return summarizeSurvey(me, id);
+  if (raw.action === "remind") {
+    // まだ答えていない人にだけ、もう一度知らせる。名前を出さないアンケートでも、だれに送ったかは画面に出さない
+    if (!isOpen(s)) throw new UserError("締め切ったアンケートです");
+    const since = new Date(Date.now() - 24 * 3_600_000);
+    if (await prisma.emailLog.count({ where: { companyId: me.companyId, relatedId: id, subject: { startsWith: "【アンケート・再送】" }, createdAt: { gte: since } } })) throw new UserError("もう一度送るのは1日1回までです");
+    const answered = new Set((await prisma.surveyResponse.findMany({ where: { surveyId: id }, select: { userId: true } })).map((r) => r.userId));
+    const waiting = (await members(me.companyId)).filter((p) => !answered.has(p.id));
+    if (!waiting.length) throw new UserError("全員が答えています");
+    let sent = 0;
+    for (const p of waiting) {
+      if (!p.email) continue;
+      try {
+        await sendMail({ companyId: me.companyId, kind: "NOTICE", to: p.email, subject: `【アンケート・再送】${s.title}`, text: `${p.name}さん\n\n「${s.title}」のアンケートにまだ答えていないようです${s.deadline ? `(${Number(s.deadline.slice(5, 7))}月${Number(s.deadline.slice(8))}日まで)` : ""}。答えられる質問だけでかまいません。${s.anonymous ? "\n名前は出さずに集計します。" : ""}\n\n答える: ${appUrl(request)}/staff/surveys\n`, sentByName: me.name, relatedId: id });
+        sent++;
+      } catch (error) {
+        if (!(error instanceof MailError)) throw error;
+      }
+    }
+    notifyLater(
+      waiting.map((p) => p.id),
+      { title: `【アンケート】${s.title}`, body: "まだ答えていません。答えられる質問だけでかまいません", url: "/staff/surveys" },
+    );
+    return { sent, waiting: s.anonymous ? null : waiting.length };
+  }
   throw new UserError("することがわかりません");
 }
 
@@ -275,6 +299,12 @@ export async function summarizeSurvey(me: Me, id: string) {
   const ok = !!summary && !inventedNumbers(all, src).length && !(r.anonymous && names.some((nm) => all.includes(nm)));
   if (!ok) throw new UserError("AIのまとめが条件に合わなかったので使いませんでした(元にない数字や人の名前が入っていました)。答えの一覧を読んでください");
   return { summary, points };
+}
+
+// 総務のきょう・AIアシスタント: 受付中のアンケートと答えの数
+export async function openSurveySummary(companyId: string) {
+  const [rows, people] = await Promise.all([prisma.survey.findMany({ where: { companyId, closedAt: null }, include: { _count: { select: { responses: true } } }, orderBy: { createdAt: "desc" }, take: 10 }), members(companyId)]);
+  return rows.filter(isOpen).map((s) => ({ id: s.id, title: s.title, deadline: s.deadline, anonymous: s.anonymous, responses: s._count.responses, total: people.length }));
 }
 
 // 従業員のホーム: 答えていないアンケートの数
