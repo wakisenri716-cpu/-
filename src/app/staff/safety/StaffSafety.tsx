@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Check = { id: string; title: string; message: string; createdAt: string; mine: { status: string; canWork: string; note: string | null } | null };
+type Check = { id: string; title: string; message: string; drill?: boolean; createdAt: string; mine: { status: string; canWork: string; note: string | null } | null };
 const STATUS = [
   { v: "SAFE", label: "無事です", cls: "border-emerald-300 bg-emerald-50 text-emerald-900" },
   { v: "INJURED", label: "けがをした", cls: "border-amber-300 bg-amber-50 text-amber-900" },
@@ -60,7 +60,10 @@ export function StaffSafety() {
           return (
             <section key={c.id} className="space-y-3 rounded-2xl bg-white p-4 text-sm shadow-sm ring-1 ring-slate-200">
               <div>
-                <h2 className="font-semibold">{c.title}</h2>
+                <h2 className="font-semibold">
+                  {c.drill && <span className="mr-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">訓練</span>}
+                  {c.title}
+                </h2>
                 <p className="mt-1 whitespace-pre-line text-slate-600">{c.message}</p>
               </div>
               {c.mine && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-emerald-800">答えました。変わったら選び直して送ってください。</p>}

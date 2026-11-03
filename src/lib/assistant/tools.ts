@@ -15,6 +15,7 @@ import { listSupplyRequests } from "@/lib/supplyRequests";
 import { listLicenses } from "@/lib/staffLicenses";
 import { listHealth, KINDS as HEALTH_KINDS, STATES as HEALTH_STATES } from "@/lib/healthChecks";
 import { listStock, CATEGORIES as STOCK_CATEGORIES } from "@/lib/stockpile";
+import { listChecks as listSafetyChecks, STATUS as SAFETY_STATUS, CAN_WORK as SAFETY_WORK } from "@/lib/safetyChecks";
 import { listApplicants, STATUS as APPLICANT_STATUS, type Status as ApplicantStatus } from "@/lib/applicants";
 import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
@@ -499,6 +500,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_stockpile",
     description: "防災の備蓄品。品物ごとの数・期限(近い/切れた)・置き場所と、社員の人数から見た3日分(水は1人1日3リットル・食料3食・簡易トイレ5回)が足りるか・あと何が要るかを返す。「備蓄の水は足りてる?」「期限が切れそうな非常食は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_safety_checks",
+    description: "安否確認(災害のときの一斉の問いかけと訓練)。いちばん新しいものの題・訓練か・受付中か・答えた人数・無事/けが/助けが必要の数・まだ答えていない人・けがや助けが必要な人とひとこと・答えるまでの時間を返す。「安否確認はどうなってる?」「まだ答えていない人は?」などに使う。始めるのは /safety を案内する。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1095,6 +1101,14 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         coverage: d.coverage.map((c) => ({ kind: c.label, have: `${c.have}${c.unit}`, need: `${c.need}${c.unit}`, short: c.short ? `${c.short}${c.unit}` : null, days: c.days })),
         items: d.items.map((i) => ({ name: i.name, kind: STOCK_CATEGORIES[i.category as keyof typeof STOCK_CATEGORIES] ?? i.category, quantity: `${i.quantity}${i.unit ?? ""}`, expiresOn: i.expiresOn, state: i.state === "EXPIRED" ? "切れている" : i.state === "SOON" ? `あと${i.days}日` : "問題なし", place: i.place })),
         link: "/stockpile",
+      };
+    }
+    case "get_safety_checks": {
+      const c = (await listSafetyChecks(companyId))[0];
+      if (!c) return { latest: null, link: "/safety" };
+      return {
+        latest: { title: c.title, drill: c.drill, open: !c.closedAt, counts: c.counts, notAnswered: c.waiting.map((p) => p.name), needCare: c.answers.filter((a) => a.status !== "SAFE").map((a) => ({ name: a.name, status: SAFETY_STATUS[a.status as keyof typeof SAFETY_STATUS], canWork: SAFETY_WORK[a.canWork as keyof typeof SAFETY_WORK], note: a.note })), medianMinutes: c.speed.median },
+        link: "/safety",
       };
     }
     case "get_mail_items": {

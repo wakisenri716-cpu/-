@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type Answer = { userId: string; name: string; status: "SAFE" | "INJURED" | "HELP"; canWork: "YES" | "LATER" | "REMOTE" | "NO"; note: string | null; at: string };
-type Check = { id: string; title: string; message: string; createdByName: string; createdAt: string; closedAt: string | null; answers: Answer[]; waiting: { id: string; name: string; email: boolean }[]; counts: { total: number; answered: number; safe: number; injured: number; help: number; canWork: number } };
+type Check = { id: string; title: string; message: string; createdByName: string; createdAt: string; closedAt: string | null; drill: boolean; speed: { median: number | null; within30: number; within60: number; slowest: number | null; total: number }; answers: Answer[]; waiting: { id: string; name: string; email: boolean }[]; counts: { total: number; answered: number; safe: number; injured: number; help: number; canWork: number } };
 
 const STATUS = { SAFE: { label: "無事", cls: "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200" }, INJURED: { label: "けがをした", cls: "bg-amber-50 text-amber-900 ring-1 ring-amber-200" }, HELP: { label: "助けが必要", cls: "bg-rose-50 text-rose-800 ring-1 ring-rose-200" } };
 const WORK = { YES: "出社できる", LATER: "遅れて出社", REMOTE: "家で仕事できる", NO: "出社できない" };
@@ -13,6 +13,7 @@ const when = (s: string) => new Date(s).toLocaleString("ja-JP", { timeZone: "Asi
 export default function SafetyView({ initial }: { initial: Check[] }) {
   const [checks, setChecks] = useState(initial);
   const [situation, setSituation] = useState("");
+  const [drill, setDrill] = useState(false);
   const [draft, setDraft] = useState<{ title: string; message: string; mode: string } | null>(null);
   const [summary, setSummary] = useState<Record<string, { text: string; mode: string }>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -40,14 +41,14 @@ export default function SafetyView({ initial }: { initial: Check[] }) {
   const load = async () => setChecks((await call("/api/safety", "GET")).checks);
   const makeDraft = (useAi: boolean) =>
     run(useAi ? "ai" : "draft", async () => {
-      const d = await call("/api/safety", "POST", { action: "draft", situation, useAi });
+      const d = await call("/api/safety", "POST", { action: "draft", situation, useAi, drill });
       setDraft(d);
       if (useAi && d.mode !== "claude") setFlash("AIの文が条件に合わなかったので、決まった文のままにしました");
     });
   const start = () =>
     run("start", async () => {
-      if (!draft || !confirm("社員全員に安否確認を送ります。よろしいですか?")) return;
-      const r = await call("/api/safety", "POST", { title: draft.title, message: draft.message });
+      if (!draft || !confirm(drill ? "社員全員に安否確認の訓練を送ります。よろしいですか?" : "社員全員に安否確認を送ります。よろしいですか?")) return;
+      const r = await call("/api/safety", "POST", { title: draft.title, message: draft.message, drill });
       setDraft(null);
       setSituation("");
       setFlash(`${r.people}人に安否確認を送りました(メール${r.sent}通・アプリを入れている人には通知も)`);
@@ -74,10 +75,15 @@ export default function SafetyView({ initial }: { initial: Check[] }) {
           <h2 className="font-semibold">安否確認を始める</h2>
           <div className="flex flex-col gap-2 sm:flex-row">
             <input aria-label="何があったか" value={situation} onChange={(e) => setSituation(e.target.value)} placeholder="何があったか(例: 地震・台風10号・大雨)" className={input} />
+            <label className="flex shrink-0 items-center gap-1.5 text-xs">
+              <input type="checkbox" checked={drill} onChange={(e) => { setDrill(e.target.checked); setDraft(null); }} />
+              訓練として送る
+            </label>
             <button onClick={() => makeDraft(false)} disabled={!!busy} className="shrink-0 rounded-md border border-slate-300 bg-white px-3 py-2 hover:bg-slate-50 disabled:opacity-50">
               文を作る
             </button>
           </div>
+          <p className="text-xs text-slate-500">ふだんの練習には「訓練として送る」を使ってください。題と本文に「訓練」と入り、答えるまでの時間を集計します。</p>
           {draft && (
             <div className="space-y-2 rounded-md border border-slate-200 p-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -90,8 +96,8 @@ export default function SafetyView({ initial }: { initial: Check[] }) {
               <textarea aria-label="本文" value={draft.message} rows={8} onChange={(e) => setDraft({ ...draft, message: e.target.value })} className={input} />
               <p className="text-xs text-slate-500">送るときに、答える画面へのリンクを足します。</p>
               <div className="flex gap-2">
-                <button onClick={start} disabled={!!busy} className="rounded-md bg-rose-600 px-4 py-2 font-medium text-white hover:bg-rose-700 disabled:opacity-50">
-                  {busy === "start" ? "送っています…" : "全員に送る"}
+                <button onClick={start} disabled={!!busy} className={`rounded-md px-4 py-2 font-medium text-white disabled:opacity-50 ${drill ? "bg-amber-600 hover:bg-amber-700" : "bg-rose-600 hover:bg-rose-700"}`}>
+                  {busy === "start" ? "送っています…" : drill ? "訓練を全員に送る" : "全員に送る"}
                 </button>
                 <button onClick={() => setDraft(null)} className="rounded-md border border-slate-300 bg-white px-3 py-2 hover:bg-slate-50">
                   やめる
@@ -112,6 +118,7 @@ export default function SafetyView({ initial }: { initial: Check[] }) {
               {when(c.createdAt)} {c.createdByName}
               {c.closedAt ? `・${when(c.closedAt)}に締めた` : ""}
             </span>
+            {c.drill && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-900 ring-1 ring-amber-200">訓練</span>}
             {!c.closedAt && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs text-rose-800 ring-1 ring-rose-200">受付中</span>}
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
@@ -123,6 +130,11 @@ export default function SafetyView({ initial }: { initial: Check[] }) {
             {c.counts.help > 0 && <span className={`rounded-full px-2 py-0.5 ${STATUS.HELP.cls}`}>助けが必要 {c.counts.help}</span>}
             <span className="rounded-full bg-slate-100 px-2 py-0.5">出社できる(遅れ・在宅も) {c.counts.canWork}</span>
           </div>
+          {c.speed.median != null && (
+            <p className="text-xs text-slate-600">
+              答えるまでの時間: 真ん中の人 {c.speed.median}分・30分以内 {c.speed.within30}人・1時間以内 {c.speed.within60}人(いちばん遅い人 {c.speed.slowest}分)
+            </p>
+          )}
           {c.waiting.length > 0 && (
             <div className="rounded-md bg-amber-50/70 p-3">
               <p className="text-xs font-medium text-amber-900">まだ答えていない人({c.waiting.length}人)</p>

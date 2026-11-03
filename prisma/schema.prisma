@@ -2586,6 +2586,7 @@ model SafetyCheck {
   company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   title         String // 例: 11/3 地震の安否確認
   message       String
+  drill         Boolean        @default(false) // 訓練(本当の災害ではない)
   createdById   String
   createdByName String
   closedAt      DateTime?
