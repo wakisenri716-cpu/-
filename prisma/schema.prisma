@@ -258,6 +258,7 @@ model Company {
   gifts         GiftRecord[]
   supplyRequests SupplyRequest[]
   healthChecks HealthCheck[]
+  stockpileItems StockpileItem[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
   partyNotes           PartyNote[]
@@ -2674,6 +2675,26 @@ model StaffLicense {
   createdByName String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// 防災の備蓄品(水・食料・簡易トイレなど)。数と賞味期限・使用期限を持ち、社員の人数から3日分が足りるかを見る
+model StockpileItem {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name          String
+  category      String   @default("OTHER") // WATER(水) / FOOD(食料) / TOILET(簡易トイレ) / MEDICAL(救急・衛生) / OTHER
+  quantity      Int
+  unit          String? // 本・箱・食など
+  amountPerUnit Float? // 1つあたりの量(水はリットル、食料は食、トイレは回)
+  expiresOn     String? // 賞味期限・使用期限 YYYY-MM-DD
+  place         String? // 置き場所
+  note          String?
+  createdByName String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([companyId])
 }

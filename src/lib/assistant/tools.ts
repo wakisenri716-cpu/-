@@ -14,6 +14,7 @@ import { listEvents } from "@/lib/companyEvents";
 import { listSupplyRequests } from "@/lib/supplyRequests";
 import { listLicenses } from "@/lib/staffLicenses";
 import { listHealth, KINDS as HEALTH_KINDS, STATES as HEALTH_STATES } from "@/lib/healthChecks";
+import { listStock, CATEGORIES as STOCK_CATEGORIES } from "@/lib/stockpile";
 import { listApplicants, STATUS as APPLICANT_STATUS, type Status as ApplicantStatus } from "@/lib/applicants";
 import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
@@ -493,6 +494,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_health_checks",
     description: "社員の健康診断の受診管理。在籍している人ごとの今年の定期健康診断の状態(受けた・予約済み・予約日を過ぎた・今年まだ・1年以上受けていない)と予約日・受けた日、再検査がまだの人を返す(結果の中身は記録していない)。「健康診断まだの人は?」「再検査は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_stockpile",
+    description: "防災の備蓄品。品物ごとの数・期限(近い/切れた)・置き場所と、社員の人数から見た3日分(水は1人1日3リットル・食料3食・簡易トイレ5回)が足りるか・あと何が要るかを返す。「備蓄の水は足りてる?」「期限が切れそうな非常食は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1081,6 +1087,15 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_health_checks": {
       const d = await listHealth(companyId, Number(jstDateKey(new Date()).slice(0, 4)));
       return { year: d.year, people: d.people.map((p) => ({ name: p.name, state: HEALTH_STATES[p.state], doneOn: p.doneOn, plannedOn: p.plannedOn, lastDone: p.lastDone })), followUps: d.followUps.map((f) => ({ name: f.name, kind: HEALTH_KINDS[f.kind as keyof typeof HEALTH_KINDS] ?? f.kind, doneOn: f.doneOn })), link: "/health-checks" };
+    }
+    case "get_stockpile": {
+      const d = await listStock(companyId);
+      return {
+        people: d.people,
+        coverage: d.coverage.map((c) => ({ kind: c.label, have: `${c.have}${c.unit}`, need: `${c.need}${c.unit}`, short: c.short ? `${c.short}${c.unit}` : null, days: c.days })),
+        items: d.items.map((i) => ({ name: i.name, kind: STOCK_CATEGORIES[i.category as keyof typeof STOCK_CATEGORIES] ?? i.category, quantity: `${i.quantity}${i.unit ?? ""}`, expiresOn: i.expiresOn, state: i.state === "EXPIRED" ? "切れている" : i.state === "SOON" ? `あと${i.days}日` : "問題なし", place: i.place })),
+        link: "/stockpile",
+      };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);
