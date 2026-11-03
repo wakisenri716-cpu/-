@@ -34,6 +34,11 @@ export default async function OfficePage() {
       </div>
       <OfficeSummary initial={templateSummary(f)} ai={ai} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {f.safetyWaiting + f.safetyHelp > 0 && (
+          <Card href="/safety" title="安否確認" count={`${f.safetyWaiting + f.safetyHelp}人`} tone="rose">
+            <p className="text-rose-700">{[f.safetyHelp ? `けが・助けが必要 ${f.safetyHelp}人` : "", f.safetyWaiting ? `まだ答えていない ${f.safetyWaiting}人` : ""].filter(Boolean).join("・")}</p>
+          </Card>
+        )}
         <Card href="/visitors" title="今日の来客" count={`${f.visitors.length}件`} tone={f.visitors.length ? "amber" : "slate"}>
           {f.visitors.length ? (
             <ul className="space-y-0.5 text-slate-600">

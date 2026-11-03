@@ -32,6 +32,7 @@ import { countOpenSupplyRequests } from "@/lib/supplyRequests";
 import { countLicenseAlerts } from "@/lib/staffLicenses";
 import { countHealthTodos } from "@/lib/healthChecks";
 import { countStockAlerts } from "@/lib/stockpile";
+import { countSafetyTodos } from "@/lib/safetyChecks";
 import { countApplicantTodos } from "@/lib/applicants";
 import { countHandoverDue } from "@/lib/handover";
 import { countDueTasks } from "@/lib/teamTasks";
@@ -125,7 +126,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions, hrAlerts, calendarAlerts, memos, quoteFollow, dueTasks, waitingMail, handoverDue, visitorsToday, openQuestions, missingAlcohol, vehicleAlerts, eventReminders, unthankedGifts, supplies, licenseAlerts, applicantTodos, healthTodos, stockAlerts] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions, hrAlerts, calendarAlerts, memos, quoteFollow, dueTasks, waitingMail, handoverDue, visitorsToday, openQuestions, missingAlcohol, vehicleAlerts, eventReminders, unthankedGifts, supplies, licenseAlerts, applicantTodos, healthTodos, stockAlerts, safety] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -183,9 +184,11 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     !user || user.role === "ADMIN" || user.role === "ACCOUNTANT" ? countApplicantTodos(companyId) : Promise.resolve({ waiting: 0, interviews: 0 }),
     !user || user.role === "ADMIN" || user.role === "ACCOUNTANT" ? countHealthTodos(companyId) : Promise.resolve({ passed: 0, followUps: 0, due: 0, total: 0 }),
     !user || user.role === "ADMIN" || user.role === "ACCOUNTANT" ? countStockAlerts(companyId) : Promise.resolve(0),
+    !user || user.role === "ADMIN" || user.role === "ACCOUNTANT" ? countSafetyTodos(companyId) : Promise.resolve({ waiting: 0, help: 0 }),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
+    { key: "safety", label: "安否確認", detail: [safety.help ? `けがをした・助けが必要な人が${safety.help}人います。` : "", safety.waiting ? `まだ答えていない人が${safety.waiting}人います。` : ""].join(""), count: safety.help + safety.waiting, href: "/safety", tone: "rose" },
     { key: "advisorQuestions", label: "税理士からの質問", detail: "仕訳へのコメントに回答して、解決済みにしてください", count: advisorQuestions, href: "/journal-comments", tone: "amber" },
     { key: "aiProposals", label: "自分のAIが作った下書き", detail: "内容を確かめて「実行する」を押すと確定します(24時間で期限切れ)", count: mcpProposals, href: "/ai-proposals", tone: "amber" },
     { key: "review", label: "AI仕訳のレビュー待ち", detail: "経費・請求書のAI判定を確認してください", count: reviews, href: "/review", tone: "amber" },
