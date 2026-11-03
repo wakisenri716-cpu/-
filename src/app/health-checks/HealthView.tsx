@@ -5,8 +5,8 @@ import { useState } from "react";
 type State = "DONE" | "PLANNED" | "PASSED" | "NOT_YET" | "DUE" | "MISSED";
 type Kind = "REGULAR" | "HIRING" | "STRESS";
 type Person = { staffId: string; name: string; state: State; doneOn: string | null; plannedOn: string | null; clinic: string | null; lastDone: string | null; stress: string | null; recordId: string | null };
-type Record_ = { id: string; staffId: string; staffName: string; kind: Kind; plannedOn: string | null; doneOn: string | null; clinic: string | null; cost: number | null; followUp: boolean; followUpDoneOn: string | null; note: string | null };
-type Data = { year: number; today: string; people: Person[]; followUps: { id: string; name: string; kind: Kind; doneOn: string | null; days: number | null }[]; records: Record_[]; counts: Record<State, number>; cost: number; started: boolean };
+type Record_ = { id: string; staffId: string; staffName: string; kind: Kind; plannedOn: string | null; doneOn: string | null; clinic: string | null; cost: number | null; followUp: boolean; followUpDoneOn: string | null; journalEntryId: string | null; note: string | null };
+type Data = { year: number; today: string; people: Person[]; followUps: { id: string; staffId: string; name: string; kind: Kind; doneOn: string | null; days: number | null }[]; records: Record_[]; counts: Record<State, number>; cost: number; started: boolean };
 type Draft = { id?: string; staffId: string | null; staffName: string; kind: Kind; plannedOn: string | null; doneOn: string | null; clinic: string | null; cost: number | null; followUp: boolean; followUpDoneOn?: string | null; note?: string | null };
 
 const KINDS: Record<Kind, string> = { REGULAR: "定期健康診断", HIRING: "雇入時健康診断", STRESS: "ストレスチェック" };
@@ -30,6 +30,9 @@ export default function HealthView({ initial, staff }: { initial: Data; staff: {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const [payFrom, setPayFrom] = useState<"1010" | "1020">("1010");
+  type Target = { staffId: string; name: string; email: string | null; lastSent: string | null; ok: boolean };
+  const [remind, setRemind] = useState<{ kind: "CHECKUP" | "FOLLOWUP"; deadline: string; subject: string; body: string; mode: string; targets: Target[] } | null>(null);
 
   async function call(url: string, method: string, body?: unknown) {
     const res = await fetch(url, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
@@ -64,6 +67,26 @@ export default function HealthView({ initial, staff }: { initial: Data; staff: {
     run(id, async () => {
       await call(`/api/health-checks/${id}`, "PATCH", { action: "followUpDone" });
       setFlash(`${name}さんの再検査を受けたことにしました`);
+      await load();
+    });
+  const openRemind = (kind: "CHECKUP" | "FOLLOWUP", useAi = false, deadline = remind?.deadline ?? "") =>
+    run(useAi ? "ai" : "remind", async () => {
+      const [d, t] = await Promise.all([call("/api/health-checks/actions", "POST", { action: "draft", kind, deadline, useAi }), call("/api/health-checks/actions", "POST", { action: "targets", kind })]);
+      setRemind({ kind, deadline, subject: d.subject, body: d.body, mode: d.mode, targets: t.targets });
+      if (useAi && d.mode !== "claude") setFlash("AIの文が条件に合わなかったので、決まった文のままにしました");
+    });
+  const sendRemind = () =>
+    run("send", async () => {
+      if (!remind) return;
+      const r = await call("/api/health-checks/actions", "POST", { action: "send", kind: remind.kind, subject: remind.subject, body: remind.body });
+      setRemind(null);
+      setFlash(`${r.sent}人にお知らせを送りました${r.failed.length ? `(送れなかった人: ${r.failed.join("、")})` : ""}`);
+    });
+  const unposted = data.records.filter((r) => r.doneOn && r.cost && !r.journalEntryId);
+  const postCosts = () =>
+    run("post", async () => {
+      const r = await call("/api/health-checks/actions", "POST", { action: "post", year: data.year, payFrom });
+      setFlash(`${r.count}件・${r.total.toLocaleString()}円を福利厚生費で仕訳しました`);
       await load();
     });
   const remove = (r: Record_) =>
@@ -152,6 +175,57 @@ export default function HealthView({ initial, staff }: { initial: Data; staff: {
         {flash && <p className="rounded-md bg-emerald-50 px-3 py-2 text-emerald-800">{flash}</p>}
       </section>
 
+      {(data.counts.DUE + data.counts.NOT_YET + data.counts.PASSED > 0 || data.followUps.length > 0) && data.year === thisYear && (
+        <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-semibold">お知らせメール</h2>
+            {data.counts.DUE + data.counts.NOT_YET + data.counts.PASSED > 0 && (
+              <button onClick={() => openRemind("CHECKUP")} disabled={!!busy} className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs hover:bg-slate-50">
+                まだの人に知らせる
+              </button>
+            )}
+            {data.followUps.length > 0 && (
+              <button onClick={() => openRemind("FOLLOWUP")} disabled={!!busy} className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs hover:bg-slate-50">
+                再検査がまだの人に知らせる
+              </button>
+            )}
+          </div>
+          {remind && (
+            <div className="space-y-2 rounded-md border border-slate-200 p-3">
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="text-xs text-slate-600">
+                  期限(なくてもよい)
+                  <input aria-label="期限" type="date" value={remind.deadline} min={data.today} onChange={(e) => openRemind(remind.kind, false, e.target.value)} className="block rounded-md border border-slate-300 px-2 py-1 text-sm" />
+                </label>
+                <button onClick={() => openRemind(remind.kind, true)} disabled={!!busy} className="rounded-md border border-indigo-300 bg-indigo-50 px-2.5 py-1.5 text-xs text-indigo-800 hover:bg-indigo-100 disabled:opacity-50">
+                  {busy === "ai" ? "AIが整えています…" : "AIで文を整える"}
+                </button>
+                {remind.mode === "claude" && <span className="text-xs text-indigo-700">AIが整えました。送る前に読んでください</span>}
+              </div>
+              <input aria-label="件名" value={remind.subject} onChange={(e) => setRemind({ ...remind, subject: e.target.value })} className={input} />
+              <textarea aria-label="本文" value={remind.body} rows={7} onChange={(e) => setRemind({ ...remind, body: e.target.value })} className={input} />
+              <p className="text-xs text-slate-500">1人ずつ、はじめに「〇〇さん」を足して送ります(ほかの人の名前やアドレスは見えません)。</p>
+              <ul className="flex flex-wrap gap-1.5 text-xs">
+                {remind.targets.map((t) => (
+                  <li key={t.staffId} className={`rounded-full px-2 py-0.5 ${t.ok ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200" : "bg-slate-100 text-slate-500"}`}>
+                    {t.name}
+                    {!t.email ? "(メールなし)" : t.lastSent ? `(${md(t.lastSent)}に送った)` : ""}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex gap-2">
+                <button onClick={sendRemind} disabled={!!busy || !remind.targets.some((t) => t.ok)} className="rounded-md bg-vermilion-600 px-4 py-2 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
+                  {busy === "send" ? "送っています…" : `${remind.targets.filter((t) => t.ok).length}人に送る`}
+                </button>
+                <button onClick={() => setRemind(null)} className="rounded-md border border-slate-300 bg-white px-3 py-2 hover:bg-slate-50">
+                  やめる
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
       {data.followUps.length > 0 && (
         <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-sm shadow-sm">
           <h2 className="font-semibold text-amber-900">再検査・精密検査がまだの人</h2>
@@ -232,9 +306,22 @@ export default function HealthView({ initial, staff }: { initial: Data; staff: {
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
-        <h2 className="font-semibold">
-          {data.year}年の記録({data.records.length}件{data.cost ? `・費用 ${data.cost.toLocaleString()}円` : ""})
-        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-semibold">
+            {data.year}年の記録({data.records.length}件{data.cost ? `・費用 ${data.cost.toLocaleString()}円` : ""})
+          </h2>
+          {unposted.length > 0 && (
+            <span className="ml-auto flex items-center gap-1.5 text-xs">
+              <select aria-label="払ったところ" value={payFrom} onChange={(e) => setPayFrom(e.target.value as "1010" | "1020")} className="rounded-md border border-slate-300 bg-white px-1.5 py-1">
+                <option value="1010">現金</option>
+                <option value="1020">普通預金</option>
+              </select>
+              <button onClick={postCosts} disabled={!!busy} className="rounded-md bg-vermilion-600 px-2.5 py-1 font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
+                {busy === "post" ? "仕訳しています…" : `費用${unposted.length}件(${unposted.reduce((s, r) => s + (r.cost ?? 0), 0).toLocaleString()}円)を福利厚生費で仕訳`}
+              </button>
+            </span>
+          )}
+        </div>
         {data.records.length ? (
           <ul className="mt-2 divide-y divide-slate-100">
             {data.records.map((r) => (
@@ -244,6 +331,7 @@ export default function HealthView({ initial, staff }: { initial: Data; staff: {
                 <span className="text-xs text-slate-600">{r.doneOn ? `${ymd(r.doneOn)}に受けた` : `予約 ${ymd(r.plannedOn)}`}</span>
                 {r.clinic && <span className="text-xs text-slate-500">{r.clinic}</span>}
                 {r.cost != null && <span className="text-xs text-slate-500">{r.cost.toLocaleString()}円</span>}
+                {r.journalEntryId && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">仕訳済み</span>}
                 {r.followUp && <span className={`rounded-full px-2 py-0.5 text-xs ${r.followUpDoneOn ? "bg-slate-100 text-slate-600" : "bg-amber-50 text-amber-900 ring-1 ring-amber-200"}`}>{r.followUpDoneOn ? `再検査 ${md(r.followUpDoneOn)}に受けた` : "再検査まだ"}</span>}
                 <span className="ml-auto flex gap-2">
                   <button onClick={() => setDraft({ ...r })} className="text-xs text-indigo-700 hover:underline">
