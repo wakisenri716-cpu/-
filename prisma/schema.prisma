@@ -262,6 +262,7 @@ model Company {
   safetyChecks  SafetyCheck[]
   surveys       Survey[]
   celebrations  Celebration[]
+  sealUses      SealUse[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
   partyNotes           PartyNote[]
@@ -2579,6 +2580,29 @@ model AlcoholCheck {
   checkedAt   DateTime @default(now())
 
   @@index([companyId, date])
+}
+
+// 押印の申請と押印簿(実印・銀行印・角印など、だれが・いつ・何に押したか)
+model SealUse {
+  id              String    @id @default(cuid())
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  seal            String // JITSUIN(実印) / BANK(銀行印) / KAKUIN(角印) / OTHER
+  document        String // 書類の名前
+  party           String? // 相手先
+  copies          Int       @default(1)
+  purpose         String?
+  requestedById   String
+  requestedByName String
+  status          String    @default("REQUESTED") // REQUESTED / APPROVED / REJECTED / DONE
+  decidedByName   String?
+  reply           String? // 見送りの理由など
+  doneOn          String? // 押した日 YYYY-MM-DD
+  pressedByName   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([companyId, createdAt])
 }
 
 // 誕生日・勤続記念のお祝い(送った・見送った を年ごとに1つ。同じ年に二度送らない)
