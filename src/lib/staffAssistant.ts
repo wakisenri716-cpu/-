@@ -10,6 +10,7 @@ import { formatDays } from "@/lib/leave/rules";
 import { unreadAnnouncements } from "@/lib/announcements";
 import { mySupplyRequests, STATUS as SUPPLY_STATUS } from "@/lib/supplyRequests";
 import { myEvents, ANSWERS as EVENT_ANSWERS, type Answer as EventAnswer } from "@/lib/companyEvents";
+import { myHealth } from "@/lib/healthChecks";
 
 // 従業員向けのAIアシスタント: ログインしている本人のこと(シフト・有給・今月の勤務・経費精算・申請)と、
 // 社内のマニュアル・お知らせについて答える。ほかの人や会社のお金のデータには触れない(道具が本人の分しか返さない)。
@@ -41,6 +42,7 @@ export const STAFF_TOOLS: Anthropic.Beta.BetaTool[] = [
   { name: "search_manuals", description: "社内のマニュアルを言葉で探し、合うものの題名と本文の抜き出しを返す。仕事のやり方・ルールの質問に使う。", input_schema: { type: "object", properties: { query: { type: "string", description: "探す言葉" } }, required: ["query"], additionalProperties: false } },
   { name: "my_notices", description: "まだ読んでいない社内のお知らせを返す。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_supplies", description: "自分が総務に頼んだ備品・消耗品の購入依頼(品物・数・状態〈依頼中・発注しました・届きました・見送り〉・見送りの理由)を返す。新しく頼むときは /staff/supplies を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
+  { name: "my_health", description: "自分の健康診断: 今年受けたか(受けた・予約済み・予約日を過ぎた・今年まだ・1年以上受けていない)・前に受けた日・予約日・再検査がまだかを返す(結果の中身は記録していない)。予約・受けたを入れるのは /staff/health を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_events", description: "これからの社内のイベント(忘年会・歓迎会など)の日時・場所・会費・締め切りと、自分の出欠の答え(まだなら未回答)を返す。答えるのは /staff/events を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
 ];
 
@@ -129,6 +131,11 @@ export async function runStaffTool(me: Me, name: string, input: Record<string, u
     case "my_supplies": {
       const rs = await mySupplyRequests(me);
       return { requests: rs.slice(0, 15).map((r) => ({ item: r.item, quantity: r.quantity, unit: r.unit, status: SUPPLY_STATUS[r.status as keyof typeof SUPPLY_STATUS] ?? r.status, reply: r.reply, requested: jstDateKey(r.createdAt) })), link: "/staff/supplies" };
+    }
+    case "my_health": {
+      const h = await myHealth(me);
+      if (!h.linked) return { linked: false, link: "/staff/health" };
+      return { year: h.year, state: h.stateLabel, lastDone: h.lastDone, records: h.records.map((r) => ({ kind: r.kindLabel, plannedOn: r.plannedOn, doneOn: r.doneOn, followUpPending: r.followUp && !r.followUpDoneOn })), link: "/staff/health" };
     }
     case "my_events": {
       const es = await myEvents(me);
@@ -224,6 +231,17 @@ async function askSimple(me: Me, q: string): Promise<StaffReply> {
     const r = await run("my_supplies");
     const rs = r.requests as { item: string; quantity: number; unit: string | null; status: string; reply: string | null }[];
     return { reply: rs.length ? ["あなたの購入依頼:", ...rs.slice(0, 8).map((x) => `・${x.item} ${x.quantity}${x.unit ?? ""}(${x.status}${x.reply ? `・${x.reply}` : ""})`), "[購入依頼](/staff/supplies)"].join("\n") : "頼んだものはありません。ほしいものは [購入依頼](/staff/supplies) から頼めます。", tools: ["my_supplies"], mode: "simple" };
+  }
+  if (/健康診断|健診|再検査|精密検査|ストレスチェック/.test(s)) {
+    const r = await run("my_health");
+    if (r.linked === false) return { reply: "あなたのスタッフ登録が見つかりません。総務に、ログインとスタッフのひも付けを頼んでください。", tools: ["my_health"], mode: "simple" };
+    const recs = r.records as { kind: string; plannedOn: string | null; doneOn: string | null; followUpPending: boolean }[];
+    const plan = recs.find((x) => !x.doneOn && x.plannedOn);
+    return {
+      reply: [`${r.year}年の健康診断: ${r.state}${plan ? `(予約 ${plan.plannedOn!.slice(5).replace("-", "/")})` : ""}`, r.lastDone ? `前に受けた日: ${String(r.lastDone).replace(/-/g, "/")}` : "", recs.some((x) => x.followUpPending) ? "再検査をまだ受けていません。受けたら知らせてください。" : "", "予約した・受けたは [健康診断](/staff/health) から総務に伝えられます。"].filter(Boolean).join("\n"),
+      tools: ["my_health"],
+      mode: "simple",
+    };
   }
   if (/イベント|忘年会|新年会|歓迎会|送別会|飲み会|社員旅行|出欠/.test(s)) {
     const r = await run("my_events");

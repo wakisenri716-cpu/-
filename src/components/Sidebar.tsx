@@ -271,6 +271,7 @@ const EMPLOYEE_SECTIONS: NavSection[] = [
       { href: "/staff/events", label: "社内のイベント(出欠)", icon: MegaphoneIcon },
       { href: "/staff/supplies", label: "備品・消耗品の購入依頼", icon: ReceiptIcon },
       { href: "/staff/licenses", label: "資格・免許", icon: ChecklistIcon },
+      { href: "/staff/health", label: "健康診断", icon: ChecklistIcon },
     ],
   },
 ];
