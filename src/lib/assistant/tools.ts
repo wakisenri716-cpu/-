@@ -16,6 +16,7 @@ import { listLicenses } from "@/lib/staffLicenses";
 import { listHealth, KINDS as HEALTH_KINDS, STATES as HEALTH_STATES } from "@/lib/healthChecks";
 import { listStock, CATEGORIES as STOCK_CATEGORIES } from "@/lib/stockpile";
 import { listChecks as listSafetyChecks, STATUS as SAFETY_STATUS, CAN_WORK as SAFETY_WORK } from "@/lib/safetyChecks";
+import { openSurveySummary } from "@/lib/surveys";
 import { listApplicants, STATUS as APPLICANT_STATUS, type Status as ApplicantStatus } from "@/lib/applicants";
 import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
@@ -505,6 +506,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_safety_checks",
     description: "安否確認(災害のときの一斉の問いかけと訓練)。いちばん新しいものの題・訓練か・受付中か・答えた人数・無事/けが/助けが必要の数・まだ答えていない人・けがや助けが必要な人とひとこと・答えるまでの時間を返す。「安否確認はどうなってる?」「まだ答えていない人は?」などに使う。始めるのは /safety を案内する。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_surveys",
+    description: "受付中の社内アンケートの題・締め切り・名前を出さないか・答えた人数と社員の人数を返す(答えの中身は返さない)。「アンケートは何人答えた?」などに使う。結果は /surveys を案内する。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1110,6 +1116,9 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         latest: { title: c.title, drill: c.drill, open: !c.closedAt, counts: c.counts, notAnswered: c.waiting.map((p) => p.name), needCare: c.answers.filter((a) => a.status !== "SAFE").map((a) => ({ name: a.name, status: SAFETY_STATUS[a.status as keyof typeof SAFETY_STATUS], canWork: SAFETY_WORK[a.canWork as keyof typeof SAFETY_WORK], note: a.note })), medianMinutes: c.speed.median },
         link: "/safety",
       };
+    }
+    case "get_surveys": {
+      return { open: await openSurveySummary(companyId), link: "/surveys" };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);

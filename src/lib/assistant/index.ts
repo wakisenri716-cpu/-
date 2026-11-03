@@ -239,6 +239,15 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「アンケートは何人答えた?」
+  if (/アンケート/.test(q)) {
+    const r = (await run("get_surveys")) as { open: { title: string; deadline: string | null; responses: number; total: number }[] };
+    return {
+      reply: r.open.length ? ["受付中の社内アンケート:", ...r.open.map((s) => `・${s.title}: ${s.total}人のうち${s.responses}人が答えました${s.deadline ? `(${Number(s.deadline.slice(5, 7))}/${Number(s.deadline.slice(8))}まで)` : ""}`), "[社内アンケート](/surveys)"].join("\n") : "受付中の社内アンケートはありません。\n[社内アンケート](/surveys) から作れます(AIが質問を考えます)。",
+      tools: ["get_surveys"],
+      mode: "simple",
+    };
+  }
   // 「安否確認はどうなってる?」「まだ答えていない人は?」
   if (/安否/.test(q)) {
     const r = (await run("get_safety_checks")) as { latest: null | { title: string; drill: boolean; open: boolean; counts: { total: number; answered: number; safe: number; injured: number; help: number }; notAnswered: string[]; needCare: { name: string; status: string; note: string | null }[]; medianMinutes: number | null } };

@@ -11,6 +11,8 @@ import { unreadAnnouncements } from "@/lib/announcements";
 import { mySupplyRequests, STATUS as SUPPLY_STATUS } from "@/lib/supplyRequests";
 import { myEvents, ANSWERS as EVENT_ANSWERS, type Answer as EventAnswer } from "@/lib/companyEvents";
 import { myHealth } from "@/lib/healthChecks";
+import { mySurveys } from "@/lib/surveys";
+import { myChecks } from "@/lib/safetyChecks";
 
 // 従業員向けのAIアシスタント: ログインしている本人のこと(シフト・有給・今月の勤務・経費精算・申請)と、
 // 社内のマニュアル・お知らせについて答える。ほかの人や会社のお金のデータには触れない(道具が本人の分しか返さない)。
@@ -43,6 +45,8 @@ export const STAFF_TOOLS: Anthropic.Beta.BetaTool[] = [
   { name: "my_notices", description: "まだ読んでいない社内のお知らせを返す。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_supplies", description: "自分が総務に頼んだ備品・消耗品の購入依頼(品物・数・状態〈依頼中・発注しました・届きました・見送り〉・見送りの理由)を返す。新しく頼むときは /staff/supplies を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_health", description: "自分の健康診断: 今年受けたか(受けた・予約済み・予約日を過ぎた・今年まだ・1年以上受けていない)・前に受けた日・予約日・再検査がまだかを返す(結果の中身は記録していない)。予約・受けたを入れるのは /staff/health を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
+  { name: "my_surveys", description: "受付中の社内アンケートの題・締め切り・問題の数・名前を出さないか・自分が答えたかを返す。答えるのは /staff/surveys を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
+  { name: "my_safety", description: "受付中の安否確認(災害のときの問いかけ・訓練)と、自分が答えたかを返す。答えるのは /staff/safety を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_events", description: "これからの社内のイベント(忘年会・歓迎会など)の日時・場所・会費・締め切りと、自分の出欠の答え(まだなら未回答)を返す。答えるのは /staff/events を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
 ];
 
@@ -136,6 +140,14 @@ export async function runStaffTool(me: Me, name: string, input: Record<string, u
       const h = await myHealth(me);
       if (!h.linked) return { linked: false, link: "/staff/health" };
       return { year: h.year, state: h.stateLabel, lastDone: h.lastDone, records: h.records.map((r) => ({ kind: r.kindLabel, plannedOn: r.plannedOn, doneOn: r.doneOn, followUpPending: r.followUp && !r.followUpDoneOn })), link: "/staff/health" };
+    }
+    case "my_surveys": {
+      const ss = await mySurveys(me);
+      return { surveys: ss.map((x) => ({ title: x.title, deadline: x.deadline, questions: x.questions.length, anonymous: x.anonymous, answered: !!x.mine })), link: "/staff/surveys" };
+    }
+    case "my_safety": {
+      const cs = await myChecks(me);
+      return { checks: cs.map((c) => ({ title: c.title, drill: c.drill, answered: !!c.mine })), link: "/staff/safety" };
     }
     case "my_events": {
       const es = await myEvents(me);
@@ -231,6 +243,16 @@ async function askSimple(me: Me, q: string): Promise<StaffReply> {
     const r = await run("my_supplies");
     const rs = r.requests as { item: string; quantity: number; unit: string | null; status: string; reply: string | null }[];
     return { reply: rs.length ? ["あなたの購入依頼:", ...rs.slice(0, 8).map((x) => `・${x.item} ${x.quantity}${x.unit ?? ""}(${x.status}${x.reply ? `・${x.reply}` : ""})`), "[購入依頼](/staff/supplies)"].join("\n") : "頼んだものはありません。ほしいものは [購入依頼](/staff/supplies) から頼めます。", tools: ["my_supplies"], mode: "simple" };
+  }
+  if (/安否/.test(s)) {
+    const r = await run("my_safety");
+    const cs = r.checks as { title: string; drill: boolean; answered: boolean }[];
+    return { reply: cs.length ? [...cs.map((c) => `・${c.drill ? "(訓練)" : ""}${c.title} — ${c.answered ? "答えました" : "まだ答えていません"}`), "[安否確認](/staff/safety) から答えられます。"].join("\n") : "いま答える安否確認はありません。", tools: ["my_safety"], mode: "simple" };
+  }
+  if (/アンケート/.test(s)) {
+    const r = await run("my_surveys");
+    const ss = r.surveys as { title: string; deadline: string | null; questions: number; answered: boolean }[];
+    return { reply: ss.length ? [...ss.map((x) => `・${x.title}(${x.questions}問${x.deadline ? `・${Number(x.deadline.slice(5, 7))}/${Number(x.deadline.slice(8))}まで` : ""}) — ${x.answered ? "答えました" : "まだ答えていません"}`), "[社内アンケート](/staff/surveys) から答えられます。"].join("\n") : "いま答えるアンケートはありません。", tools: ["my_surveys"], mode: "simple" };
   }
   if (/健康診断|健診|再検査|精密検査|ストレスチェック/.test(s)) {
     const r = await run("my_health");

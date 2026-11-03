@@ -68,6 +68,12 @@ export default function SurveysView({ initial }: { initial: Row[] }) {
       setRows((await call("/api/surveys", "GET")).surveys);
       setDetail(await call(`/api/surveys/${detail.id}`, "GET"));
     });
+  const remind = () =>
+    run("remind", async () => {
+      if (!detail) return;
+      const r = await call(`/api/surveys/${detail.id}`, "PATCH", { action: "remind" });
+      setFlash(r.waiting == null ? `まだ答えていない人にもう一度送りました(メール${r.sent}通)` : `まだ答えていない${r.waiting}人にもう一度送りました(メール${r.sent}通)`);
+    });
   const summarize = () =>
     run("sum", async () => {
       if (!detail) return;
@@ -170,6 +176,11 @@ export default function SurveysView({ initial }: { initial: Row[] }) {
               <button onClick={summarize} disabled={!!busy || !detail.showText} className="rounded-md border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs text-indigo-800 hover:bg-indigo-100 disabled:opacity-50">
                 {busy === "sum" ? "AIがまとめています…" : "AIで自由な答えをまとめる"}
               </button>
+              {detail.open && detail.responses < detail.total && (
+                <button onClick={remind} disabled={!!busy} className="rounded-md border border-amber-300 bg-white px-2.5 py-1 text-xs text-amber-900 hover:bg-amber-50">
+                  {busy === "remind" ? "送っています…" : "まだの人にもう一度送る"}
+                </button>
+              )}
               {detail.open && (
                 <button onClick={close} disabled={!!busy} className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs hover:bg-slate-50">
                   締め切る
