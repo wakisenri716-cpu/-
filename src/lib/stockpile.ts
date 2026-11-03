@@ -104,7 +104,9 @@ export async function saveStock(user: { companyId: string; name: string; role: s
     note: String(raw.note ?? "").trim().slice(0, 200) || null,
   };
   if (id) {
-    const { count } = await prisma.stockpileItem.updateMany({ where: { id, companyId: user.companyId }, data });
+    const before = await prisma.stockpileItem.findFirst({ where: { id, companyId: user.companyId }, select: { expiresOn: true } });
+    // 入れかえて期限が変わったら、発注済みのしるしは外す
+    const { count } = await prisma.stockpileItem.updateMany({ where: { id, companyId: user.companyId }, data: { ...data, ...(before && before.expiresOn !== data.expiresOn ? { restockOrderId: null } : {}) } });
     if (!count) throw new UserError("見つかりません");
     return prisma.stockpileItem.findUniqueOrThrow({ where: { id } });
   }
