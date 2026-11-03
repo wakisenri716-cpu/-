@@ -239,6 +239,15 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「今月誕生日の人は?」「入社記念日の人は?」
+  if (/誕生日|記念日|勤続/.test(q)) {
+    const r = (await run("get_celebrations")) as { upcoming: { date: string; name: string; kind: string; status: string }[] };
+    return {
+      reply: r.upcoming.length ? ["これから30日のお祝い:", ...r.upcoming.map((u) => `・${Number(u.date.slice(5, 7))}/${Number(u.date.slice(8))} ${u.name}さん ${u.kind}(${u.status})`), "[誕生日・入社の記念日](/celebrations)"].join("\n") : "これから30日のお祝いはありません(労働者名簿の生年月日・入社日から出します)。\n[誕生日・入社の記念日](/celebrations)",
+      tools: ["get_celebrations"],
+      mode: "simple",
+    };
+  }
   // 「アンケートは何人答えた?」
   if (/アンケート/.test(q)) {
     const r = (await run("get_surveys")) as { open: { title: string; deadline: string | null; responses: number; total: number }[] };

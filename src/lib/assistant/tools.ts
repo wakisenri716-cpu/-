@@ -17,6 +17,7 @@ import { listHealth, KINDS as HEALTH_KINDS, STATES as HEALTH_STATES } from "@/li
 import { listStock, CATEGORIES as STOCK_CATEGORIES } from "@/lib/stockpile";
 import { listChecks as listSafetyChecks, STATUS as SAFETY_STATUS, CAN_WORK as SAFETY_WORK } from "@/lib/safetyChecks";
 import { openSurveySummary } from "@/lib/surveys";
+import { upcomingCelebrations } from "@/lib/celebrations";
 import { listApplicants, STATUS as APPLICANT_STATUS, type Status as ApplicantStatus } from "@/lib/applicants";
 import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
@@ -511,6 +512,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_surveys",
     description: "受付中の社内アンケートの題・締め切り・名前を出さないか・答えた人数と社員の人数を返す(答えの中身は返さない)。「アンケートは何人答えた?」などに使う。結果は /surveys を案内する。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_celebrations",
+    description: "これから30日の社員の誕生日・入社の記念日(日にち・名前・何年目・お祝いを送ったか)を返す。年齢は返さない。「今月誕生日の人は?」「入社記念日の人は?」などに使う。送るのは /celebrations を案内する。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1119,6 +1125,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     }
     case "get_surveys": {
       return { open: await openSurveySummary(companyId), link: "/surveys" };
+    }
+    case "get_celebrations": {
+      const us = await upcomingCelebrations(companyId);
+      return { upcoming: us.map((u) => ({ date: u.date, name: u.name, kind: u.kind === "BIRTHDAY" ? "誕生日" : `入社${u.years}年`, status: u.status === "SENT" ? "送った" : u.status === "SKIPPED" ? "見送り" : "まだ" })), link: "/celebrations" };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);
