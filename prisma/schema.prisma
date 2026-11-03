@@ -260,6 +260,7 @@ model Company {
   healthChecks HealthCheck[]
   stockpileItems StockpileItem[]
   safetyChecks  SafetyCheck[]
+  surveys       Survey[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
   partyNotes           PartyNote[]
@@ -2577,6 +2578,38 @@ model AlcoholCheck {
   checkedAt   DateTime @default(now())
 
   @@index([companyId, date])
+}
+
+// 社内アンケート(選ぶ・5段階・自由に書く)。名前を出さないアンケートでは、集計に名前を出さない(二重に答えないためだけに誰が答えたかを持つ)
+model Survey {
+  id            String           @id @default(cuid())
+  companyId     String
+  company       Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  questions     Json // [{ id, kind: CHOICE | MULTI | SCALE | TEXT, label, options?: string[] }]
+  anonymous     Boolean          @default(true)
+  deadline      String? // 締め切り YYYY-MM-DD
+  closedAt      DateTime?
+  createdById   String
+  createdByName String
+  createdAt     DateTime         @default(now())
+  responses     SurveyResponse[]
+
+  @@index([companyId, createdAt])
+}
+
+model SurveyResponse {
+  id        String   @id @default(cuid())
+  surveyId  String
+  survey    Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  userId    String
+  userName  String
+  answers   Json // { [questionId]: string | string[] | number }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([surveyId, userId])
 }
 
 // 安否確認: 災害などのとき、社員に無事かどうか・出社できるかを一斉に聞く

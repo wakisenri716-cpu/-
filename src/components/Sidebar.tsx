@@ -204,6 +204,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/health-checks", label: "健康診断", icon: ChecklistIcon },
       { href: "/stockpile", label: "防災の備蓄品", icon: ChecklistIcon },
       { href: "/safety", label: "安否確認", icon: ChecklistIcon },
+      { href: "/surveys", label: "社内アンケート", icon: ChecklistIcon },
       { href: "/job-posting", label: "求人票の下書き", icon: SparkleIcon },
       { href: "/applicants", label: "採用の応募者", icon: ChecklistIcon },
     ],
@@ -275,6 +276,7 @@ const EMPLOYEE_SECTIONS: NavSection[] = [
       { href: "/staff/licenses", label: "資格・免許", icon: ChecklistIcon },
       { href: "/staff/health", label: "健康診断", icon: ChecklistIcon },
       { href: "/staff/safety", label: "安否確認", icon: ChecklistIcon },
+      { href: "/staff/surveys", label: "社内アンケート", icon: ChecklistIcon },
     ],
   },
 ];

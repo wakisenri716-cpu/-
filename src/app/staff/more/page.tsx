@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/requests", label: "申請・稟議(有給など)", icon: StampIcon },
   { href: "/notices", label: "社内のお知らせ", icon: MegaphoneIcon },
   { href: "/staff/events", label: "社内のイベント(出欠)", icon: MegaphoneIcon },
+  { href: "/staff/surveys", label: "社内アンケート", icon: StampIcon },
   { href: "/staff/supplies", label: "備品・消耗品の購入依頼", icon: ReceiptIcon },
   { href: "/staff/licenses", label: "資格・免許", icon: KeyIcon },
   { href: "/staff/health", label: "健康診断", icon: StampIcon },
