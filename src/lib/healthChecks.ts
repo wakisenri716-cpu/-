@@ -102,6 +102,7 @@ export async function saveHealth(user: { companyId: string; name: string; role: 
   if (id) {
     const row = await prisma.healthCheck.findFirst({ where: { id, companyId: user.companyId } });
     if (!row) throw new UserError("見つかりません");
+    if (row.journalEntryId && (common.cost !== row.cost || common.doneOn !== row.doneOn)) throw new UserError("費用はもう仕訳しました。費用・受けた日を直すときは、先に仕訳帳で仕訳を取り消してください");
     const day = doneOn ?? plannedOn;
     return prisma.healthCheck.update({ where: { id }, data: { ...common, year: day ? Number(day.slice(0, 4)) : row.year } });
   }
@@ -119,6 +120,8 @@ export async function saveHealth(user: { companyId: string; name: string; role: 
 
 export async function deleteHealth(user: { companyId: string; role: string }, id: string) {
   if (!canManage(user.role)) throw new UserError("健康診断の記録は管理者・経理担当がします");
+  const row = await prisma.healthCheck.findFirst({ where: { id, companyId: user.companyId }, select: { journalEntryId: true } });
+  if (row?.journalEntryId) throw new UserError("費用はもう仕訳しました。消すときは、先に仕訳帳で仕訳を取り消してください");
   const { count } = await prisma.healthCheck.deleteMany({ where: { id, companyId: user.companyId } });
   if (!count) throw new UserError("見つかりません");
 }
@@ -153,7 +156,7 @@ export async function listHealth(companyId: string, year: number) {
       recordId: (done ?? plan)?.id ?? null,
     };
   });
-  const followUps = rows.filter((r) => r.followUp && !r.followUpDoneOn && staff.some((s) => s.id === r.staffId)).map((r) => ({ id: r.id, name: r.staffName, kind: r.kind, doneOn: r.doneOn, days: r.doneOn ? daysBetween(r.doneOn, today) : null }));
+  const followUps = rows.filter((r) => r.followUp && !r.followUpDoneOn && staff.some((s) => s.id === r.staffId)).map((r) => ({ id: r.id, staffId: r.staffId, name: r.staffName, kind: r.kind, doneOn: r.doneOn, days: r.doneOn ? daysBetween(r.doneOn, today) : null }));
   const records = rows.filter((r) => r.year === year);
   const counts = Object.fromEntries((Object.keys(STATES) as State[]).map((k) => [k, people.filter((p) => p.state === k).length])) as Record<State, number>;
   return { year, today, people, followUps, records, counts, cost: records.reduce((s, r) => s + (r.doneOn ? (r.cost ?? 0) : 0), 0), started: rows.length > 0 };

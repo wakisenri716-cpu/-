@@ -2693,6 +2693,7 @@ model HealthCheck {
   cost           Int? // 費用(円)
   followUp       Boolean  @default(false) // 再検査・精密検査が必要と言われた(本人の申し出)
   followUpDoneOn String? // 再検査を受けた日
+  journalEntryId String? // 費用を福利厚生費で仕訳したときの仕訳
   note           String?
   createdByName  String
   createdAt      DateTime @default(now())
