@@ -259,6 +259,7 @@ model Company {
   supplyRequests SupplyRequest[]
   healthChecks HealthCheck[]
   stockpileItems StockpileItem[]
+  safetyChecks  SafetyCheck[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
   partyNotes           PartyNote[]
@@ -2576,6 +2577,37 @@ model AlcoholCheck {
   checkedAt   DateTime @default(now())
 
   @@index([companyId, date])
+}
+
+// 安否確認: 災害などのとき、社員に無事かどうか・出社できるかを一斉に聞く
+model SafetyCheck {
+  id            String         @id @default(cuid())
+  companyId     String
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title         String // 例: 11/3 地震の安否確認
+  message       String
+  createdById   String
+  createdByName String
+  closedAt      DateTime?
+  createdAt     DateTime       @default(now())
+  answers       SafetyAnswer[]
+
+  @@index([companyId, createdAt])
+}
+
+model SafetyAnswer {
+  id        String      @id @default(cuid())
+  checkId   String
+  check     SafetyCheck @relation(fields: [checkId], references: [id], onDelete: Cascade)
+  userId    String
+  userName  String
+  status    String // SAFE(無事) / INJURED(けがをした) / HELP(助けが必要)
+  canWork   String // YES(出社できる) / LATER(遅れて出社) / NO(出社できない) / REMOTE(家で仕事できる)
+  note      String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([checkId, userId])
 }
 
 // 社内のイベント(忘年会・歓迎会・社員旅行など)と出欠

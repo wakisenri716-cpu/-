@@ -16,6 +16,7 @@ type Home = {
   hasProducts: boolean;
   toAnswer?: { id: string; title: string; date: string; deadline: string | null }[];
   newAnswers?: number;
+  safety?: { id: string; title: string; answered: boolean }[];
 };
 
 const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8))}`;
@@ -61,6 +62,12 @@ export default function StaffHome() {
         )}
       </section>
 
+      {data.safety?.map((c) => (
+        <Link key={c.id} href="/staff/safety" className={`block rounded-2xl border p-4 text-sm shadow-sm ${c.answered ? "border-emerald-200 bg-emerald-50" : "border-rose-300 bg-rose-50"}`}>
+          <span className={`block font-semibold ${c.answered ? "text-emerald-800" : "text-rose-800"}`}>{c.answered ? "安否確認に答えました" : "安否確認: 無事かどうかを答えてください"}</span>
+          <span className={`mt-0.5 block ${c.answered ? "text-emerald-700" : "text-rose-700"}`}>{c.title} ›</span>
+        </Link>
+      ))}
       {!!data.toAnswer?.length && (
         <Link href="/staff/events" className="block rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm shadow-sm">
           <span className="block font-semibold text-rose-800">出欠を答えていないイベントがあります</span>

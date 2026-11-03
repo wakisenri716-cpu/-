@@ -6,6 +6,7 @@ import { PushSettings } from "./PushSettings";
 import { BookIcon, ClockIcon, KeyIcon, MegaphoneIcon, NotebookIcon, ReceiptIcon, SparkleIcon, StampIcon } from "@/components/icons";
 
 const LINKS = [
+  { href: "/staff/safety", label: "安否確認", icon: MegaphoneIcon },
   { href: "/staff/ask", label: "AIに聞く", icon: SparkleIcon },
   { href: "/timeclock", label: "タイムカード", icon: ClockIcon },
   { href: "/expenses", label: "経費精算(レシート)", icon: ReceiptIcon },

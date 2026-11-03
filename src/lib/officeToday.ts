@@ -17,6 +17,7 @@ import { countUnthanked } from "@/lib/gifts";
 import { upcomingLeaves } from "@/lib/handover";
 import { countHealthTodos } from "@/lib/healthChecks";
 import { countStockAlerts } from "@/lib/stockpile";
+import { countSafetyTodos } from "@/lib/safetyChecks";
 
 // 総務のきょう: 来客・会議室と社用車・アルコールチェック・郵便物・伝言・購入依頼・質問・イベント・資格・健康診断・採用・休む人を1つの画面にまとめる。
 // AIが使えるときは、今日いちばん気をつけることを短くまとめる(元の数字にない数字が入ったら決まった文に戻す)。
@@ -27,7 +28,7 @@ const DAILY_LIMIT = Number(process.env.ASSISTANT_DAILY_LIMIT || 100);
 export async function officeFacts(companyId: string) {
   const today = jstDateKey(new Date());
   const soon = new Date(Date.parse(`${today}T00:00:00Z`) + 14 * 86_400_000).toISOString().slice(0, 10);
-  const [visitors, bookings, cars, missing, mail, memos, supplies, questions, events, licenses, applicants, vehicles, gifts, leaves, health, stock] = await Promise.all([
+  const [visitors, bookings, cars, missing, mail, memos, supplies, questions, events, licenses, applicants, vehicles, gifts, leaves, health, stock, safety] = await Promise.all([
     visitorsOn(companyId, today),
     listBookings(companyId, today, 1),
     carBookingsOn(companyId, today),
@@ -44,6 +45,7 @@ export async function officeFacts(companyId: string) {
     upcomingLeaves(companyId, 0),
     countHealthTodos(companyId),
     countStockAlerts(companyId),
+    countSafetyTodos(companyId),
   ]);
   return {
     today,
@@ -66,6 +68,8 @@ export async function officeFacts(companyId: string) {
     healthDue: health.due + health.passed,
     healthFollowUps: health.followUps,
     stockAlerts: stock,
+    safetyWaiting: safety.waiting,
+    safetyHelp: safety.help,
     offToday: leaves.filter((l) => l.dates.includes(today)).map((l) => l.name),
   };
 }
@@ -75,6 +79,8 @@ export type OfficeFacts = Awaited<ReturnType<typeof officeFacts>>;
 // AIを使わないときのまとめ(気をつけることを順に)
 export function templateSummary(f: OfficeFacts) {
   const parts: string[] = [];
+  if (f.safetyHelp) parts.push(`安否確認で、けがをした・助けが必要な人が${f.safetyHelp}人います`);
+  if (f.safetyWaiting) parts.push(`安否確認にまだ答えていない人が${f.safetyWaiting}人います`);
   if (f.alcoholMissing) parts.push(`アルコールチェックの記録が足りない社用車の予約が${f.alcoholMissing}件あります`);
   if (f.suppliesUrgent) parts.push(`至急の購入依頼が${f.suppliesUrgent}件あります`);
   if (f.visitors.length) parts.push(`今日は来客が${f.visitors.length}件あります`);
