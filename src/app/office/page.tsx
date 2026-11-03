@@ -110,6 +110,14 @@ export default async function OfficePage() {
         <Card href="/health-checks" title="健康診断" count={`${f.healthDue + f.healthFollowUps}人`} tone={f.healthDue ? "rose" : f.healthFollowUps ? "amber" : "slate"}>
           <p className="text-slate-500">{f.healthDue || f.healthFollowUps ? [f.healthDue ? `受けていない・予約日を過ぎた人が${f.healthDue}人` : "", f.healthFollowUps ? `再検査がまだの人が${f.healthFollowUps}人` : ""].filter(Boolean).join("・") : "気になるものはありません"}</p>
         </Card>
+        <Card href="/celebrations" title="この1週間のお祝い" count={`${f.celebrations.length}件`} tone={f.celebrations.some((c) => !c.done) ? "amber" : "slate"}>
+          {f.celebrations.slice(0, 4).map((c) => (
+            <p key={`${c.name}-${c.kind}`} className="text-slate-600">
+              {Number(c.date.slice(5, 7))}/{Number(c.date.slice(8))} {c.name}さん {c.kind === "BIRTHDAY" ? "誕生日" : `入社${c.years}年`}
+              {c.done ? "(済み)" : ""}
+            </p>
+          ))}
+        </Card>
         <Card href="/surveys" title="受付中のアンケート" count={`${f.surveys.length}件`} tone="slate">
           {f.surveys.slice(0, 3).map((x) => (
             <p key={x.title} className="text-slate-600">

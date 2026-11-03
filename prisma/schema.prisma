@@ -261,6 +261,7 @@ model Company {
   stockpileItems StockpileItem[]
   safetyChecks  SafetyCheck[]
   surveys       Survey[]
+  celebrations  Celebration[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
   partyNotes           PartyNote[]
@@ -2578,6 +2579,23 @@ model AlcoholCheck {
   checkedAt   DateTime @default(now())
 
   @@index([companyId, date])
+}
+
+// 誕生日・勤続記念のお祝い(送った・見送った を年ごとに1つ。同じ年に二度送らない)
+model Celebration {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  staffId    String
+  staffName  String
+  kind       String // BIRTHDAY(誕生日) / ANNIVERSARY(入社の記念日)
+  year       Int
+  status     String // SENT(送った) / SKIPPED(見送った)
+  message    String?
+  byName     String
+  createdAt  DateTime @default(now())
+
+  @@unique([companyId, staffId, kind, year])
 }
 
 // 社内アンケート(選ぶ・5段階・自由に書く)。名前を出さないアンケートでは、集計に名前を出さない(二重に答えないためだけに誰が答えたかを持つ)
