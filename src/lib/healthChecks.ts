@@ -170,3 +170,53 @@ export async function countHealthTodos(companyId: string) {
   const due = d.counts.DUE;
   return { passed, followUps: d.followUps.length, due, total: passed + d.followUps.length + due };
 }
+
+// ---- 従業員が自分で入れる ----
+
+const ownStaff = (me: { id: string; companyId: string }) => prisma.staff.findFirst({ where: { companyId: me.companyId, userId: me.id, active: true }, select: { id: true, name: true } });
+
+// 自分の健康診断: 今年の状態・自分の記録(この2年)・再検査がまだのもの。費用は見せない
+export async function myHealth(me: { id: string; companyId: string }) {
+  const s = await ownStaff(me);
+  if (!s) return { linked: false as const };
+  const year = Number(jstDateKey(new Date()).slice(0, 4));
+  const d = await listHealth(me.companyId, year);
+  const p = d.people.find((x) => x.staffId === s.id) ?? null;
+  const rows = await prisma.healthCheck.findMany({ where: { companyId: me.companyId, staffId: s.id, year: { gte: year - 1 } }, orderBy: [{ year: "desc" }, { createdAt: "desc" }] });
+  return {
+    linked: true as const,
+    year,
+    today: d.today,
+    state: p?.state ?? "NOT_YET",
+    stateLabel: STATES[(p?.state ?? "NOT_YET") as State],
+    lastDone: p?.lastDone ?? null,
+    records: rows.map((r) => ({ id: r.id, kind: r.kind, kindLabel: KINDS[r.kind as Kind] ?? r.kind, plannedOn: r.plannedOn, doneOn: r.doneOn, clinic: r.clinic, followUp: r.followUp, followUpDoneOn: r.followUpDoneOn })),
+  };
+}
+
+// 自分で入れる: { action: "plan", kind, plannedOn, clinic } / { action: "done", kind, doneOn, clinic, followUp } / { action: "followUpDone", id }
+export async function saveOwnHealth(me: { id: string; name: string; companyId: string }, raw: Record<string, unknown>) {
+  const s = await ownStaff(me);
+  if (!s) throw new UserError("あなたのスタッフ登録が見つかりません。総務に、ログインとスタッフのひも付けを頼んでください");
+  const today = jstDateKey(new Date());
+  if (raw.action === "followUpDone") {
+    const { count } = await prisma.healthCheck.updateMany({ where: { id: String(raw.id ?? ""), companyId: me.companyId, staffId: s.id, followUp: true }, data: { followUpDoneOn: today } });
+    if (!count) throw new UserError("見つかりません");
+    return { ok: true };
+  }
+  const kind: Kind = raw.kind === "HIRING" || raw.kind === "STRESS" ? raw.kind : "REGULAR";
+  const day = String((raw.action === "done" ? raw.doneOn : raw.plannedOn) ?? "").trim();
+  if (!DATE.test(day) || Number.isNaN(Date.parse(`${day}T00:00:00Z`))) throw new UserError(raw.action === "done" ? "受けた日を入れてください" : "予約した日を入れてください");
+  if (raw.action === "done" && day > today) throw new UserError("受けた日が今日より後になっています");
+  if (raw.action !== "done" && day < today) throw new UserError("予約した日が過ぎています。受けたなら「受けた」で入れてください");
+  const clinic = String(raw.clinic ?? "").replace(/\s+/g, " ").trim().slice(0, 40) || null;
+  const year = Number(day.slice(0, 4));
+  const open = await prisma.healthCheck.findFirst({ where: { companyId: me.companyId, staffId: s.id, kind, year, doneOn: null }, orderBy: { createdAt: "desc" } });
+  if (raw.action === "done") {
+    const data = { doneOn: day, clinic: clinic ?? open?.clinic ?? null, followUp: raw.followUp === true };
+    if (open) return prisma.healthCheck.update({ where: { id: open.id }, data, select: { id: true } });
+    return prisma.healthCheck.create({ data: { companyId: me.companyId, staffId: s.id, staffName: s.name, year, kind, ...data, createdByName: me.name }, select: { id: true } });
+  }
+  if (open) return prisma.healthCheck.update({ where: { id: open.id }, data: { plannedOn: day, clinic: clinic ?? open.clinic }, select: { id: true } });
+  return prisma.healthCheck.create({ data: { companyId: me.companyId, staffId: s.id, staffName: s.name, year, kind, plannedOn: day, clinic, createdByName: me.name }, select: { id: true } });
+}
