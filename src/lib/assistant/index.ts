@@ -239,6 +239,21 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「備蓄の水は足りてる?」「非常食の期限は?」
+  if (/備蓄|非常食|防災|保存水|簡易トイレ/.test(q)) {
+    const r = (await run("get_stockpile")) as { people: number; coverage: { kind: string; have: string; need: string; short: string | null; days: number | null }[]; items: { name: string; quantity: string; expiresOn: string | null; state: string }[] };
+    const alerts = r.items.filter((i) => i.state !== "問題なし");
+    return {
+      reply: [
+        `${r.people}人の3日分:`,
+        ...r.coverage.map((c) => `・${c.kind}: ${c.have} / ${c.need}${c.short ? `(あと${c.short})` : "(足りています)"}`),
+        alerts.length ? `期限が近い・切れている: ${alerts.map((i) => `${i.name} ${i.quantity}(${i.state})`).join("、")}` : "期限が近い備蓄品はありません。",
+        "[防災の備蓄品](/stockpile)",
+      ].join("\n"),
+      tools: ["get_stockpile"],
+      mode: "simple",
+    };
+  }
   // 「健康診断まだの人は?」「再検査は?」(帳簿の健康診断は別)
   if (/健康診断|健診|ストレスチェック|再検査/.test(q) && !/帳簿/.test(q)) {
     const r = (await run("get_health_checks")) as { year: number; people: { name: string; state: string; doneOn: string | null; plannedOn: string | null }[]; followUps: { name: string; kind: string }[] };
