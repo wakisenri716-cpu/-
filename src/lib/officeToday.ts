@@ -15,8 +15,9 @@ import { countApplicantTodos } from "@/lib/applicants";
 import { countVehicleAlerts } from "@/lib/vehicles";
 import { countUnthanked } from "@/lib/gifts";
 import { upcomingLeaves } from "@/lib/handover";
+import { countHealthTodos } from "@/lib/healthChecks";
 
-// 総務のきょう: 来客・会議室と社用車・アルコールチェック・郵便物・伝言・購入依頼・質問・イベント・資格・採用・休む人を1つの画面にまとめる。
+// 総務のきょう: 来客・会議室と社用車・アルコールチェック・郵便物・伝言・購入依頼・質問・イベント・資格・健康診断・採用・休む人を1つの画面にまとめる。
 // AIが使えるときは、今日いちばん気をつけることを短くまとめる(元の数字にない数字が入ったら決まった文に戻す)。
 
 const MODEL = process.env.ANTHROPIC_ASSISTANT_MODEL || "claude-opus-5-5";
@@ -25,7 +26,7 @@ const DAILY_LIMIT = Number(process.env.ASSISTANT_DAILY_LIMIT || 100);
 export async function officeFacts(companyId: string) {
   const today = jstDateKey(new Date());
   const soon = new Date(Date.parse(`${today}T00:00:00Z`) + 14 * 86_400_000).toISOString().slice(0, 10);
-  const [visitors, bookings, cars, missing, mail, memos, supplies, questions, events, licenses, applicants, vehicles, gifts, leaves] = await Promise.all([
+  const [visitors, bookings, cars, missing, mail, memos, supplies, questions, events, licenses, applicants, vehicles, gifts, leaves, health] = await Promise.all([
     visitorsOn(companyId, today),
     listBookings(companyId, today, 1),
     carBookingsOn(companyId, today),
@@ -40,6 +41,7 @@ export async function officeFacts(companyId: string) {
     countVehicleAlerts(companyId),
     countUnthanked(companyId),
     upcomingLeaves(companyId, 0),
+    countHealthTodos(companyId),
   ]);
   return {
     today,
@@ -59,6 +61,8 @@ export async function officeFacts(companyId: string) {
     applicantsWaiting: applicants.waiting,
     vehicleAlerts: vehicles,
     unthankedGifts: gifts,
+    healthDue: health.due + health.passed,
+    healthFollowUps: health.followUps,
     offToday: leaves.filter((l) => l.dates.includes(today)).map((l) => l.name),
   };
 }
@@ -74,6 +78,7 @@ export function templateSummary(f: OfficeFacts) {
   if (f.interviewsToday) parts.push(`採用の面接が${f.interviewsToday}件あります`);
   if (f.mailImportant) parts.push(`書留・役所からの郵便物などが${f.mailImportant}件届いています`);
   if (f.offToday.length) parts.push(`${f.offToday.join("・")}さんがお休みです`);
+  if (f.healthDue) parts.push(`健康診断を受けていない(予約日を過ぎた)人が${f.healthDue}人います`);
   if (f.licenseAlerts) parts.push(`期限の近い資格・免許などが${f.licenseAlerts}件あります`);
   return parts.length ? `${parts.slice(0, 3).join("。")}。` : "今日の総務は落ち着いています。";
 }

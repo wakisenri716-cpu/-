@@ -257,6 +257,7 @@ model Company {
   companyEvents CompanyEvent[]
   gifts         GiftRecord[]
   supplyRequests SupplyRequest[]
+  healthChecks HealthCheck[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
   partyNotes           PartyNote[]
@@ -2675,6 +2676,29 @@ model StaffLicense {
   updatedAt    DateTime @updatedAt
 
   @@index([companyId])
+}
+
+// 社員の健康診断(定期・雇入時)とストレスチェックの受診の記録。結果の中身(病名・数値)は記録せず、受けた日と「再検査が必要か」だけを持つ
+model HealthCheck {
+  id             String   @id @default(cuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  staffId        String
+  staffName      String
+  year           Int // 何年の分か(予約日・受けた日の年)
+  kind           String   @default("REGULAR") // REGULAR(定期健康診断) / HIRING(雇入時健康診断) / STRESS(ストレスチェック)
+  plannedOn      String? // 予約した日 YYYY-MM-DD
+  doneOn         String? // 受けた日 YYYY-MM-DD
+  clinic         String? // 病院・健診センター
+  cost           Int? // 費用(円)
+  followUp       Boolean  @default(false) // 再検査・精密検査が必要と言われた(本人の申し出)
+  followUpDoneOn String? // 再検査を受けた日
+  note           String?
+  createdByName  String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([companyId, year])
 }
 
 // 採用の応募者(応募から面接・内定・入社まで)

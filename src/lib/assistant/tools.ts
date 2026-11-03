@@ -13,6 +13,7 @@ import { listVehicles } from "@/lib/vehicles";
 import { listEvents } from "@/lib/companyEvents";
 import { listSupplyRequests } from "@/lib/supplyRequests";
 import { listLicenses } from "@/lib/staffLicenses";
+import { listHealth, KINDS as HEALTH_KINDS, STATES as HEALTH_STATES } from "@/lib/healthChecks";
 import { listApplicants, STATUS as APPLICANT_STATUS, type Status as ApplicantStatus } from "@/lib/applicants";
 import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
@@ -487,6 +488,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_applicants",
     description: "採用の応募者。選考中・最近終わった応募者の名前・応募した仕事・応募経路・状態(応募・面接・内定・入社・不採用・辞退)・応募日・面接の日時と面接する人を返す(電話・メールは返さない)。「応募は何人来てる?」「今週の面接は?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_health_checks",
+    description: "社員の健康診断の受診管理。在籍している人ごとの今年の定期健康診断の状態(受けた・予約済み・予約日を過ぎた・今年まだ・1年以上受けていない)と予約日・受けた日、再検査がまだの人を返す(結果の中身は記録していない)。「健康診断まだの人は?」「再検査は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1071,6 +1077,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_applicants": {
       const d = await listApplicants(companyId);
       return { applicants: d.applicants.map((a) => ({ name: a.name, position: a.position, source: a.source, status: APPLICANT_STATUS[a.status as ApplicantStatus] ?? a.status, appliedOn: a.appliedOn, interview: a.interviewDate ? `${a.interviewDate} ${a.interviewTime ?? ""}`.trim() : null, interviewer: a.interviewerName })), link: "/applicants" };
+    }
+    case "get_health_checks": {
+      const d = await listHealth(companyId, Number(jstDateKey(new Date()).slice(0, 4)));
+      return { year: d.year, people: d.people.map((p) => ({ name: p.name, state: HEALTH_STATES[p.state], doneOn: p.doneOn, plannedOn: p.plannedOn, lastDone: p.lastDone })), followUps: d.followUps.map((f) => ({ name: f.name, kind: HEALTH_KINDS[f.kind as keyof typeof HEALTH_KINDS] ?? f.kind, doneOn: f.doneOn })), link: "/health-checks" };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);

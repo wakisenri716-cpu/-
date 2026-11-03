@@ -239,6 +239,23 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「健康診断まだの人は?」「再検査は?」(帳簿の健康診断は別)
+  if (/健康診断|健診|ストレスチェック|再検査/.test(q) && !/帳簿/.test(q)) {
+    const r = (await run("get_health_checks")) as { year: number; people: { name: string; state: string; doneOn: string | null; plannedOn: string | null }[]; followUps: { name: string; kind: string }[] };
+    const notDone = r.people.filter((p) => p.state !== "受けた" && p.state !== "予約済み");
+    const planned = r.people.filter((p) => p.state === "予約済み");
+    return {
+      reply: [
+        r.people.length ? `${r.year}年の健康診断: 在籍${r.people.length}人のうち、受けた人 ${r.people.length - notDone.length - planned.length}人・予約済み ${planned.length}人。` : "在籍している人がいません。",
+        ...(notDone.length ? [`まだの人: ${notDone.map((p) => `${p.name}さん(${p.state})`).join("、")}`] : r.people.length ? ["まだの人はいません。"] : []),
+        ...(planned.length ? [`予約: ${planned.map((p) => `${p.name}さん ${p.plannedOn}`).join("、")}`] : []),
+        ...(r.followUps.length ? [`再検査がまだ: ${r.followUps.map((f) => `${f.name}さん`).join("、")}`] : []),
+        "[健康診断の受診管理](/health-checks)",
+      ].join("\n"),
+      tools: ["get_health_checks"],
+      mode: "simple",
+    };
+  }
   // 「免許が切れそうな人は?」「フォークリフトの資格を持っている人は?」
   if (/免許|資格(?!取得|喪失)/.test(q) && !/資格取得届|資格喪失届/.test(q)) {
     const r = (await run("get_licenses")) as { licenses: { holder: string; name: string; expiresOn: string | null; state: string }[]; unlicensedDrivers: { name: string; reason: string }[] };
