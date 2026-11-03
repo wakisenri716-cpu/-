@@ -311,3 +311,18 @@ export async function openSurveySummary(companyId: string) {
 export async function countUnansweredSurveys(me: { id: string; companyId: string }) {
   return (await mySurveys(me)).filter((s) => !s.mine).length;
 }
+
+// CSV: 1行に1人の答え。名前を出さないアンケートは名前の列をつけず、3人以上答えたときだけ、答えの中身の順に並べる(答えた順がわからないように)
+export async function surveyCsv(companyId: string, id: string) {
+  const s = await prisma.survey.findFirst({ where: { id, companyId }, include: { responses: { orderBy: { createdAt: "asc" } } } });
+  if (!s) throw new UserError("アンケートが見つかりません");
+  if (s.anonymous && s.responses.length < MIN_ANON) throw new UserError(`名前を出さないアンケートは、${MIN_ANON}人以上答えるとCSVにできます`);
+  const qs = s.questions as unknown as Question[];
+  const cell = (q: Question, v: unknown) => (v === undefined ? "" : Array.isArray(v) ? v.join("・") : String(v));
+  const rows = s.responses.map((r) => {
+    const a = r.answers as Record<string, unknown>;
+    return [...(s.anonymous ? [] : [r.userName, jstDateKey(r.updatedAt)]), ...qs.map((q) => cell(q, a[q.id]))];
+  });
+  if (s.anonymous) rows.sort((x, y) => x.join("\u0001").localeCompare(y.join("\u0001"), "ja"));
+  return { filename: `アンケート_${s.title}.csv`.replace(/[\\/:*?"<>|]/g, "_"), rows: [[...(s.anonymous ? [] : ["名前", "答えた日"]), ...qs.map((q, i) => `${i + 1}. ${q.label}`)], ...rows] };
+}

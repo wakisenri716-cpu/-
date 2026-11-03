@@ -173,6 +173,11 @@ export default function SurveysView({ initial }: { initial: Row[] }) {
               {detail.total}人のうち{detail.responses}人が答えました{detail.anonymous ? "(名前なし)" : ""}
             </span>
             <span className="ml-auto flex gap-2">
+              {detail.showText && detail.responses > 0 && (
+                <a href={`/api/surveys/${detail.id}/csv`} className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs hover:bg-slate-50">
+                  CSVで保存
+                </a>
+              )}
               <button onClick={summarize} disabled={!!busy || !detail.showText} className="rounded-md border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs text-indigo-800 hover:bg-indigo-100 disabled:opacity-50">
                 {busy === "sum" ? "AIがまとめています…" : "AIで自由な答えをまとめる"}
               </button>
