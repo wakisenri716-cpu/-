@@ -70,6 +70,7 @@ export async function officeFacts(companyId: string) {
     stockAlerts: stock,
     safetyWaiting: safety.waiting,
     safetyHelp: safety.help,
+    safetyDrill: safety.drill,
     offToday: leaves.filter((l) => l.dates.includes(today)).map((l) => l.name),
   };
 }
@@ -80,7 +81,7 @@ export type OfficeFacts = Awaited<ReturnType<typeof officeFacts>>;
 export function templateSummary(f: OfficeFacts) {
   const parts: string[] = [];
   if (f.safetyHelp) parts.push(`安否確認で、けがをした・助けが必要な人が${f.safetyHelp}人います`);
-  if (f.safetyWaiting) parts.push(`安否確認にまだ答えていない人が${f.safetyWaiting}人います`);
+  if (f.safetyWaiting) parts.push(`安否確認${f.safetyDrill ? "の訓練" : ""}にまだ答えていない人が${f.safetyWaiting}人います`);
   if (f.alcoholMissing) parts.push(`アルコールチェックの記録が足りない社用車の予約が${f.alcoholMissing}件あります`);
   if (f.suppliesUrgent) parts.push(`至急の購入依頼が${f.suppliesUrgent}件あります`);
   if (f.visitors.length) parts.push(`今日は来客が${f.visitors.length}件あります`);

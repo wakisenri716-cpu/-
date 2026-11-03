@@ -239,6 +239,23 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「安否確認はどうなってる?」「まだ答えていない人は?」
+  if (/安否/.test(q)) {
+    const r = (await run("get_safety_checks")) as { latest: null | { title: string; drill: boolean; open: boolean; counts: { total: number; answered: number; safe: number; injured: number; help: number }; notAnswered: string[]; needCare: { name: string; status: string; note: string | null }[]; medianMinutes: number | null } };
+    const c = r.latest;
+    if (!c) return { reply: "安否確認はまだしたことがありません。\n[安否確認](/safety) から始められます(訓練もできます)。", tools: ["get_safety_checks"], mode: "simple" };
+    return {
+      reply: [
+        `${c.drill ? "訓練の" : ""}「${c.title}」(${c.open ? "受付中" : "締めました"}): ${c.counts.total}人のうち${c.counts.answered}人が答えました(無事${c.counts.safe}人・けが${c.counts.injured}人・助けが必要${c.counts.help}人)。`,
+        ...(c.needCare.length ? [`気をつける人: ${c.needCare.map((a) => `${a.name}さん(${a.status}${a.note ? `・${a.note}` : ""})`).join("、")}`] : []),
+        ...(c.notAnswered.length ? [`まだ答えていない: ${c.notAnswered.map((n) => `${n}さん`).join("、")}`] : []),
+        ...(c.medianMinutes != null ? [`答えるまでの時間(真ん中の人): ${c.medianMinutes}分`] : []),
+        "[安否確認](/safety)",
+      ].join("\n"),
+      tools: ["get_safety_checks"],
+      mode: "simple",
+    };
+  }
   // 「備蓄の水は足りてる?」「非常食の期限は?」
   if (/備蓄|非常食|防災|保存水|簡易トイレ/.test(q)) {
     const r = (await run("get_stockpile")) as { people: number; coverage: { kind: string; have: string; need: string; short: string | null; days: number | null }[]; items: { name: string; quantity: string; expiresOn: string | null; state: string }[] };
