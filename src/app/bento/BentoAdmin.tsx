@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type Item = { id: string; name: string; price: number };
 type ShopRow = { id: string; name: string; menu: Item[]; cutoff: string; weekdays: number[]; email: string | null; phone: string | null };
-type DayShop = { id: string; name: string; cutoff: string; closed: boolean; email: string | null; phone: string | null; items: { name: string; price: number; qty: number; people: string[] }[]; total: number; count: number };
+type DayShop = { id: string; name: string; cutoff: string; closed: boolean; email: string | null; phone: string | null; items: { name: string; price: number; qty: number; people: string[] }[]; total: number; count: number; sent: boolean };
 type Data = { day: { date: string; allShops: ShopRow[]; shops: DayShop[] }; month: string; totals: { userId: string; name: string; total: number; unpaid: number; count: number }[] };
 type Draft = { id?: string; name: string; menu: Item[]; cutoff: string; weekdays: number[]; email: string; phone: string; text: string; mode?: string };
 const DAYS = "日月火水木金土";
@@ -64,6 +64,7 @@ export default function BentoAdmin() {
       if (!data || !confirm(`${s.name}に${s.count}個の注文をメールで送りますか?`)) return;
       await call("/api/bento", "POST", { action: "send", shopId: s.id, date: data.day.date });
       setFlash(`${s.name}に注文を送りました`);
+      await load();
     });
   const paid = (userId: string, name: string) =>
     run(`paid-${userId}`, async () => {
@@ -97,7 +98,8 @@ export default function BentoAdmin() {
                 </span>
                 <span className="ml-auto flex items-center gap-2">
                   {s.phone && <span className="text-xs text-slate-500">TEL {s.phone}</span>}
-                  {s.email && s.count > 0 && (
+                  {s.sent && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800 ring-1 ring-emerald-200">お店に送りました</span>}
+                  {s.email && s.count > 0 && !s.sent && (
                     <button onClick={() => send(s)} disabled={!!busy} className="rounded-md bg-vermilion-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                       お店にメールで注文
                     </button>

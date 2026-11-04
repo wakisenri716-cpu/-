@@ -110,6 +110,15 @@ export default async function OfficePage() {
         <Card href="/health-checks" title="健康診断" count={`${f.healthDue + f.healthFollowUps}人`} tone={f.healthDue ? "rose" : f.healthFollowUps ? "amber" : "slate"}>
           <p className="text-slate-500">{f.healthDue || f.healthFollowUps ? [f.healthDue ? `受けていない・予約日を過ぎた人が${f.healthDue}人` : "", f.healthFollowUps ? `再検査がまだの人が${f.healthFollowUps}人` : ""].filter(Boolean).join("・") : "気になるものはありません"}</p>
         </Card>
+        {f.bento.length > 0 && (
+          <Card href="/bento" title="今日のお弁当" count={`${f.bento.reduce((n, s) => n + s.count, 0)}個`} tone={f.bento.some((s) => s.closed && s.count && !s.sent) ? "rose" : "slate"}>
+            {f.bento.map((s) => (
+              <p key={s.name} className="text-slate-600">
+                {s.name}: {s.count}個{s.closed ? (s.sent ? "・送った" : s.count ? "・まだお店に送っていない" : "") : "・受付中"}
+              </p>
+            ))}
+          </Card>
+        )}
         <Card href="/lost-items" title="落とし物・忘れ物" count={`${f.lostClaimed + f.lostOverdue}件`} tone={f.lostClaimed + f.lostOverdue ? "amber" : "slate"}>
           {(f.lostClaimed > 0 || f.lostOverdue > 0) && <p className="text-slate-600">{[f.lostClaimed ? `持ち主が名のった ${f.lostClaimed}件` : "", f.lostOverdue ? `30日すぎた ${f.lostOverdue}件` : ""].filter(Boolean).join("・")}</p>}
         </Card>
