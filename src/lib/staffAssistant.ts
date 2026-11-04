@@ -14,6 +14,7 @@ import { myHealth } from "@/lib/healthChecks";
 import { mySurveys } from "@/lib/surveys";
 import { mySeals, SEALS as SEAL_KINDS, STATUS as SEAL_STATUS } from "@/lib/sealUses";
 import { myDuties } from "@/lib/duties";
+import { searchLost } from "@/lib/lostItems";
 import { myChecks } from "@/lib/safetyChecks";
 
 // 従業員向けのAIアシスタント: ログインしている本人のこと(シフト・有給・今月の勤務・経費精算・申請)と、
@@ -51,6 +52,7 @@ export const STAFF_TOOLS: Anthropic.Beta.BetaTool[] = [
   { name: "my_safety", description: "受付中の安否確認(災害のときの問いかけ・訓練)と、自分が答えたかを返す。答えるのは /staff/safety を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_seals", description: "自分が出した押印の申請(印・書類・部数・状態〈申請中・認められた・押した・見送り〉・見送りの理由)を返す。新しく頼むのは /staff/seals を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_duties", description: "自分のこれから2週間の当番(掃除・ゴミ出し・電話当番など)の日にちと、今日が当番かを返す。当番表は /staff/duties を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
+  { name: "find_lost_item", description: "社内の落とし物(あずかり中のもの)から、なくしたものに合いそうなものを探す。query になくしたもの(例: 黒い傘)を入れる。名のるのは /staff/lost を案内する。", input_schema: { type: "object", properties: { query: { type: "string", description: "なくしたもの" } }, required: ["query"], additionalProperties: false } },
   { name: "my_events", description: "これからの社内のイベント(忘年会・歓迎会など)の日時・場所・会費・締め切りと、自分の出欠の答え(まだなら未回答)を返す。答えるのは /staff/events を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
 ];
 
@@ -157,6 +159,10 @@ export async function runStaffTool(me: Me, name: string, input: Record<string, u
       const rs = await mySeals(me);
       return { requests: rs.slice(0, 10).map((r) => ({ seal: SEAL_KINDS[r.seal as keyof typeof SEAL_KINDS] ?? r.seal, document: r.document, copies: r.copies, status: SEAL_STATUS[r.status as keyof typeof SEAL_STATUS] ?? r.status, reply: r.reply })), link: "/staff/seals" };
     }
+    case "find_lost_item": {
+      const r = await searchLost(me, { query: String(input.query ?? ""), useAi: false });
+      return { items: r.items.slice(0, 5).map((i) => ({ item: i.item, foundOn: i.foundOn, place: i.place, keptAt: i.keptAt })), link: "/staff/lost" };
+    }
     case "my_duties": {
       const ds = await myDuties(me);
       return { duties: ds.map((d) => ({ role: d.role, date: d.date, today: d.today, note: d.note })), link: "/staff/duties" };
@@ -255,6 +261,13 @@ async function askSimple(me: Me, q: string): Promise<StaffReply> {
     const r = await run("my_supplies");
     const rs = r.requests as { item: string; quantity: number; unit: string | null; status: string; reply: string | null }[];
     return { reply: rs.length ? ["あなたの購入依頼:", ...rs.slice(0, 8).map((x) => `・${x.item} ${x.quantity}${x.unit ?? ""}(${x.status}${x.reply ? `・${x.reply}` : ""})`), "[購入依頼](/staff/supplies)"].join("\n") : "頼んだものはありません。ほしいものは [購入依頼](/staff/supplies) から頼めます。", tools: ["my_supplies"], mode: "simple" };
+  }
+  if (/落とし物|忘れ物|落し物|なくし|失くし|無くし|落とし|置き忘れ/.test(s)) {
+    const query = s.replace(/(を|が)?(なくし|失くし|無くし|落とし|忘れ|置き忘れ)(て|た|ました|ちゃった)?.*$/, "").replace(/落とし物|忘れ物|落し物|ありますか|ない|[?？]/g, "").trim().replace(/[のをが]+$/, "");
+    if (!query) return { reply: "なくしたものを教えてください(例: 黒い傘をなくした)。落とし物の一覧は [落とし物・忘れ物](/staff/lost) で見られます。", tools: [], mode: "simple" };
+    const r = await run("find_lost_item", { query });
+    const items = r.items as { item: string; foundOn: string; place: string | null; keptAt: string | null }[];
+    return { reply: items.length ? [`「${query}」に合いそうな落とし物:`, ...items.map((i) => `・${i.item}(${Number(i.foundOn.slice(5, 7))}/${Number(i.foundOn.slice(8))}${i.place ? `・${i.place}` : ""}${i.keptAt ? `・${i.keptAt}であずかり中` : ""})`), "自分のものなら [落とし物・忘れ物](/staff/lost) で「わたしのです」を押してください。"].join("\n") : `「${query}」に合いそうな落とし物はまだありません。[落とし物・忘れ物](/staff/lost) で一覧も見られます。`, tools: ["find_lost_item"], mode: "simple" };
   }
   if (/当番/.test(s)) {
     const r = await run("my_duties");
