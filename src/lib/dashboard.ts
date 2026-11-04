@@ -38,6 +38,7 @@ import { countSealRequests } from "@/lib/sealUses";
 import { countLostTodos } from "@/lib/lostItems";
 import { countUnsentBento } from "@/lib/bento";
 import { countCardRequests } from "@/lib/cardOrders";
+import { countNotices } from "@/lib/changeNotices";
 import { countApplicantTodos } from "@/lib/applicants";
 import { countHandoverDue } from "@/lib/handover";
 import { countDueTasks } from "@/lib/teamTasks";
@@ -131,7 +132,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
   const today = jstDateKey(now);
   const lastMonth = shiftMonth(today.slice(0, 7), -1);
   const lastMonthRange = { gte: new Date(`${lastMonth}-01T00:00:00Z`), lt: new Date(`${today.slice(0, 7)}-01T00:00:00Z`) };
-  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions, hrAlerts, calendarAlerts, memos, quoteFollow, dueTasks, waitingMail, handoverDue, visitorsToday, openQuestions, missingAlcohol, vehicleAlerts, eventReminders, unthankedGifts, supplies, licenseAlerts, applicantTodos, healthTodos, stockAlerts, safety, celebrations, sealRequests, lost, unsentBento, cardRequests] = await Promise.all([
+  const [reviews, bank, overdue, forgot, lastMonthShifts, lastMonthRecords, payroll, stockouts, reimbursements, recurringDue, recurringInvoicesDue, expiringFiles, overtimeAlerts, leaveAlerts, approvals, remittances, lateOrders, staleAdvances, dueDeals, overdueLoans, yearEnd, dueAllocations, dueLoans, overLimit, propertyTax, budgetAlerts, duplicates, anomalies, poIssues, mcpProposals, advisorQuestions, hrAlerts, calendarAlerts, memos, quoteFollow, dueTasks, waitingMail, handoverDue, visitorsToday, openQuestions, missingAlcohol, vehicleAlerts, eventReminders, unthankedGifts, supplies, licenseAlerts, applicantTodos, healthTodos, stockAlerts, safety, celebrations, sealRequests, lost, unsentBento, cardRequests, changeNotices] = await Promise.all([
     prisma.journalEntry.count({ where: { companyId, status: "PENDING_REVIEW" } }),
     prisma.bankTransaction.count({ where: { companyId, status: "PENDING" } }),
     prisma.invoice.count({ where: { companyId, status: { in: [...SETTLEABLE] }, dueDate: { lt: new Date(`${today}T00:00:00Z`) } } }),
@@ -195,6 +196,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     !user || user.role === "ADMIN" || user.role === "ACCOUNTANT" ? countLostTodos(companyId) : Promise.resolve({ claimed: 0, overdue: 0 }),
     !user || user.role === "ADMIN" || user.role === "ACCOUNTANT" ? countUnsentBento(companyId) : Promise.resolve(0),
     !user || user.role === "ADMIN" || user.role === "ACCOUNTANT" ? countCardRequests(companyId) : Promise.resolve(0),
+    !user || user.role === "ADMIN" || user.role === "ACCOUNTANT" ? countNotices(companyId) : Promise.resolve(0),
   ]);
   const [ly, lm] = lastMonth.split("-").map(Number);
   const todos: TodoItem[] = [
@@ -258,6 +260,7 @@ export async function getTodos(companyId: string, now = new Date(), user?: Pick<
     { key: "lostItems", label: "落とし物・忘れ物", detail: [lost.claimed ? `持ち主が名のった落とし物が${lost.claimed}件あります。本人か確かめて渡してください。` : "", lost.overdue ? `30日すぎても持ち主が見つからないものが${lost.overdue}件あります。処分するか決めてください。` : ""].join(""), count: lost.claimed + lost.overdue, href: "/lost-items", tone: "amber" },
     { key: "bento", label: "お弁当の注文", detail: "締め切りを過ぎたお弁当の注文を、まだお店に送っていません。メールで送るか、電話で注文してください", count: unsentBento, href: "/bento", tone: "rose" },
     { key: "cards", label: "名刺の注文", detail: "従業員から名刺の申し込みが届いています。まとめて印刷会社に頼めます", count: cardRequests, href: "/cards", tone: "amber" },
+    { key: "changeNotices", label: "身上の変更の届け出", detail: "従業員から住所・名前などの変更の届け出が届いています。確かめて名簿に入れてください", count: changeNotices, href: "/change-notices", tone: "amber" },
     { key: "staffQuestions", label: "従業員からの質問", detail: "AIで答えがわからなかった質問が届いています。答えて「よくある質問」に足すと、次からはAIが答えられます", count: openQuestions, href: "/staff-questions", tone: "amber" },
     { key: "visitors", label: user ? "今日の自分あての来客" : "今日の来客", detail: "まだお見えになっていない来客の予定があります。お見えになったら「お見えになった」を押すと担当の人に知らせます", count: visitorsToday, href: "/visitors", tone: "amber" },
     { key: "mailLog", label: user ? "届いている自分あての郵便物・荷物" : "まだ渡していない郵便物・荷物", detail: [waitingMail.important ? `書留・役所から・請求書が${waitingMail.important}件あります。` : "", waitingMail.stale ? `届いてから3日以上たったものが${waitingMail.stale}件あります。` : "", "受け取ったら「渡した」に"].join(""), count: waitingMail.count, href: "/mail-log", tone: waitingMail.important || waitingMail.stale ? "rose" : "amber" },

@@ -28,6 +28,10 @@ export type Profile = {
   holidays?: string;
   retireDate?: string;
   retireReason?: string;
+  // 緊急連絡先(身上の変更の届け出から入る)
+  emergencyName?: string;
+  emergencyPhone?: string;
+  emergencyRelation?: string;
 };
 
 export type LaborDefaults = {
@@ -113,7 +117,9 @@ export async function getStaffRecords(companyId: string) {
 export async function updateProfile(companyId: string, staffId: string, input: Record<string, unknown>) {
   const staff = await prisma.staff.findFirst({ where: { id: staffId, companyId } });
   if (!staff) throw new UserError("スタッフが見つかりません");
-  const profile = parseProfile(input);
+  // 名簿の画面にない項目(緊急連絡先)は、いまの値を残す
+  const old = asObject<Profile>(staff.profile);
+  const profile = { ...parseProfile(input), emergencyName: old.emergencyName, emergencyPhone: old.emergencyPhone, emergencyRelation: old.emergencyRelation };
   const hireDate = input.hireDate === undefined ? undefined : date(input, "hireDate", "入社日");
   await prisma.staff.update({
     where: { id: staffId },
