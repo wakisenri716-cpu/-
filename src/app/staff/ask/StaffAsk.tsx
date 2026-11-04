@@ -7,7 +7,7 @@ import { SparkleIcon } from "@/components/icons";
 type Turn = { role: "user" | "assistant"; text: string };
 type Question = { id: string; question: string; status: string; answer: string | null; answeredByName: string | null; isNew: boolean };
 
-const SUGGESTIONS = ["有給はあと何日?", "次のシフトはいつ?", "今月は何時間働いた?", "経費精算はどうなった?", "申請の状況は?", "購入依頼はどうなった?", "イベントの出欠は?", "押印の申請は?", "レジ締めのやり方は?"];
+const SUGGESTIONS = ["有給はあと何日?", "次のシフトはいつ?", "今月は何時間働いた?", "経費精算はどうなった?", "申請の状況は?", "購入依頼はどうなった?", "イベントの出欠は?", "押印の申請は?", "傘をなくした", "レジ締めのやり方は?"];
 
 function Text({ text }: { text: string }) {
   return (

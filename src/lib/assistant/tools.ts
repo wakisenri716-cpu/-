@@ -20,6 +20,7 @@ import { openSurveySummary } from "@/lib/surveys";
 import { upcomingCelebrations } from "@/lib/celebrations";
 import { listSeals, SEALS as SEAL_KINDS, STATUS as SEAL_STATUS } from "@/lib/sealUses";
 import { listDuties } from "@/lib/duties";
+import { listLost, STATUS as LOST_STATUS } from "@/lib/lostItems";
 import { listApplicants, STATUS as APPLICANT_STATUS, type Status as ApplicantStatus } from "@/lib/applicants";
 import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
@@ -529,6 +530,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_duties",
     description: "当番表(掃除・ゴミ出し・電話当番など)。当番ごとの曜日・回す人と、今日から1週間のだれが当番か(入れかわりも)を返す。「今日の掃除当番は?」「来週の電話当番は?」などに使う。決める・入れかえるのは /duties を案内する。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_lost_items",
+    description: "社内の落とし物・忘れ物。あずかり中・持ち主が名のったもの(品物・見つけた日と場所・あずかっている場所・30日すぎたか)と、最近返した・処分したものを返す。「落とし物はある?」「処分していい落とし物は?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1151,6 +1157,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_duties": {
       const d = await listDuties(companyId, 7);
       return { today: d.today, roles: d.roles.map((r) => ({ name: r.name, weekdays: r.weekdayLabel, members: r.members.map((m) => m.name), schedule: r.schedule.map((s) => ({ date: s.date, name: s.name, swapped: s.swapped })) })), link: "/duties" };
+    }
+    case "get_lost_items": {
+      const items = await listLost(companyId);
+      return { items: items.map((i) => ({ item: i.item, foundOn: i.foundOn, place: i.place, keptAt: i.keptAt, status: LOST_STATUS[i.status as keyof typeof LOST_STATUS] ?? i.status, claimedBy: i.claimedByName, overdue30: i.overdue })), link: "/lost-items" };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);

@@ -110,6 +110,9 @@ export default async function OfficePage() {
         <Card href="/health-checks" title="健康診断" count={`${f.healthDue + f.healthFollowUps}人`} tone={f.healthDue ? "rose" : f.healthFollowUps ? "amber" : "slate"}>
           <p className="text-slate-500">{f.healthDue || f.healthFollowUps ? [f.healthDue ? `受けていない・予約日を過ぎた人が${f.healthDue}人` : "", f.healthFollowUps ? `再検査がまだの人が${f.healthFollowUps}人` : ""].filter(Boolean).join("・") : "気になるものはありません"}</p>
         </Card>
+        <Card href="/lost-items" title="落とし物・忘れ物" count={`${f.lostClaimed + f.lostOverdue}件`} tone={f.lostClaimed + f.lostOverdue ? "amber" : "slate"}>
+          {(f.lostClaimed > 0 || f.lostOverdue > 0) && <p className="text-slate-600">{[f.lostClaimed ? `持ち主が名のった ${f.lostClaimed}件` : "", f.lostOverdue ? `30日すぎた ${f.lostOverdue}件` : ""].filter(Boolean).join("・")}</p>}
+        </Card>
         <Card href="/seals" title="押印の申請" count={`${f.sealRequests}件`} tone={f.sealRequests ? "amber" : "slate"} />
         <Card href="/celebrations" title="この1週間のお祝い" count={`${f.celebrations.length}件`} tone={f.celebrations.some((c) => !c.done) ? "amber" : "slate"}>
           {f.celebrations.slice(0, 4).map((c) => (

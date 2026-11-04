@@ -239,6 +239,21 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「落とし物はある?」「処分していい落とし物は?」
+  if (/落とし物|忘れ物|落し物/.test(q)) {
+    const r = (await run("get_lost_items")) as { items: { item: string; foundOn: string; place: string | null; status: string; claimedBy: string | null; overdue30: boolean }[] };
+    const open = r.items.filter((i) => i.status === "あずかり中" || i.status === "持ち主が名のった");
+    const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8))}`;
+    return {
+      reply: [
+        open.length ? `あずかり中の落とし物が${open.length}件あります:` : "あずかり中の落とし物はありません。",
+        ...open.map((i) => `・${i.item}(${md(i.foundOn)}${i.place ? `・${i.place}` : ""})${i.claimedBy ? ` — ${i.claimedBy}さんが名のりました` : i.overdue30 ? " — 30日すぎました" : ""}`),
+        "[落とし物・忘れ物](/lost-items)",
+      ].join("\n"),
+      tools: ["get_lost_items"],
+      mode: "simple",
+    };
+  }
   // 「今日の掃除当番は?」
   if (/当番/.test(q)) {
     const r = (await run("get_duties")) as { today: string; roles: { name: string; schedule: { date: string; name: string }[] }[] };
