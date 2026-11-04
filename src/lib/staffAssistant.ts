@@ -13,6 +13,7 @@ import { myEvents, ANSWERS as EVENT_ANSWERS, type Answer as EventAnswer } from "
 import { myHealth } from "@/lib/healthChecks";
 import { mySurveys } from "@/lib/surveys";
 import { mySeals, SEALS as SEAL_KINDS, STATUS as SEAL_STATUS } from "@/lib/sealUses";
+import { myDuties } from "@/lib/duties";
 import { myChecks } from "@/lib/safetyChecks";
 
 // 従業員向けのAIアシスタント: ログインしている本人のこと(シフト・有給・今月の勤務・経費精算・申請)と、
@@ -49,6 +50,7 @@ export const STAFF_TOOLS: Anthropic.Beta.BetaTool[] = [
   { name: "my_surveys", description: "受付中の社内アンケートの題・締め切り・問題の数・名前を出さないか・自分が答えたかを返す。答えるのは /staff/surveys を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_safety", description: "受付中の安否確認(災害のときの問いかけ・訓練)と、自分が答えたかを返す。答えるのは /staff/safety を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_seals", description: "自分が出した押印の申請(印・書類・部数・状態〈申請中・認められた・押した・見送り〉・見送りの理由)を返す。新しく頼むのは /staff/seals を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
+  { name: "my_duties", description: "自分のこれから2週間の当番(掃除・ゴミ出し・電話当番など)の日にちと、今日が当番かを返す。当番表は /staff/duties を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_events", description: "これからの社内のイベント(忘年会・歓迎会など)の日時・場所・会費・締め切りと、自分の出欠の答え(まだなら未回答)を返す。答えるのは /staff/events を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
 ];
 
@@ -155,6 +157,10 @@ export async function runStaffTool(me: Me, name: string, input: Record<string, u
       const rs = await mySeals(me);
       return { requests: rs.slice(0, 10).map((r) => ({ seal: SEAL_KINDS[r.seal as keyof typeof SEAL_KINDS] ?? r.seal, document: r.document, copies: r.copies, status: SEAL_STATUS[r.status as keyof typeof SEAL_STATUS] ?? r.status, reply: r.reply })), link: "/staff/seals" };
     }
+    case "my_duties": {
+      const ds = await myDuties(me);
+      return { duties: ds.map((d) => ({ role: d.role, date: d.date, today: d.today, note: d.note })), link: "/staff/duties" };
+    }
     case "my_events": {
       const es = await myEvents(me);
       return { events: es.map((e) => ({ title: e.title, date: e.date, time: e.time, place: e.place, fee: e.fee, deadline: e.deadline, closed: e.closed, myAnswer: e.mine ? EVENT_ANSWERS[e.mine.answer as EventAnswer] : "未回答", paid: e.mine?.paid ?? false })), link: "/staff/events" };
@@ -249,6 +255,11 @@ async function askSimple(me: Me, q: string): Promise<StaffReply> {
     const r = await run("my_supplies");
     const rs = r.requests as { item: string; quantity: number; unit: string | null; status: string; reply: string | null }[];
     return { reply: rs.length ? ["あなたの購入依頼:", ...rs.slice(0, 8).map((x) => `・${x.item} ${x.quantity}${x.unit ?? ""}(${x.status}${x.reply ? `・${x.reply}` : ""})`), "[購入依頼](/staff/supplies)"].join("\n") : "頼んだものはありません。ほしいものは [購入依頼](/staff/supplies) から頼めます。", tools: ["my_supplies"], mode: "simple" };
+  }
+  if (/当番/.test(s)) {
+    const r = await run("my_duties");
+    const ds = r.duties as { role: string; date: string; today: boolean }[];
+    return { reply: ds.length ? ["あなたの当番(2週間):", ...ds.map((d) => `・${d.today ? "今日 " : ""}${Number(d.date.slice(5, 7))}/${Number(d.date.slice(8))} ${d.role}`), "[当番表](/staff/duties)"].join("\n") : "これから2週間、あなたの当番はありません。\n[当番表](/staff/duties)", tools: ["my_duties"], mode: "simple" };
   }
   if (/押印|実印|銀行印|角印|印鑑|ハンコ|はんこ/.test(s)) {
     const r = await run("my_seals");

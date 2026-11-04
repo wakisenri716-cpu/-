@@ -18,6 +18,7 @@ type Home = {
   newAnswers?: number;
   safety?: { id: string; title: string; answered: boolean }[];
   surveys?: number;
+  dutiesToday?: string[];
 };
 
 const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8))}`;
@@ -75,6 +76,11 @@ export default function StaffHome() {
           <span className="mt-0.5 block text-rose-700">
             {data.toAnswer.map((e) => `${e.title}(${md(e.date)}${e.deadline ? `・締め切り ${md(e.deadline)}` : ""})`).join("、")} ›
           </span>
+        </Link>
+      )}
+      {!!data.dutiesToday?.length && (
+        <Link href="/staff/duties" className="block rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900 shadow-sm">
+          今日は{data.dutiesToday.join("・")}の当番です ›
         </Link>
       )}
       {!!data.surveys && (

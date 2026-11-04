@@ -54,6 +54,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_surveys: "社内アンケート",
   get_celebrations: "誕生日・入社の記念日",
   get_seal_requests: "押印の申請と押印簿",
+  get_duties: "当番表",
   get_applicants: "採用の応募者",
   get_purchase_prices: "仕入値の履歴",
   get_meeting_slots: "日程調整",
