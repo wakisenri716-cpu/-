@@ -57,6 +57,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_duties: "当番表",
   get_lost_items: "落とし物・忘れ物",
   get_bento_orders: "お弁当の注文",
+  get_shipments: "郵便・宅配の発送記録",
   get_applicants: "採用の応募者",
   get_purchase_prices: "仕入値の履歴",
   get_meeting_slots: "日程調整",

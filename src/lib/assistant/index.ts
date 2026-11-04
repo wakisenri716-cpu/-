@@ -239,6 +239,21 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「さくら商事に請求書はいつ送った?」「今月の送料は?」
+  if (/送料|発送|送った|郵送|追跡/.test(q) && !/メール/.test(q)) {
+    const who = q.match(/([^\s、。]{2,20}?)(?:様|さん|御中)?(?:に|へ)(?:.{0,12})(?:送った|発送|郵送)/)?.[1];
+    const r = (await run("get_shipments", who ? { query: who } : {})) as { query: string | null; month: string; total: number; items: { date: string; recipient: string; contents: string | null; method: string; cost: number; tracking: string | null }[] };
+    const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8))}`;
+    return {
+      reply: [
+        r.query ? (r.items.length ? `「${r.query}」への発送:` : `「${r.query}」への発送の記録はありません。`) : `${Number(r.month.slice(5))}月の発送は${r.items.length}件・送料 ${r.total.toLocaleString()}円です。`,
+        ...r.items.slice(0, 8).map((i) => `・${md(i.date)} ${i.recipient}${i.contents ? ` ${i.contents}` : ""}(${i.method}・${i.cost.toLocaleString()}円${i.tracking ? `・追跡 ${i.tracking}` : ""})`),
+        "[郵便・宅配の発送記録](/shipments)",
+      ].join("\n"),
+      tools: ["get_shipments"],
+      mode: "simple",
+    };
+  }
   // 「今日のお弁当は何個?」
   if (/弁当/.test(q)) {
     const r = (await run("get_bento_orders")) as { shops: { name: string; cutoff: string; closed: boolean; count: number; total: number; sent: boolean; items: { name: string; qty: number }[] }[] };

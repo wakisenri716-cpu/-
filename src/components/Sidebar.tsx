@@ -211,6 +211,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/lost-items", label: "落とし物・忘れ物", icon: BoxIcon },
       { href: "/bento", label: "お弁当の注文", icon: BoxIcon },
       { href: "/cards", label: "名刺の注文", icon: BoxIcon },
+      { href: "/shipments", label: "郵便・宅配の発送記録", icon: BoxIcon },
       { href: "/job-posting", label: "求人票の下書き", icon: SparkleIcon },
       { href: "/applicants", label: "採用の応募者", icon: ChecklistIcon },
     ],
