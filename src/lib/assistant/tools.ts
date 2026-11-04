@@ -23,6 +23,8 @@ import { listDuties } from "@/lib/duties";
 import { listLost, STATUS as LOST_STATUS } from "@/lib/lostItems";
 import { daySummary as bentoDay } from "@/lib/bento";
 import { listShipments } from "@/lib/shipments";
+import { listCards, STATUS as CARD_STATUS } from "@/lib/cardOrders";
+import { listNotices } from "@/lib/changeNotices";
 import { listApplicants, STATUS as APPLICANT_STATUS, type Status as ApplicantStatus } from "@/lib/applicants";
 import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
@@ -548,6 +550,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_shipments",
     description: "郵便・宅配の発送記録。query を入れると相手・中身・追跡番号で探し、入れなければ今月の発送(送った日・相手・中身・送り方・送料・追跡番号)と送料の合計を返す。「さくら商事に請求書はいつ送った?」「今月の送料は?」などに使う。",
     input_schema: { type: "object", properties: { query: { type: "string", description: "相手・中身・追跡番号" } }, additionalProperties: false },
+  },
+  {
+    name: "get_staff_requests",
+    description: "従業員からの名刺の注文と身上の変更の届け出(住所・電話・名前・緊急連絡先)。申し込み・確認待ちのもの(だれから・何の変更か・いつから)と、名刺の印刷中のものを返す(住所などの中身は返さない)。「名刺の申し込みは来てる?」「届け出は来てる?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
     name: "get_mail_items",
@@ -1182,6 +1189,14 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
       const q = typeof input.query === "string" ? input.query.trim().slice(0, 40) : "";
       const d = await listShipments(companyId, jstDateKey(new Date()).slice(0, 7), q || undefined);
       return { query: q || null, month: d.month, total: d.total, items: d.items.slice(0, 20).map((r) => ({ date: r.date, recipient: r.recipient, contents: r.contents, method: r.methodLabel, cost: r.cost, tracking: r.tracking })), link: "/shipments" };
+    }
+    case "get_staff_requests": {
+      const [cards, notices] = await Promise.all([listCards(companyId), listNotices(companyId)]);
+      return {
+        cards: cards.orders.filter((o) => o.status === "REQUESTED" || o.status === "ORDERED").map((o) => ({ name: o.userName, quantity: o.quantity, status: CARD_STATUS[o.status as keyof typeof CARD_STATUS] ?? o.status })),
+        notices: notices.filter((n) => n.status === "REQUESTED").map((n) => ({ name: n.userName, kind: n.kindLabel, effectiveOn: n.effectiveOn })),
+        links: { cards: "/cards", notices: "/change-notices" },
+      };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);

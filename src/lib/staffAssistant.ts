@@ -16,6 +16,8 @@ import { mySeals, SEALS as SEAL_KINDS, STATUS as SEAL_STATUS } from "@/lib/sealU
 import { myDuties } from "@/lib/duties";
 import { searchLost } from "@/lib/lostItems";
 import { myBento } from "@/lib/bento";
+import { myCards, STATUS as CARD_STATUS } from "@/lib/cardOrders";
+import { myNotices, KINDS as NOTICE_KINDS } from "@/lib/changeNotices";
 import { myChecks } from "@/lib/safetyChecks";
 
 // 従業員向けのAIアシスタント: ログインしている本人のこと(シフト・有給・今月の勤務・経費精算・申請)と、
@@ -55,6 +57,7 @@ export const STAFF_TOOLS: Anthropic.Beta.BetaTool[] = [
   { name: "my_duties", description: "自分のこれから2週間の当番(掃除・ゴミ出し・電話当番など)の日にちと、今日が当番かを返す。当番表は /staff/duties を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "find_lost_item", description: "社内の落とし物(あずかり中のもの)から、なくしたものに合いそうなものを探す。query になくしたもの(例: 黒い傘)を入れる。名のるのは /staff/lost を案内する。", input_schema: { type: "object", properties: { query: { type: "string", description: "なくしたもの" } }, required: ["query"], additionalProperties: false } },
   { name: "my_bento", description: "今日のお弁当: 頼めるお店とメニュー・締め切り・締め切ったか、自分が頼んだもの、今月の自分の合計とまだ払っていない金額を返す。頼むのは /staff/bento を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
+  { name: "my_paperwork", description: "自分の名刺の注文(枚数・状態)と、身上の変更の届け出(住所・電話・名前・緊急連絡先。状態と総務からの理由)を返す。名刺は /staff/cards、届け出は /staff/changes を案内する。引っ越しや結婚のときの手続きを聞かれたら、届け出を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_events", description: "これからの社内のイベント(忘年会・歓迎会など)の日時・場所・会費・締め切りと、自分の出欠の答え(まだなら未回答)を返す。答えるのは /staff/events を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
 ];
 
@@ -169,6 +172,11 @@ export async function runStaffTool(me: Me, name: string, input: Record<string, u
       const b = await myBento(me);
       return { date: b.date, shops: b.shops.map((s) => ({ name: s.name, cutoff: s.cutoff, closed: s.closed, menu: s.menu.map((m) => `${m.name} ${m.price}円`) })), mine: b.mine.map((o) => `${o.itemName}×${o.qty}`), monthTotal: b.monthTotal, monthUnpaid: b.monthUnpaid, link: "/staff/bento" };
     }
+    case "my_paperwork": {
+      const [cards, notices] = await Promise.all([myCards(me), myNotices(me)]);
+      const NS: Record<string, string> = { REQUESTED: "総務の確認待ち", APPLIED: "名簿に入りました", REJECTED: "確かめが必要" };
+      return { cards: cards.orders.slice(0, 5).map((o) => ({ quantity: o.quantity, status: CARD_STATUS[o.status as keyof typeof CARD_STATUS] ?? o.status })), notices: notices.slice(0, 5).map((n) => ({ kind: NOTICE_KINDS[n.kind as keyof typeof NOTICE_KINDS] ?? n.kind, status: NS[n.status] ?? n.status, reply: n.reply })), links: { cards: "/staff/cards", changes: "/staff/changes" } };
+    }
     case "my_duties": {
       const ds = await myDuties(me);
       return { duties: ds.map((d) => ({ role: d.role, date: d.date, today: d.today, note: d.note })), link: "/staff/duties" };
@@ -274,6 +282,20 @@ async function askSimple(me: Me, q: string): Promise<StaffReply> {
     const r = await run("find_lost_item", { query });
     const items = r.items as { item: string; foundOn: string; place: string | null; keptAt: string | null }[];
     return { reply: items.length ? [`「${query}」に合いそうな落とし物:`, ...items.map((i) => `・${i.item}(${Number(i.foundOn.slice(5, 7))}/${Number(i.foundOn.slice(8))}${i.place ? `・${i.place}` : ""}${i.keptAt ? `・${i.keptAt}であずかり中` : ""})`), "自分のものなら [落とし物・忘れ物](/staff/lost) で「わたしのです」を押してください。"].join("\n") : `「${query}」に合いそうな落とし物はまだありません。[落とし物・忘れ物](/staff/lost) で一覧も見られます。`, tools: ["find_lost_item"], mode: "simple" };
+  }
+  if (/名刺|引っ越|引越|転居|住所(が|を)?変|結婚|改姓|旧姓|緊急連絡先|届け出|届出/.test(s)) {
+    const r = await run("my_paperwork");
+    const cards = r.cards as { quantity: number; status: string }[];
+    const notices = r.notices as { kind: string; status: string; reply: string | null }[];
+    const wantsCard = /名刺/.test(s);
+    return {
+      reply: [
+        wantsCard ? (cards.length ? `名刺: ${cards.map((c) => `${c.quantity}枚(${c.status})`).join("、")}` : "名刺の注文はまだありません。") : notices.length ? `届け出: ${notices.map((n) => `${n.kind}(${n.status}${n.reply ? `・${n.reply}` : ""})`).join("、")}` : "引っ越し・電話番号・名前・緊急連絡先が変わったら、届け出てください。",
+        wantsCard ? "[名刺の注文](/staff/cards) から申し込めます。" : "[身上の変更の届け出](/staff/changes) から届け出られます(給与の振込先の口座は総務に直接伝えてください)。",
+      ].join("\n"),
+      tools: ["my_paperwork"],
+      mode: "simple",
+    };
   }
   if (/弁当/.test(s)) {
     const r = await run("my_bento");
