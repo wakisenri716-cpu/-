@@ -9,9 +9,9 @@ const SEALS: Record<Seal, string> = { JITSUIN: "実印(代表者印)", BANK: "�
 const STATUS: Record<string, string> = { REQUESTED: "申請中", APPROVED: "認められました(押す前)", REJECTED: "見送り", DONE: "押しました" };
 const input = "w-full rounded-xl border border-slate-300 px-3 py-2 text-sm";
 
-export function StaffSeals() {
+export function StaffSeals({ initialText = "" }: { initialText?: string }) {
   const [list, setList] = useState<Row[] | null>(null);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);

@@ -7,9 +7,9 @@ type Req = { id: string; item: string; quantity: number; unit: string | null; ur
 const STATUS: Record<string, string> = { OPEN: "依頼中", ORDERED: "発注しました", DONE: "届きました", REJECTED: "見送り" };
 const md = (iso: string) => new Date(iso).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric", timeZone: "Asia/Tokyo" });
 
-export function StaffSupplies() {
+export function StaffSupplies({ initialText = "" }: { initialText?: string }) {
   const [list, setList] = useState<Req[] | null>(null);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
