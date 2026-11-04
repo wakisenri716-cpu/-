@@ -15,6 +15,7 @@ import { mySurveys } from "@/lib/surveys";
 import { mySeals, SEALS as SEAL_KINDS, STATUS as SEAL_STATUS } from "@/lib/sealUses";
 import { myDuties } from "@/lib/duties";
 import { searchLost } from "@/lib/lostItems";
+import { myBento } from "@/lib/bento";
 import { myChecks } from "@/lib/safetyChecks";
 
 // 従業員向けのAIアシスタント: ログインしている本人のこと(シフト・有給・今月の勤務・経費精算・申請)と、
@@ -53,6 +54,7 @@ export const STAFF_TOOLS: Anthropic.Beta.BetaTool[] = [
   { name: "my_seals", description: "自分が出した押印の申請(印・書類・部数・状態〈申請中・認められた・押した・見送り〉・見送りの理由)を返す。新しく頼むのは /staff/seals を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_duties", description: "自分のこれから2週間の当番(掃除・ゴミ出し・電話当番など)の日にちと、今日が当番かを返す。当番表は /staff/duties を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "find_lost_item", description: "社内の落とし物(あずかり中のもの)から、なくしたものに合いそうなものを探す。query になくしたもの(例: 黒い傘)を入れる。名のるのは /staff/lost を案内する。", input_schema: { type: "object", properties: { query: { type: "string", description: "なくしたもの" } }, required: ["query"], additionalProperties: false } },
+  { name: "my_bento", description: "今日のお弁当: 頼めるお店とメニュー・締め切り・締め切ったか、自分が頼んだもの、今月の自分の合計とまだ払っていない金額を返す。頼むのは /staff/bento を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_events", description: "これからの社内のイベント(忘年会・歓迎会など)の日時・場所・会費・締め切りと、自分の出欠の答え(まだなら未回答)を返す。答えるのは /staff/events を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
 ];
 
@@ -163,6 +165,10 @@ export async function runStaffTool(me: Me, name: string, input: Record<string, u
       const r = await searchLost(me, { query: String(input.query ?? ""), useAi: false });
       return { items: r.items.slice(0, 5).map((i) => ({ item: i.item, foundOn: i.foundOn, place: i.place, keptAt: i.keptAt })), link: "/staff/lost" };
     }
+    case "my_bento": {
+      const b = await myBento(me);
+      return { date: b.date, shops: b.shops.map((s) => ({ name: s.name, cutoff: s.cutoff, closed: s.closed, menu: s.menu.map((m) => `${m.name} ${m.price}円`) })), mine: b.mine.map((o) => `${o.itemName}×${o.qty}`), monthTotal: b.monthTotal, monthUnpaid: b.monthUnpaid, link: "/staff/bento" };
+    }
     case "my_duties": {
       const ds = await myDuties(me);
       return { duties: ds.map((d) => ({ role: d.role, date: d.date, today: d.today, note: d.note })), link: "/staff/duties" };
@@ -268,6 +274,16 @@ async function askSimple(me: Me, q: string): Promise<StaffReply> {
     const r = await run("find_lost_item", { query });
     const items = r.items as { item: string; foundOn: string; place: string | null; keptAt: string | null }[];
     return { reply: items.length ? [`「${query}」に合いそうな落とし物:`, ...items.map((i) => `・${i.item}(${Number(i.foundOn.slice(5, 7))}/${Number(i.foundOn.slice(8))}${i.place ? `・${i.place}` : ""}${i.keptAt ? `・${i.keptAt}であずかり中` : ""})`), "自分のものなら [落とし物・忘れ物](/staff/lost) で「わたしのです」を押してください。"].join("\n") : `「${query}」に合いそうな落とし物はまだありません。[落とし物・忘れ物](/staff/lost) で一覧も見られます。`, tools: ["find_lost_item"], mode: "simple" };
+  }
+  if (/弁当/.test(s)) {
+    const r = await run("my_bento");
+    const shops = r.shops as { name: string; cutoff: string; closed: boolean }[];
+    const mine = r.mine as string[];
+    return {
+      reply: [mine.length ? `今日頼んだお弁当: ${mine.join("、")}` : "今日はまだお弁当を頼んでいません。", ...shops.map((x) => `・${x.name}: ${x.closed ? "締め切りました" : `${x.cutoff}まで頼めます`}`), `今月の合計 ${Number(r.monthTotal).toLocaleString()}円${Number(r.monthUnpaid) ? `(まだ払っていない ${Number(r.monthUnpaid).toLocaleString()}円)` : ""}`, "[お弁当の注文](/staff/bento)"].join("\n"),
+      tools: ["my_bento"],
+      mode: "simple",
+    };
   }
   if (/当番/.test(s)) {
     const r = await run("my_duties");

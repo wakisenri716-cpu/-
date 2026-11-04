@@ -139,14 +139,20 @@ export async function orderBento(me: { id: string; name: string; companyId: stri
 // 総務: その日のまとめ(お店ごと・品物ごとの数と名前)
 export async function daySummary(companyId: string, dateRaw?: string) {
   const date = dateRaw && /^\d{4}-\d{2}-\d{2}$/.test(dateRaw) ? dateRaw : jstDateKey(new Date());
-  const [shops, orders, allShops] = await Promise.all([openShops(companyId, date), prisma.bentoOrder.findMany({ where: { companyId, date }, orderBy: { createdAt: "asc" } }), prisma.bentoShop.findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" } })]);
+  const [shops, orders, allShops, logs] = await Promise.all([
+    openShops(companyId, date),
+    prisma.bentoOrder.findMany({ where: { companyId, date }, orderBy: { createdAt: "asc" } }),
+    prisma.bentoShop.findMany({ where: { companyId, active: true }, orderBy: { createdAt: "asc" } }),
+    prisma.emailLog.findMany({ where: { companyId, relatedId: { endsWith: `:${date}` }, subject: { startsWith: "お弁当の注文" }, status: { not: "FAILED" } }, select: { relatedId: true } }),
+  ]);
+  const sentKeys = new Set(logs.map((l) => l.relatedId));
   return {
     date,
     allShops: allShops.map((s) => ({ id: s.id, name: s.name, menu: s.menu as unknown as MenuItem[], cutoff: s.cutoff, weekdays: s.weekdays, email: s.email, phone: s.phone })),
     shops: shops.map((s) => {
       const mine = orders.filter((o) => o.shopId === s.id);
       const items = s.menu.map((m) => ({ name: m.name, price: m.price, qty: mine.filter((o) => o.itemId === m.id).reduce((x, o) => x + o.qty, 0), people: mine.filter((o) => o.itemId === m.id).map((o) => (o.qty > 1 ? `${o.userName}×${o.qty}` : o.userName)) })).filter((i) => i.qty);
-      return { ...s, items, total: mine.reduce((x, o) => x + o.price * o.qty, 0), count: mine.reduce((x, o) => x + o.qty, 0) };
+      return { ...s, items, total: mine.reduce((x, o) => x + o.price * o.qty, 0), count: mine.reduce((x, o) => x + o.qty, 0), sent: sentKeys.has(`${s.id}:${date}`) };
     }),
   };
 }
@@ -194,4 +200,15 @@ export async function markPaid(me: Me, raw: Record<string, unknown>) {
   if (!/^\d{4}-\d{2}$/.test(month)) throw new UserError("月を正しく選んでください");
   const { count } = await prisma.bentoOrder.updateMany({ where: { companyId: me.companyId, userId: String(raw.userId ?? ""), date: { startsWith: month }, paid: false }, data: { paid: true } });
   return { count };
+}
+
+// やることリスト: 今日、締め切りを過ぎて注文があるのに、まだお店に注文を送っていないお店の数
+export async function countUnsentBento(companyId: string) {
+  const d = await daySummary(companyId);
+  let n = 0;
+  for (const s of d.shops.filter((x) => x.closed && x.count > 0)) {
+    const sent = s.email ? await prisma.emailLog.count({ where: { companyId, relatedId: `${s.id}:${d.date}`, status: { not: "FAILED" } } }) : 0;
+    if (!sent) n++;
+  }
+  return n;
 }

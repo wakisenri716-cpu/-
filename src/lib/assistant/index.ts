@@ -239,6 +239,15 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「今日のお弁当は何個?」
+  if (/弁当/.test(q)) {
+    const r = (await run("get_bento_orders")) as { shops: { name: string; cutoff: string; closed: boolean; count: number; total: number; sent: boolean; items: { name: string; qty: number }[] }[] };
+    return {
+      reply: r.shops.length ? [...r.shops.map((s) => `・${s.name}: ${s.count}個・${s.total.toLocaleString()}円(${s.closed ? (s.sent ? "締め切り・お店に送りました" : "締め切り・まだお店に送っていません") : `${s.cutoff}まで受付中`})${s.items.length ? ` — ${s.items.map((i) => `${i.name}${i.qty}`).join("、")}` : ""}`), "[お弁当の注文](/bento)"].join("\n") : "今日頼めるお弁当のお店はありません。\n[お弁当の注文](/bento)",
+      tools: ["get_bento_orders"],
+      mode: "simple",
+    };
+  }
   // 「落とし物はある?」「処分していい落とし物は?」
   if (/落とし物|忘れ物|落し物/.test(q)) {
     const r = (await run("get_lost_items")) as { items: { item: string; foundOn: string; place: string | null; status: string; claimedBy: string | null; overdue30: boolean }[] };
