@@ -209,6 +209,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/seals", label: "押印の申請と押印簿", icon: StampIcon },
       { href: "/duties", label: "当番表", icon: CalendarIcon },
       { href: "/lost-items", label: "落とし物・忘れ物", icon: BoxIcon },
+      { href: "/bento", label: "お弁当の注文", icon: BoxIcon },
       { href: "/job-posting", label: "求人票の下書き", icon: SparkleIcon },
       { href: "/applicants", label: "採用の応募者", icon: ChecklistIcon },
     ],
@@ -284,6 +285,7 @@ const EMPLOYEE_SECTIONS: NavSection[] = [
       { href: "/staff/seals", label: "押印の申請", icon: StampIcon },
       { href: "/staff/duties", label: "当番表", icon: CalendarIcon },
       { href: "/staff/lost", label: "落とし物・忘れ物", icon: BoxIcon },
+      { href: "/staff/bento", label: "お弁当", icon: BoxIcon },
     ],
   },
 ];

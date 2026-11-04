@@ -265,6 +265,7 @@ model Company {
   sealUses      SealUse[]
   dutyRoles     DutyRole[]
   lostItems     LostItem[]
+  bentoShops    BentoShop[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
   partyNotes           PartyNote[]
@@ -2581,6 +2582,43 @@ model AlcoholCheck {
   destination String? // 行き先(運転日誌用)
   checkedAt   DateTime @default(now())
 
+  @@index([companyId, date])
+}
+
+// お弁当の注文: お店とメニュー・締め切り。社員が締め切りまでに頼み、総務がまとめてお店に注文する
+model BentoShop {
+  id        String       @id @default(cuid())
+  companyId String
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  menu      Json // [{ id, name, price }]
+  cutoff    String       @default("10:00") // 締め切り HH:MM
+  weekdays  Int[] // 注文できる曜日 0=日〜6=土
+  email     String? // お店のメール(注文を送る)
+  phone     String?
+  active    Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  orders    BentoOrder[]
+
+  @@index([companyId])
+}
+
+model BentoOrder {
+  id        String    @id @default(cuid())
+  companyId String
+  shopId    String
+  shop      BentoShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  date      String // YYYY-MM-DD
+  userId    String
+  userName  String
+  itemId    String
+  itemName  String
+  price     Int
+  qty       Int       @default(1)
+  paid      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@unique([shopId, date, userId, itemId])
   @@index([companyId, date])
 }
 
