@@ -239,6 +239,19 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「名刺の申し込みは来てる?」「届け出は来てる?」
+  if (/名刺の(申し込み|注文|発注)|届け出|届出|身上/.test(q)) {
+    const r = (await run("get_staff_requests")) as { cards: { name: string; quantity: number; status: string }[]; notices: { name: string; kind: string; effectiveOn: string | null }[] };
+    return {
+      reply: [
+        r.notices.length ? `確認待ちの届け出: ${r.notices.map((n) => `${n.name}さんの${n.kind}${n.effectiveOn ? `(${n.effectiveOn}から)` : ""}`).join("、")}` : "確認待ちの届け出はありません。",
+        r.cards.length ? `名刺: ${r.cards.map((c) => `${c.name}さん ${c.quantity}枚(${c.status})`).join("、")}` : "名刺の申し込みはありません。",
+        "[身上の変更の届け出](/change-notices) [名刺の注文](/cards)",
+      ].join("\n"),
+      tools: ["get_staff_requests"],
+      mode: "simple",
+    };
+  }
   // 「さくら商事に請求書はいつ送った?」「今月の送料は?」
   if (/送料|発送|送った|郵送|追跡/.test(q) && !/メール/.test(q)) {
     const who = q.match(/([^\s、。]{2,20}?)(?:様|さん|御中)?(?:に|へ)(?:.{0,12})(?:送った|発送|郵送)/)?.[1];

@@ -23,6 +23,8 @@ import { upcomingCelebrations } from "@/lib/celebrations";
 import { countSealRequests } from "@/lib/sealUses";
 import { countLostTodos } from "@/lib/lostItems";
 import { daySummary as bentoDay } from "@/lib/bento";
+import { countCardRequests } from "@/lib/cardOrders";
+import { countNotices } from "@/lib/changeNotices";
 
 // 総務のきょう: 来客・会議室と社用車・アルコールチェック・郵便物・伝言・購入依頼・質問・イベント・資格・健康診断・採用・休む人を1つの画面にまとめる。
 // AIが使えるときは、今日いちばん気をつけることを短くまとめる(元の数字にない数字が入ったら決まった文に戻す)。
@@ -33,7 +35,7 @@ const DAILY_LIMIT = Number(process.env.ASSISTANT_DAILY_LIMIT || 100);
 export async function officeFacts(companyId: string) {
   const today = jstDateKey(new Date());
   const soon = new Date(Date.parse(`${today}T00:00:00Z`) + 14 * 86_400_000).toISOString().slice(0, 10);
-  const [visitors, bookings, cars, missing, mail, memos, supplies, questions, events, licenses, applicants, vehicles, gifts, leaves, health, stock, safety, surveys, celebrations, seals, lost, bento] = await Promise.all([
+  const [visitors, bookings, cars, missing, mail, memos, supplies, questions, events, licenses, applicants, vehicles, gifts, leaves, health, stock, safety, surveys, celebrations, seals, lost, bento, cardReq, notices] = await Promise.all([
     visitorsOn(companyId, today),
     listBookings(companyId, today, 1),
     carBookingsOn(companyId, today),
@@ -56,6 +58,8 @@ export async function officeFacts(companyId: string) {
     countSealRequests(companyId),
     countLostTodos(companyId),
     bentoDay(companyId),
+    countCardRequests(companyId),
+    countNotices(companyId),
   ]);
   return {
     today,
@@ -83,6 +87,8 @@ export async function officeFacts(companyId: string) {
     safetyDrill: safety.drill,
     sealRequests: seals,
     lostClaimed: lost.claimed,
+    cardRequests: cardReq,
+    changeNotices: notices,
     bento: bento.shops.map((s) => ({ name: s.name, count: s.count, closed: s.closed, sent: s.sent })),
     lostOverdue: lost.overdue,
     celebrations: celebrations.map((c) => ({ name: c.name, kind: c.kind, date: c.date, years: c.years, done: !!c.status })),

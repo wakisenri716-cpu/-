@@ -119,6 +119,8 @@ export default async function OfficePage() {
             ))}
           </Card>
         )}
+        <Card href="/change-notices" title="身上の変更の届け出" count={`${f.changeNotices}件`} tone={f.changeNotices ? "amber" : "slate"} />
+        <Card href="/cards" title="名刺の申し込み" count={`${f.cardRequests}件`} tone={f.cardRequests ? "amber" : "slate"} />
         <Card href="/lost-items" title="落とし物・忘れ物" count={`${f.lostClaimed + f.lostOverdue}件`} tone={f.lostClaimed + f.lostOverdue ? "amber" : "slate"}>
           {(f.lostClaimed > 0 || f.lostOverdue > 0) && <p className="text-slate-600">{[f.lostClaimed ? `持ち主が名のった ${f.lostClaimed}件` : "", f.lostOverdue ? `30日すぎた ${f.lostOverdue}件` : ""].filter(Boolean).join("・")}</p>}
         </Card>
