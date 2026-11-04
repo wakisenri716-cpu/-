@@ -7,11 +7,11 @@ type Draft = { item: string; place: string | null; keptAt: string | null; foundO
 const STATUS = { FOUND: "あずかり中", CLAIMED: "持ち主が名のった", RETURNED: "返した", DISPOSED: "処分した" };
 const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`;
 
-export function LostView({ admin = false }: { admin?: boolean }) {
+export function LostView({ admin = false, initialText = "", initialQuery = "" }: { admin?: boolean; initialText?: string; initialQuery?: string }) {
   const [items, setItems] = useState<Item[] | null>(null);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [hits, setHits] = useState<{ items: Item[]; mode: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { AskOffice } from "./home-parts/AskOffice";
 import { BoxIcon, CalendarIcon, ClockIcon, MegaphoneIcon, NotebookIcon, ReceiptIcon, SparkleIcon, StampIcon } from "@/components/icons";
 
 type Shift = { date: string; weekday: string; start: string; end: string; breakMinutes: number; today: boolean };
@@ -71,6 +72,7 @@ export default function StaffHome() {
           <span className={`mt-0.5 block ${c.answered ? "text-emerald-700" : "text-rose-700"}`}>{c.title} ›</span>
         </Link>
       ))}
+      <AskOffice />
       {!!data.toAnswer?.length && (
         <Link href="/staff/events" className="block rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm shadow-sm">
           <span className="block font-semibold text-rose-800">出欠を答えていないイベントがあります</span>

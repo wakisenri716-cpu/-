@@ -10,8 +10,8 @@ const KINDS: Record<Kind, string> = { ADDRESS: "住所", PHONE: "電話番号", 
 const STATUS: Record<string, string> = { REQUESTED: "総務の確認待ち", APPLIED: "名簿に入りました", REJECTED: "確かめが必要" };
 const input = "w-full rounded-xl border border-slate-300 px-3 py-2 text-sm";
 
-export function StaffChanges() {
-  const [text, setText] = useState("");
+export function StaffChanges({ initialText = "" }: { initialText?: string }) {
+  const [text, setText] = useState(initialText);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
