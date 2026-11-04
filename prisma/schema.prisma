@@ -267,6 +267,7 @@ model Company {
   lostItems     LostItem[]
   bentoShops    BentoShop[]
   cardOrders    CardOrder[]
+  shipments     Shipment[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
   partyNotes           PartyNote[]
@@ -2582,6 +2583,26 @@ model AlcoholCheck {
   odometer    Int? // メーター(km)。運転前は出発時、運転後は帰着時
   destination String? // 行き先(運転日誌用)
   checkedAt   DateTime @default(now())
+
+  @@index([companyId, date])
+}
+
+// 郵便・宅配の発送記録(だれに・何を・どの方法で・送料・追跡番号)。現金で払った送料は月ごとに通信費で仕訳する
+model Shipment {
+  id             String   @id @default(cuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  date           String // 送った日 YYYY-MM-DD
+  recipient      String
+  contents       String?
+  method         String // LETTER / LETTERPACK_LIGHT / LETTERPACK_PLUS / SMART_LETTER / YUPACKET / YUPACK / TAKKYUBIN / NEKOPOS / HIKYAKU / REGISTERED / EXPRESS / OTHER
+  carrier        String? // JP(日本郵便) / YAMATO / SAGAWA
+  tracking       String?
+  cost           Int      @default(0)
+  paidBy         String   @default("CASH") // CASH(現金) / STAMP(買ってある切手・レターパック) / INVOICE(月払いの請求)
+  byName         String
+  journalEntryId String?
+  createdAt      DateTime @default(now())
 
   @@index([companyId, date])
 }

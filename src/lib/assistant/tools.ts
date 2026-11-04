@@ -22,6 +22,7 @@ import { listSeals, SEALS as SEAL_KINDS, STATUS as SEAL_STATUS } from "@/lib/sea
 import { listDuties } from "@/lib/duties";
 import { listLost, STATUS as LOST_STATUS } from "@/lib/lostItems";
 import { daySummary as bentoDay } from "@/lib/bento";
+import { listShipments } from "@/lib/shipments";
 import { listApplicants, STATUS as APPLICANT_STATUS, type Status as ApplicantStatus } from "@/lib/applicants";
 import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
@@ -542,6 +543,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_bento_orders",
     description: "今日のお弁当の注文。お店ごとの締め切り・締め切ったか・品物ごとの数と頼んだ人・合計・お店に注文を送ったかを返す。「今日のお弁当は何個?」「お弁当の注文は送った?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_shipments",
+    description: "郵便・宅配の発送記録。query を入れると相手・中身・追跡番号で探し、入れなければ今月の発送(送った日・相手・中身・送り方・送料・追跡番号)と送料の合計を返す。「さくら商事に請求書はいつ送った?」「今月の送料は?」などに使う。",
+    input_schema: { type: "object", properties: { query: { type: "string", description: "相手・中身・追跡番号" } }, additionalProperties: false },
   },
   {
     name: "get_mail_items",
@@ -1171,6 +1177,11 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_bento_orders": {
       const d = await bentoDay(companyId);
       return { date: d.date, shops: d.shops.map((s) => ({ name: s.name, cutoff: s.cutoff, closed: s.closed, count: s.count, total: s.total, sent: s.sent, items: s.items.map((i) => ({ name: i.name, qty: i.qty, people: i.people })) })), link: "/bento" };
+    }
+    case "get_shipments": {
+      const q = typeof input.query === "string" ? input.query.trim().slice(0, 40) : "";
+      const d = await listShipments(companyId, jstDateKey(new Date()).slice(0, 7), q || undefined);
+      return { query: q || null, month: d.month, total: d.total, items: d.items.slice(0, 20).map((r) => ({ date: r.date, recipient: r.recipient, contents: r.contents, method: r.methodLabel, cost: r.cost, tracking: r.tracking })), link: "/shipments" };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);
