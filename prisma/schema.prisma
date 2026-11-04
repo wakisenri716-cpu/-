@@ -2600,6 +2600,25 @@ model DutyRole {
   @@index([companyId])
 }
 
+// 従業員どうしの当番の交代のお願い(相手が引き受けると、その日の入れかわりになる)
+model DutySwapRequest {
+  id         String   @id @default(cuid())
+  companyId  String
+  roleId     String
+  roleName   String
+  date       String
+  fromUserId String
+  fromName   String
+  toUserId   String
+  toName     String
+  message    String?
+  status     String   @default("PENDING") // PENDING / ACCEPTED / DECLINED / CANCELLED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([companyId, toUserId])
+}
+
 // その日だけの入れかわり
 model DutySwap {
   id        String   @id @default(cuid())

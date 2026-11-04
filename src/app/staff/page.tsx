@@ -19,6 +19,7 @@ type Home = {
   safety?: { id: string; title: string; answered: boolean }[];
   surveys?: number;
   dutiesToday?: string[];
+  swapAsks?: number;
 };
 
 const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8))}`;
@@ -81,6 +82,11 @@ export default function StaffHome() {
       {!!data.dutiesToday?.length && (
         <Link href="/staff/duties" className="block rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900 shadow-sm">
           今日は{data.dutiesToday.join("・")}の当番です ›
+        </Link>
+      )}
+      {!!data.swapAsks && (
+        <Link href="/staff/duties" className="block rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900 shadow-sm">
+          当番を代わってほしいお願いが{data.swapAsks}件届いています ›
         </Link>
       )}
       {!!data.surveys && (

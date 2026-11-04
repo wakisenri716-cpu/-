@@ -154,7 +154,7 @@ export async function listDuties(companyId: string, days = 14) {
 // 自分の当番(これから2週間)
 export async function myDuties(me: { id: string; companyId: string }) {
   const d = await listDuties(me.companyId, 14);
-  return d.roles.flatMap((r) => r.schedule.filter((s) => s.userId === me.id).map((s) => ({ role: r.name, date: s.date, today: s.date === d.today, note: r.note }))).sort((a, b) => a.date.localeCompare(b.date));
+  return d.roles.flatMap((r) => r.schedule.filter((s) => s.userId === me.id).map((s) => ({ roleId: r.id, role: r.name, date: s.date, today: s.date === d.today, note: r.note }))).sort((a, b) => a.date.localeCompare(b.date));
 }
 
 // 毎朝: 今日の当番の人にメールとアプリの通知
@@ -184,4 +184,67 @@ export async function remindDutiesToday() {
     }
   }
   return sent;
+}
+
+// ---- 従業員どうしの交代のお願い ----
+
+// 自分の当番の日を、ほかの人に代わってもらうよう頼む(相手にメールとアプリの通知)
+export async function askSwap(me: { id: string; name: string; companyId: string }, raw: Record<string, unknown>) {
+  const roleId = String(raw.roleId ?? "");
+  const date = String(raw.date ?? "");
+  const toUserId = String(raw.toUserId ?? "");
+  const mine = (await myDuties(me)).find((d) => d.roleId === roleId && d.date === date);
+  if (!mine) throw new UserError("あなたの当番の日ではありません(これから2週間の自分の当番から選んでください)");
+  if (toUserId === me.id) throw new UserError("代わってほしい人を選んでください");
+  const to = (await members(me.companyId)).find((p) => p.id === toUserId);
+  if (!to) throw new UserError("社内の人を選んでください");
+  if (await prisma.dutySwapRequest.count({ where: { companyId: me.companyId, roleId, date, fromUserId: me.id, status: "PENDING" } })) throw new UserError("この日はもうお願いしています。返事を待つか、取り消してください");
+  const req = await prisma.dutySwapRequest.create({ data: { companyId: me.companyId, roleId, roleName: mine.role, date, fromUserId: me.id, fromName: me.name, toUserId: to.id, toName: to.name, message: String(raw.message ?? "").trim().slice(0, 200) || null } });
+  const when = `${Number(date.slice(5, 7))}月${Number(date.slice(8))}日`;
+  if (to.email) {
+    try {
+      await sendMail({ companyId: me.companyId, kind: "NOTICE", to: to.email, subject: `【当番】${when}の${mine.role}を代わってもらえませんか`, text: `${to.name}さん\n\n${me.name}さんから、${when}の${mine.role}の当番を代わってほしいとお願いが来ています。${req.message ? `\n「${req.message}」` : ""}\n\nClerklyの従業員用の「当番表」で、引き受けるか断るかを選んでください。\n`, sentByName: me.name, relatedId: req.id });
+    } catch (error) {
+      if (!(error instanceof MailError)) throw error;
+    }
+  }
+  await sendToUsers([to.id], { title: `${when}の${mine.role}を代わってほしいそうです`, body: `${me.name}さんから`, url: "/staff/duties" }).catch(() => null);
+  return req;
+}
+
+// 引き受ける・断る(頼まれた人)/取り消す(頼んだ人)
+export async function answerSwap(me: { id: string; name: string; companyId: string }, id: string, raw: Record<string, unknown>) {
+  const req = await prisma.dutySwapRequest.findFirst({ where: { id, companyId: me.companyId } });
+  if (!req || req.status !== "PENDING") throw new UserError("お願いが見つからないか、もう返事が済んでいます");
+  const action = String(raw.action ?? "");
+  if (action === "cancel") {
+    if (req.fromUserId !== me.id) throw new UserError("取り消せるのは頼んだ人だけです");
+    return prisma.dutySwapRequest.update({ where: { id }, data: { status: "CANCELLED" } });
+  }
+  if (req.toUserId !== me.id) throw new UserError("頼まれた人だけが返事できます");
+  if (action !== "accept" && action !== "decline") throw new UserError("することがわかりません");
+  if (action === "accept") {
+    if (req.date < jstDateKey(new Date())) throw new UserError("その日はもう過ぎています");
+    // まだ頼んだ人の当番のままか確かめてから入れかえる
+    const still = (await myDuties({ id: req.fromUserId, companyId: me.companyId })).some((d) => d.roleId === req.roleId && d.date === req.date);
+    if (!still) throw new UserError("その日の当番はもう変わっています。総務に確かめてください");
+    await prisma.dutySwap.upsert({ where: { roleId_date: { roleId: req.roleId, date: req.date } }, create: { roleId: req.roleId, date: req.date, userId: me.id, byName: `${me.name}(${req.fromName}さんと交代)` }, update: { userId: me.id, byName: `${me.name}(${req.fromName}さんと交代)` } });
+  }
+  const updated = await prisma.dutySwapRequest.update({ where: { id }, data: { status: action === "accept" ? "ACCEPTED" : "DECLINED" } });
+  const from = await prisma.user.findFirst({ where: { id: req.fromUserId, active: true }, select: { email: true } });
+  const when = `${Number(req.date.slice(5, 7))}月${Number(req.date.slice(8))}日`;
+  if (from?.email) {
+    try {
+      await sendMail({ companyId: me.companyId, kind: "NOTICE", to: from.email, subject: `【当番】${when}の${req.roleName}: ${action === "accept" ? "代わってもらえます" : "代われないそうです"}`, text: `${req.fromName}さん\n\n${when}の${req.roleName}の当番は、${me.name}さんが${action === "accept" ? "代わってくれることになりました" : "代われないそうです。ほかの人に頼むか、総務に相談してください"}。\n`, sentByName: me.name, relatedId: req.id });
+    } catch (error) {
+      if (!(error instanceof MailError)) throw error;
+    }
+  }
+  return updated;
+}
+
+// 自分あて・自分が出したお願い(返事待ち)
+export async function mySwapRequests(me: { id: string; companyId: string }) {
+  const rows = await prisma.dutySwapRequest.findMany({ where: { companyId: me.companyId, status: "PENDING", OR: [{ toUserId: me.id }, { fromUserId: me.id }] }, orderBy: { date: "asc" } });
+  return { incoming: rows.filter((r) => r.toUserId === me.id), outgoing: rows.filter((r) => r.fromUserId === me.id) };
 }
