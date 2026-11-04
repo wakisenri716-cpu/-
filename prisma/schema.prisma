@@ -264,6 +264,7 @@ model Company {
   celebrations  Celebration[]
   sealUses      SealUse[]
   dutyRoles     DutyRole[]
+  lostItems     LostItem[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
   partyNotes           PartyNote[]
@@ -2581,6 +2582,26 @@ model AlcoholCheck {
   checkedAt   DateTime @default(now())
 
   @@index([companyId, date])
+}
+
+// 社内の落とし物・忘れ物(見つけた人が1行で登録し、なくした人が探す。30日をすぎたら総務が処分を判断)
+model LostItem {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  item          String // 品物(色・特徴を含む)
+  place         String? // 見つけた場所
+  foundOn       String // YYYY-MM-DD
+  foundById     String
+  foundByName   String
+  keptAt        String? // あずかっている場所
+  status        String   @default("FOUND") // FOUND / CLAIMED(持ち主が名のった) / RETURNED / DISPOSED
+  claimedById   String?
+  claimedByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([companyId, status])
 }
 
 // 当番表(掃除・ゴミ出し・電話当番など)。決めた曜日の会社が開いている日に、メンバーを順番に回す
