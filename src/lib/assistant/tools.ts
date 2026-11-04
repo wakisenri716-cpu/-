@@ -18,6 +18,7 @@ import { listStock, CATEGORIES as STOCK_CATEGORIES } from "@/lib/stockpile";
 import { listChecks as listSafetyChecks, STATUS as SAFETY_STATUS, CAN_WORK as SAFETY_WORK } from "@/lib/safetyChecks";
 import { openSurveySummary } from "@/lib/surveys";
 import { upcomingCelebrations } from "@/lib/celebrations";
+import { listSeals, SEALS as SEAL_KINDS, STATUS as SEAL_STATUS } from "@/lib/sealUses";
 import { listApplicants, STATUS as APPLICANT_STATUS, type Status as ApplicantStatus } from "@/lib/applicants";
 import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
@@ -517,6 +518,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_celebrations",
     description: "これから30日の社員の誕生日・入社の記念日(日にち・名前・何年目・お祝いを送ったか)を返す。年齢は返さない。「今月誕生日の人は?」「入社記念日の人は?」などに使う。送るのは /celebrations を案内する。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_seal_requests",
+    description: "押印の申請と押印簿。申請中・認めて押す前のもの(印・書類・相手先・部数・頼んだ人)と、この30日に押した・見送ったものを返す。「押印の申請は来てる?」「今月実印を押したのは?」などに使う。認める・押すのは /seals を案内する。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1129,6 +1135,12 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
     case "get_celebrations": {
       const us = await upcomingCelebrations(companyId);
       return { upcoming: us.map((u) => ({ date: u.date, name: u.name, kind: u.kind === "BIRTHDAY" ? "誕生日" : `入社${u.years}年`, status: u.status === "SENT" ? "送った" : u.status === "SKIPPED" ? "見送り" : "まだ" })), link: "/celebrations" };
+    }
+    case "get_seal_requests": {
+      const d = await listSeals(companyId);
+      const since = new Date(Date.now() - 30 * 86_400_000);
+      const row = (r: (typeof d.pending)[number]) => ({ seal: SEAL_KINDS[r.seal as keyof typeof SEAL_KINDS] ?? r.seal, document: r.document, party: r.party, copies: r.copies, requestedBy: r.requestedByName, status: SEAL_STATUS[r.status as keyof typeof SEAL_STATUS] ?? r.status, doneOn: r.doneOn });
+      return { pending: d.pending.map(row), recent: d.log.filter((r) => r.updatedAt >= since).map(row), link: "/seals" };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);

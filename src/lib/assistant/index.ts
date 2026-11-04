@@ -239,6 +239,20 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「押印の申請は来てる?」「今月実印を押したのは?」
+  if (/押印|実印|銀行印|角印|印鑑/.test(q)) {
+    const r = (await run("get_seal_requests")) as { pending: { seal: string; document: string; party: string | null; copies: number; requestedBy: string; status: string }[]; recent: { seal: string; document: string; party: string | null; status: string; doneOn: string | null }[] };
+    return {
+      reply: [
+        r.pending.length ? `申請中・押す前が${r.pending.length}件あります:` : "申請中の押印はありません。",
+        ...r.pending.map((p) => `・${p.seal} ${p.document}${p.party ? `(${p.party})` : ""} ${p.copies}部 — ${p.requestedBy}さん(${p.status})`),
+        ...(r.recent.length ? [`この30日の押印簿: ${r.recent.map((x) => `${x.doneOn ? `${Number(x.doneOn.slice(5, 7))}/${Number(x.doneOn.slice(8))} ` : ""}${x.seal} ${x.document}(${x.status})`).join("、")}`] : []),
+        "[押印の申請と押印簿](/seals)",
+      ].join("\n"),
+      tools: ["get_seal_requests"],
+      mode: "simple",
+    };
+  }
   // 「今月誕生日の人は?」「入社記念日の人は?」
   if (/誕生日|記念日|勤続/.test(q)) {
     const r = (await run("get_celebrations")) as { upcoming: { date: string; name: string; kind: string; status: string }[] };
