@@ -18,6 +18,7 @@ const LINKS = [
   { href: "/staff/duties", label: "当番表", icon: ClockIcon },
   { href: "/staff/lost", label: "落とし物・忘れ物", icon: BookIcon },
   { href: "/staff/bento", label: "お弁当の注文", icon: ReceiptIcon },
+  { href: "/staff/cards", label: "名刺の注文", icon: BookIcon },
   { href: "/staff/supplies", label: "備品・消耗品の購入依頼", icon: ReceiptIcon },
   { href: "/staff/licenses", label: "資格・免許", icon: KeyIcon },
   { href: "/staff/health", label: "健康診断", icon: StampIcon },

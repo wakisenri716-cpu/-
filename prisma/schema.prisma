@@ -266,6 +266,7 @@ model Company {
   dutyRoles     DutyRole[]
   lostItems     LostItem[]
   bentoShops    BentoShop[]
+  cardOrders    CardOrder[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
   partyNotes           PartyNote[]
@@ -2583,6 +2584,31 @@ model AlcoholCheck {
   checkedAt   DateTime @default(now())
 
   @@index([companyId, date])
+}
+
+// 社員の名刺の注文(従業員が頼み、総務がまとめて印刷会社に発注する)
+model CardOrder {
+  id         String    @id @default(cuid())
+  companyId  String
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId     String
+  userName   String // 名刺に載せる名前
+  nameKana   String?
+  nameEn     String? // 裏面の英語の名前
+  title      String? // 役職
+  titleEn    String?
+  department String?
+  email      String?
+  phone      String?
+  mobile     String?
+  quantity   Int       @default(100)
+  note       String?
+  status     String    @default("REQUESTED") // REQUESTED / ORDERED / DELIVERED / CANCELLED
+  orderedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([companyId, status])
 }
 
 // お弁当の注文: お店とメニュー・締め切り。社員が締め切りまでに頼み、総務がまとめてお店に注文する
