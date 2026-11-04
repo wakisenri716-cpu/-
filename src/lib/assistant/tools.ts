@@ -19,6 +19,7 @@ import { listChecks as listSafetyChecks, STATUS as SAFETY_STATUS, CAN_WORK as SA
 import { openSurveySummary } from "@/lib/surveys";
 import { upcomingCelebrations } from "@/lib/celebrations";
 import { listSeals, SEALS as SEAL_KINDS, STATUS as SEAL_STATUS } from "@/lib/sealUses";
+import { listDuties } from "@/lib/duties";
 import { listApplicants, STATUS as APPLICANT_STATUS, type Status as ApplicantStatus } from "@/lib/applicants";
 import { listGifts, SEASONS as GIFT_SEASONS, type Season as GiftSeason } from "@/lib/gifts";
 import { MAIL_KINDS, type MailKind } from "@/lib/mailItemLabels";
@@ -523,6 +524,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_seal_requests",
     description: "押印の申請と押印簿。申請中・認めて押す前のもの(印・書類・相手先・部数・頼んだ人)と、この30日に押した・見送ったものを返す。「押印の申請は来てる?」「今月実印を押したのは?」などに使う。認める・押すのは /seals を案内する。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_duties",
+    description: "当番表(掃除・ゴミ出し・電話当番など)。当番ごとの曜日・回す人と、今日から1週間のだれが当番か(入れかわりも)を返す。「今日の掃除当番は?」「来週の電話当番は?」などに使う。決める・入れかえるのは /duties を案内する。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1141,6 +1147,10 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
       const since = new Date(Date.now() - 30 * 86_400_000);
       const row = (r: (typeof d.pending)[number]) => ({ seal: SEAL_KINDS[r.seal as keyof typeof SEAL_KINDS] ?? r.seal, document: r.document, party: r.party, copies: r.copies, requestedBy: r.requestedByName, status: SEAL_STATUS[r.status as keyof typeof SEAL_STATUS] ?? r.status, doneOn: r.doneOn });
       return { pending: d.pending.map(row), recent: d.log.filter((r) => r.updatedAt >= since).map(row), link: "/seals" };
+    }
+    case "get_duties": {
+      const d = await listDuties(companyId, 7);
+      return { today: d.today, roles: d.roles.map((r) => ({ name: r.name, weekdays: r.weekdayLabel, members: r.members.map((m) => m.name), schedule: r.schedule.map((s) => ({ date: s.date, name: s.name, swapped: s.swapped })) })), link: "/duties" };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);

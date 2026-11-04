@@ -15,6 +15,7 @@ const LINKS = [
   { href: "/staff/events", label: "社内のイベント(出欠)", icon: MegaphoneIcon },
   { href: "/staff/surveys", label: "社内アンケート", icon: StampIcon },
   { href: "/staff/seals", label: "押印の申請", icon: StampIcon },
+  { href: "/staff/duties", label: "当番表", icon: ClockIcon },
   { href: "/staff/supplies", label: "備品・消耗品の購入依頼", icon: ReceiptIcon },
   { href: "/staff/licenses", label: "資格・免許", icon: KeyIcon },
   { href: "/staff/health", label: "健康診断", icon: StampIcon },

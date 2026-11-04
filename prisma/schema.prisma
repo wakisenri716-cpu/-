@@ -263,6 +263,7 @@ model Company {
   surveys       Survey[]
   celebrations  Celebration[]
   sealUses      SealUse[]
+  dutyRoles     DutyRole[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
   partyNotes           PartyNote[]
@@ -2580,6 +2581,36 @@ model AlcoholCheck {
   checkedAt   DateTime @default(now())
 
   @@index([companyId, date])
+}
+
+// 当番表(掃除・ゴミ出し・電話当番など)。決めた曜日の会社が開いている日に、メンバーを順番に回す
+model DutyRole {
+  id        String     @id @default(cuid())
+  companyId String
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  weekdays  Int[] // 0=日〜6=土
+  memberIds String[] // 回す順(ユーザーのid)
+  startDate String // この日から数える YYYY-MM-DD
+  note      String?
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  swaps     DutySwap[]
+
+  @@index([companyId])
+}
+
+// その日だけの入れかわり
+model DutySwap {
+  id        String   @id @default(cuid())
+  roleId    String
+  role      DutyRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  date      String
+  userId    String
+  byName    String
+  createdAt DateTime @default(now())
+
+  @@unique([roleId, date])
 }
 
 // 押印の申請と押印簿(実印・銀行印・角印など、だれが・いつ・何に押したか)

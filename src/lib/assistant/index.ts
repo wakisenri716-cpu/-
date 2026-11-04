@@ -239,6 +239,16 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「今日の掃除当番は?」
+  if (/当番/.test(q)) {
+    const r = (await run("get_duties")) as { today: string; roles: { name: string; schedule: { date: string; name: string }[] }[] };
+    const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8))}`;
+    return {
+      reply: r.roles.length ? [...r.roles.map((x) => { const t = x.schedule.find((s) => s.date === r.today); const next = x.schedule.filter((s) => s.date > r.today).slice(0, 3); return `・${x.name}: ${t ? `今日は${t.name}さん` : "今日はなし"}${next.length ? `(次: ${next.map((s) => `${md(s.date)} ${s.name}さん`).join("、")})` : ""}`; }), "[当番表](/duties)"].join("\n") : "当番はまだ決めていません。[当番表](/duties) で「掃除 月水金 山田・佐藤」のように1行で作れます。",
+      tools: ["get_duties"],
+      mode: "simple",
+    };
+  }
   // 「押印の申請は来てる?」「今月実印を押したのは?」
   if (/押印|実印|銀行印|角印|印鑑/.test(q)) {
     const r = (await run("get_seal_requests")) as { pending: { seal: string; document: string; party: string | null; copies: number; requestedBy: string; status: string }[]; recent: { seal: string; document: string; party: string | null; status: string; doneOn: string | null }[] };
