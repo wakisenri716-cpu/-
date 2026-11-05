@@ -47,6 +47,9 @@ export function YearEndList({ year }: { year: number }) {
           <p className="mt-1 text-sm text-slate-600">
             その年に支払った給料・賞与と、本人から出してもらった扶養控除等申告書・保険料控除申告書などの内容から、1年分の所得税(年税額)を計算し、払いすぎ・足りない分(過不足)を出します。確定すると源泉徴収票を印刷できます。
           </p>
+          <Link href={`/year-end/forms?year=${year}`} className="mt-2 inline-block text-sm text-indigo-700 underline">
+            従業員からの申告(スマホで集める) ›
+          </Link>
         </div>
         <div className="flex gap-2">
           <Link href={`/year-end?year=${year - 1}`} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">

@@ -21,6 +21,7 @@ const LINKS = [
   { href: "/staff/cards", label: "名刺の注文", icon: BookIcon },
   { href: "/staff/changes", label: "住所・名前などの変更の届け出", icon: StampIcon },
   { href: "/staff/phonebook", label: "社内の電話帳(内線表)", icon: BookIcon },
+  { href: "/staff/year-end", label: "年末調整の申告", icon: StampIcon },
   { href: "/staff/supplies", label: "備品・消耗品の購入依頼", icon: ReceiptIcon },
   { href: "/staff/licenses", label: "資格・免許", icon: KeyIcon },
   { href: "/staff/health", label: "健康診断", icon: StampIcon },

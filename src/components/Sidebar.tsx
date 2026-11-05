@@ -295,6 +295,7 @@ const EMPLOYEE_SECTIONS: NavSection[] = [
       { href: "/staff/cards", label: "名刺の注文", icon: BoxIcon },
       { href: "/staff/changes", label: "身上の変更の届け出", icon: StampIcon },
       { href: "/staff/phonebook", label: "社内の電話帳", icon: BookIcon },
+      { href: "/staff/year-end", label: "年末調整の申告", icon: StampIcon },
     ],
   },
 ];

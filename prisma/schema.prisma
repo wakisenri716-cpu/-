@@ -270,6 +270,7 @@ model Company {
   shipments     Shipment[]
   lendings      Lending[]
   phoneEntries  PhoneEntry[]
+  yearEndForms  YearEndSubmission[]
   changeNotices ChangeNotice[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
@@ -3074,4 +3075,23 @@ model PhoneEntry {
   updatedAt  DateTime @updatedAt
 
   @@unique([companyId, name])
+}
+
+// 年末調整の申告(従業員がスマホで出す)。総務が確かめて年末調整(YearEndAdjustment)の入力に入れる
+model YearEndSubmission {
+  id          String    @id @default(cuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  staffId     String
+  userId      String
+  year        Int
+  data        Json // 配偶者・扶養親族・保険料など(従業員が書いたまま)
+  status      String    @default("SUBMITTED") // SUBMITTED(確認待ち) / APPLIED(年末調整に入れた) / RETURNED(差し戻し)
+  reply       String? // 差し戻しの理由
+  submittedAt DateTime  @default(now())
+  appliedAt   DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([staffId, year])
+  @@index([companyId, year, status])
 }
