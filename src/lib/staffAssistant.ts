@@ -19,6 +19,7 @@ import { myBento } from "@/lib/bento";
 import { myCards, STATUS as CARD_STATUS } from "@/lib/cardOrders";
 import { myNotices, KINDS as NOTICE_KINDS } from "@/lib/changeNotices";
 import { myLendings } from "@/lib/lendings";
+import { findPhone, phoneLines, phoneQuestion } from "@/lib/phonebook";
 import { myChecks } from "@/lib/safetyChecks";
 
 // 従業員向けのAIアシスタント: ログインしている本人のこと(シフト・有給・今月の勤務・経費精算・申請)と、
@@ -59,6 +60,7 @@ export const STAFF_TOOLS: Anthropic.Beta.BetaTool[] = [
   { name: "find_lost_item", description: "社内の落とし物(あずかり中のもの)から、なくしたものに合いそうなものを探す。query になくしたもの(例: 黒い傘)を入れる。名のるのは /staff/lost を案内する。", input_schema: { type: "object", properties: { query: { type: "string", description: "なくしたもの" } }, required: ["query"], additionalProperties: false } },
   { name: "my_bento", description: "今日のお弁当: 頼めるお店とメニュー・締め切り・締め切ったか、自分が頼んだもの、今月の自分の合計とまだ払っていない金額を返す。頼むのは /staff/bento を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_paperwork", description: "自分の名刺の注文(枚数・状態)と、身上の変更の届け出(住所・電話・名前・緊急連絡先。状態と総務からの理由)を返す。名刺は /staff/cards、届け出は /staff/changes を案内する。引っ越しや結婚のときの手続きを聞かれたら、届け出を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
+  { name: "find_phone", description: "社内の電話帳(内線表)から、人・部署・場所(受付・会議室・倉庫など)の内線・直通・社用携帯を探す。query は名前の一部・部署・場所。「経理の内線は?」「山田さんの携帯は?」などに使う。一覧は /staff/phonebook を案内する。", input_schema: { type: "object", properties: { query: { type: "string", description: "名前・部署・場所" } }, required: ["query"], additionalProperties: false } },
   { name: "my_lendings", description: "総務から自分が借りているもの(鍵・入館証・ノートPCなど。貸した日・返す日・返す日を過ぎたか)と、この30日に返したものを返す。返すときは総務に直接渡すよう案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "my_events", description: "これからの社内のイベント(忘年会・歓迎会など)の日時・場所・会費・締め切りと、自分の出欠の答え(まだなら未回答)を返す。答えるのは /staff/events を案内する。", input_schema: { type: "object", properties: {}, additionalProperties: false } },
 ];
@@ -179,6 +181,11 @@ export async function runStaffTool(me: Me, name: string, input: Record<string, u
       const NS: Record<string, string> = { REQUESTED: "総務の確認待ち", APPLIED: "名簿に入りました", REJECTED: "確かめが必要" };
       return { cards: cards.orders.slice(0, 5).map((o) => ({ quantity: o.quantity, status: CARD_STATUS[o.status as keyof typeof CARD_STATUS] ?? o.status })), notices: notices.slice(0, 5).map((n) => ({ kind: NOTICE_KINDS[n.kind as keyof typeof NOTICE_KINDS] ?? n.kind, status: NS[n.status] ?? n.status, reply: n.reply })), links: { cards: "/staff/cards", changes: "/staff/changes" } };
     }
+    case "find_phone": {
+      const q = typeof input.query === "string" ? input.query.trim().slice(0, 40) : "";
+      const rows = q ? await findPhone(me.companyId, q) : [];
+      return { query: q, entries: rows.map((r) => ({ name: r.name, department: r.department, extension: r.extension, direct: r.direct, mobile: r.mobile, note: r.note })), link: "/staff/phonebook" };
+    }
     case "my_lendings": {
       const ls = await myLendings(me);
       return { borrowing: ls.filter((l) => !l.returnedOn).map((l) => ({ item: l.item, lentOn: l.lentOn, dueOn: l.dueOn, overdue: l.overdue })), returned: ls.filter((l) => l.returnedOn).map((l) => ({ item: l.item, returnedOn: l.returnedOn })) };
@@ -289,7 +296,7 @@ async function askSimple(me: Me, q: string): Promise<StaffReply> {
     const items = r.items as { item: string; foundOn: string; place: string | null; keptAt: string | null }[];
     return { reply: items.length ? [`「${query}」に合いそうな落とし物:`, ...items.map((i) => `・${i.item}(${Number(i.foundOn.slice(5, 7))}/${Number(i.foundOn.slice(8))}${i.place ? `・${i.place}` : ""}${i.keptAt ? `・${i.keptAt}であずかり中` : ""})`), "自分のものなら [落とし物・忘れ物](/staff/lost) で「わたしのです」を押してください。"].join("\n") : `「${query}」に合いそうな落とし物はまだありません。[落とし物・忘れ物](/staff/lost) で一覧も見られます。`, tools: ["find_lost_item"], mode: "simple" };
   }
-  if (/名刺|引っ越|引越|転居|住所(が|を)?変|結婚|改姓|旧姓|緊急連絡先|届け出|届出/.test(s)) {
+  if (/名刺|引っ越|引越|転居|住所(が|を)?変|電話番号(が|を)?変|結婚|改姓|旧姓|緊急連絡先|届け出|届出/.test(s)) {
     const r = await run("my_paperwork");
     const cards = r.cards as { quantity: number; status: string }[];
     const notices = r.notices as { kind: string; status: string; reply: string | null }[];
@@ -302,6 +309,13 @@ async function askSimple(me: Me, q: string): Promise<StaffReply> {
       tools: ["my_paperwork"],
       mode: "simple",
     };
+  }
+  const phoneQ = phoneQuestion(s);
+  if (phoneQ !== null) {
+    if (!phoneQ) return { reply: "だれ(どこ)の番号か教えてください(例: 経理の内線は?)。一覧は [社内の電話帳](/staff/phonebook) にあります。", tools: [], mode: "simple" };
+    const r = await run("find_phone", { query: phoneQ });
+    const entries = (r.entries ?? []) as Parameters<typeof phoneLines>[0];
+    return { reply: [entries.length ? `「${phoneQ}」の番号:` : `電話帳に「${phoneQ}」は見つかりませんでした。総務に聞いてください。`, ...phoneLines(entries), "[社内の電話帳](/staff/phonebook)"].join("\n"), tools: ["find_phone"], mode: "simple" };
   }
   if (/借りて(い|る)|借りたもの|借りてる|返すもの|返し忘れ|貸してもらって/.test(s)) {
     const r = await run("my_lendings");

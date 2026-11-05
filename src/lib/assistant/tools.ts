@@ -85,6 +85,7 @@ import { getAnalysis } from "@/lib/accounting/analysis";
 import { templateExplanation } from "@/lib/analysisExplain";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 import { listLendings } from "@/lib/lendings";
+import { findPhone } from "@/lib/phonebook";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
 // 書き換えは利用者が画面で「実行する」を押したときだけ行う。
@@ -556,6 +557,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_staff_requests",
     description: "従業員からの名刺の注文と身上の変更の届け出(住所・電話・名前・緊急連絡先)。申し込み・確認待ちのもの(だれから・何の変更か・いつから)と、名刺の印刷中のものを返す(住所などの中身は返さない)。「名刺の申し込みは来てる?」「届け出は来てる?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "find_phone",
+    description: "社内の電話帳(内線表)から、人・部署・場所(受付・会議室・倉庫など)の内線・直通・社用携帯を探す。query は名前の一部・部署・場所・番号。「経理の内線は?」「山田さんの携帯は?」「受付は何番?」などに使う。電話帳を直すのは /phonebook を案内する。",
+    input_schema: { type: "object", properties: { query: { type: "string", description: "名前・部署・場所・番号" } }, required: ["query"], additionalProperties: false },
   },
   {
     name: "get_lendings",
@@ -1203,6 +1209,11 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         notices: notices.filter((n) => n.status === "REQUESTED").map((n) => ({ name: n.userName, kind: n.kindLabel, effectiveOn: n.effectiveOn })),
         links: { cards: "/cards", notices: "/change-notices" },
       };
+    }
+    case "find_phone": {
+      const q = typeof input.query === "string" ? input.query.trim().slice(0, 40) : "";
+      const rows = q ? await findPhone(companyId, q) : [];
+      return { query: q, entries: rows.map((r) => ({ name: r.name, department: r.department, extension: r.extension, direct: r.direct, mobile: r.mobile, note: r.note })), link: "/phonebook" };
     }
     case "get_lendings": {
       const q = typeof input.query === "string" ? input.query.trim().slice(0, 40) : "";

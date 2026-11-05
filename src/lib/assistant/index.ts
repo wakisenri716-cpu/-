@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { phoneLines, phoneQuestion } from "@/lib/phonebook";
 import { aiFor } from "@/lib/ai/access";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
@@ -273,6 +274,17 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
     return {
       reply: r.shops.length ? [...r.shops.map((s) => `・${s.name}: ${s.count}個・${s.total.toLocaleString()}円(${s.closed ? (s.sent ? "締め切り・お店に送りました" : "締め切り・まだお店に送っていません") : `${s.cutoff}まで受付中`})${s.items.length ? ` — ${s.items.map((i) => `${i.name}${i.qty}`).join("、")}` : ""}`), "[お弁当の注文](/bento)"].join("\n") : "今日頼めるお弁当のお店はありません。\n[お弁当の注文](/bento)",
       tools: ["get_bento_orders"],
+      mode: "simple",
+    };
+  }
+  // 「経理の内線は?」「山田さんの携帯は?」「受付は何番?」
+  const phoneQ = phoneQuestion(q);
+  if (phoneQ !== null && !/伝言|折り返し/.test(q)) {
+    if (!phoneQ) return { reply: "だれ(どこ)の番号か教えてください(例: 経理の内線は?)。一覧は [社内の電話帳](/phonebook) にあります。", tools: [], mode: "simple" };
+    const r = (await run("find_phone", { query: phoneQ })) as { entries: { name: string; department: string | null; extension: string | null; direct: string | null; mobile: string | null; note: string | null }[] };
+    return {
+      reply: [r.entries.length ? `「${phoneQ}」の番号:` : `電話帳に「${phoneQ}」は見つかりませんでした。`, ...phoneLines(r.entries), "[社内の電話帳](/phonebook)"].join("\n"),
+      tools: ["find_phone"],
       mode: "simple",
     };
   }

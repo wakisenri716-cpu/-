@@ -59,6 +59,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_bento_orders: "お弁当の注文",
   get_shipments: "郵便・宅配の発送記録",
   get_lendings: "鍵・貸出品の貸し出し簿",
+  find_phone: "社内の電話帳",
   get_staff_requests: "名刺の注文・身上の変更の届け出",
   get_applicants: "採用の応募者",
   get_purchase_prices: "仕入値の履歴",

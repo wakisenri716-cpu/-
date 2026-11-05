@@ -127,3 +127,17 @@ export async function findPhone(companyId: string, query: string) {
   const { items: all } = await listPhonebook(companyId);
   return all.filter((r) => r.name.split(" ").some((w) => w && (w === q || q.includes(w)))).slice(0, 10);
 }
+
+// 「経理の内線は?」「山田さんの携帯は?」「受付は何番?」→ 探す言葉。電話番号の質問でなければ null
+export function phoneQuestion(text: string): string | null {
+  const t = text.normalize("NFKC").trim();
+  if (!/内線|直通|携帯|電話番号|何番|番号(は|を|教えて)|電話帳|につないで|に電話(したい|をかけ)/.test(t)) return null;
+  if (/変わ|変更|変え|引っ越|届け/.test(t)) return null; // 自分の番号が変わった → 届け出
+  const m = t.match(/^(.+?)(?:さん|様|部長|課長|係長)?\s*(?:の|は|って|に)?\s*(?:内線|直通|携帯|電話番号|番号|何番|電話|につないで)/);
+  const q = (m?.[1] ?? "").replace(/^(社内の|うちの)/, "").replace(/(さん|様)$/, "").trim();
+  return q && !/^(電話帳|社内)$/.test(q) ? q.slice(0, 20) : "";
+}
+
+export function phoneLines(entries: { name: string; department: string | null; extension: string | null; direct: string | null; mobile: string | null; note: string | null }[]) {
+  return entries.map((e) => `・${e.name}${e.department ? `(${e.department})` : ""}: ${[e.extension ? `内線 ${e.extension}` : "", e.direct ? `直通 ${e.direct}` : "", e.mobile ? `携帯 ${e.mobile}` : ""].filter(Boolean).join("・")}${e.note ? ` — ${e.note}` : ""}`);
+}
