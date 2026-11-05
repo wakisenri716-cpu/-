@@ -122,3 +122,10 @@ export async function overdueLendings(companyId: string) {
   const today = jstDateKey(new Date());
   return prisma.lending.findMany({ where: { companyId, returnedOn: null, dueOn: { lt: today } }, orderBy: { dueOn: "asc" } });
 }
+
+// 従業員: 自分が借りているもの(と最近返したもの)
+export async function myLendings(me: { id: string; companyId: string }) {
+  const today = jstDateKey(new Date());
+  const rows = await prisma.lending.findMany({ where: { companyId: me.companyId, borrowerId: me.id, OR: [{ returnedOn: null }, { returnedOn: { gte: new Date(Date.parse(`${today}T00:00:00Z`) - 30 * 86_400_000).toISOString().slice(0, 10) } }] }, orderBy: [{ returnedOn: "desc" }, { dueOn: "asc" }] });
+  return rows.map((r) => ({ item: r.item, lentOn: r.lentOn, dueOn: r.dueOn, returnedOn: r.returnedOn, overdue: !r.returnedOn && !!r.dueOn && r.dueOn < today, dueToday: !r.returnedOn && r.dueOn === today }));
+}

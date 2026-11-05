@@ -276,6 +276,22 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「会議室の鍵はだれが持ってる?」「返ってきていない貸し出しは?」
+  if (/貸し出し|貸出|貸した|返ってきて|(鍵|カギ|入館証|社員証).*(だれ|誰|どこ|持って)/.test(q)) {
+    const key = q.match(/^(.{1,16}?(?:鍵|カギ|入館証|社員証|PC|パソコン|プロジェクター))(?:は|を|が|って|\s|$)/)?.[1] ?? "";
+    const r = (await run("get_lendings", key ? { query: key } : {})) as { query: string | null; out: { item: string; borrower: string; lentOn: string; dueOn: string | null; overdueDays: number }[]; returned: { item: string; borrower: string; returnedOn: string | null }[] };
+    const md = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8))}`;
+    return {
+      reply: [
+        r.out.length ? `${r.query ? `「${r.query}」で` : "いま"}貸し出し中のものが${r.out.length}件あります:` : r.query ? `「${r.query}」は貸し出し中ではありません。` : "いま貸し出し中のものはありません。",
+        ...r.out.map((x) => `・${x.item} — ${x.borrower}さん(${md(x.lentOn)}から${x.dueOn ? `・${md(x.dueOn)}まで` : ""}${x.overdueDays ? `・${x.overdueDays}日過ぎ` : ""})`),
+        ...(r.query && !r.out.length && r.returned.length ? [`最近は${r.returned[0].borrower}さんに貸して、${r.returned[0].returnedOn ? md(r.returned[0].returnedOn) : ""}に返ってきています。`] : []),
+        "[鍵・貸出品の貸し出し簿](/lendings)",
+      ].join("\n"),
+      tools: ["get_lendings"],
+      mode: "simple",
+    };
+  }
   // 「落とし物はある?」「処分していい落とし物は?」
   if (/落とし物|忘れ物|落し物/.test(q)) {
     const r = (await run("get_lost_items")) as { items: { item: string; foundOn: string; place: string | null; status: string; claimedBy: string | null; overdue30: boolean }[] };

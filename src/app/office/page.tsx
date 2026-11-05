@@ -121,6 +121,13 @@ export default async function OfficePage() {
         )}
         <Card href="/change-notices" title="身上の変更の届け出" count={`${f.changeNotices}件`} tone={f.changeNotices ? "amber" : "slate"} />
         <Card href="/cards" title="名刺の申し込み" count={`${f.cardRequests}件`} tone={f.cardRequests ? "amber" : "slate"} />
+        <Card href="/lendings" title="貸し出し中の鍵・貸出品" count={`${f.lendingsOut}件`} tone={f.lendingsOverdue.length ? "rose" : "slate"}>
+          {f.lendingsOverdue.slice(0, 3).map((l) => (
+            <p key={l.item} className="text-rose-700">
+              {l.item}({l.borrower}さん・{l.days}日過ぎ)
+            </p>
+          ))}
+        </Card>
         <Card href="/lost-items" title="落とし物・忘れ物" count={`${f.lostClaimed + f.lostOverdue}件`} tone={f.lostClaimed + f.lostOverdue ? "amber" : "slate"}>
           {(f.lostClaimed > 0 || f.lostOverdue > 0) && <p className="text-slate-600">{[f.lostClaimed ? `持ち主が名のった ${f.lostClaimed}件` : "", f.lostOverdue ? `30日すぎた ${f.lostOverdue}件` : ""].filter(Boolean).join("・")}</p>}
         </Card>
