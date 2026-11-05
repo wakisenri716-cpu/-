@@ -3048,6 +3048,7 @@ model Lending {
   lentOn       String // YYYY-MM-DD
   dueOn        String? // 返してもらう日
   returnedOn   String?
+  remindedOn   String? // 返却のお願いを最後に送った日
   note         String?
   byName       String
   createdAt    DateTime @default(now())

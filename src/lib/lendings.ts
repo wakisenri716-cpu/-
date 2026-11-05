@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { UserError } from "@/lib/errors";
 import { jstDateKey } from "@/lib/jst";
 import { matchMember, relativeDue, stripDue } from "@/lib/teamTasks";
+import { MailError, sendMail } from "@/lib/mail";
+import { sendToUsers } from "@/lib/push";
 
 // 鍵・入館証・貸出品の貸し出し簿: 「会議室の鍵を山田さんに 金曜まで」のように1行で書くと、貸したもの・相手・返す日に分けて記録する。
 // 返してもらったら「返してもらった」を押す。返す日を過ぎたものは上に出す。
@@ -127,5 +129,51 @@ export async function overdueLendings(companyId: string) {
 export async function myLendings(me: { id: string; companyId: string }) {
   const today = jstDateKey(new Date());
   const rows = await prisma.lending.findMany({ where: { companyId: me.companyId, borrowerId: me.id, OR: [{ returnedOn: null }, { returnedOn: { gte: new Date(Date.parse(`${today}T00:00:00Z`) - 30 * 86_400_000).toISOString().slice(0, 10) } }] }, orderBy: [{ returnedOn: "desc" }, { dueOn: "asc" }] });
-  return rows.map((r) => ({ item: r.item, lentOn: r.lentOn, dueOn: r.dueOn, returnedOn: r.returnedOn, overdue: !r.returnedOn && !!r.dueOn && r.dueOn < today, dueToday: !r.returnedOn && r.dueOn === today }));
+  return rows.map((r) => ({ id: r.id, item: r.item, lentOn: r.lentOn, dueOn: r.dueOn, returnedOn: r.returnedOn, overdue: !r.returnedOn && !!r.dueOn && r.dueOn < today, dueToday: !r.returnedOn && r.dueOn === today }));
+}
+
+// 返却のお願い(メールとスマホの通知)。社内の人にだけ送れる。同じ日に二度は送らない
+const mdj = (k: string) => `${Number(k.slice(5, 7))}月${Number(k.slice(8))}日`;
+async function sendReminder(row: { id: string; companyId: string; item: string; borrowerId: string | null; borrowerName: string; dueOn: string | null }, today: string, sentByName: string) {
+  if (!row.borrowerId) return { mail: false, push: false };
+  const u = await prisma.user.findFirst({ where: { id: row.borrowerId, companyId: row.companyId, active: true }, select: { id: true, name: true, email: true } });
+  if (!u) return { mail: false, push: false };
+  const when = !row.dueOn ? "" : row.dueOn === today ? "今日が返す日です。" : row.dueOn < today ? `返す日(${mdj(row.dueOn)})を過ぎています。` : `返す日は${mdj(row.dueOn)}です。`;
+  let mail = false;
+  if (u.email) {
+    try {
+      await sendMail({ companyId: row.companyId, kind: "NOTICE", to: u.email, subject: `【総務】${row.item}の返却のお願い`, text: `${u.name}さん\n\nお貸ししている「${row.item}」について、${when}\nお手すきのときに総務まで返してください。もう返していただいていたら、このメールは気にしないでください。\n`, sentByName, relatedId: `lending:${row.id}:${today}` });
+      mail = true;
+    } catch (error) {
+      if (!(error instanceof MailError)) throw error;
+    }
+  }
+  const push = ((await sendToUsers([u.id], { title: `${row.item}の返却のお願い`, body: `${when}総務に返してください`, url: "/staff" }).catch(() => null))?.sent ?? 0) > 0;
+  await prisma.lending.update({ where: { id: row.id }, data: { remindedOn: today } });
+  return { mail, push };
+}
+
+export async function remindLending(me: { companyId: string; name: string; role: string }, id: string) {
+  if (!canManage(me.role)) throw new UserError("貸し出し簿は管理者・経理担当がつけます");
+  const row = await prisma.lending.findFirst({ where: { id, companyId: me.companyId } });
+  if (!row || row.returnedOn) throw new UserError("貸し出し中のものが見つかりません");
+  if (!row.borrowerId) throw new UserError("社外の人や名簿にない人には送れません。電話などで伝えてください");
+  const today = jstDateKey(new Date());
+  if (row.remindedOn === today) throw new UserError("今日はもうお願いを送っています");
+  return sendReminder(row, today, me.name);
+}
+
+// 毎朝: 返す日の当日と、過ぎてから最初の朝に1回ずつ、自動で返却のお願いを送る
+export async function remindDueLendings() {
+  const today = jstDateKey(new Date());
+  const rows = await prisma.lending.findMany({ where: { returnedOn: null, borrowerId: { not: null }, dueOn: { lte: today } } });
+  let sent = 0;
+  for (const r of rows) {
+    const due = r.dueOn!;
+    const send = due === today ? r.remindedOn !== today : !r.remindedOn || r.remindedOn <= due;
+    if (!send) continue;
+    const x = await sendReminder(r, today, "システム");
+    if (x.mail) sent++;
+  }
+  return sent;
 }

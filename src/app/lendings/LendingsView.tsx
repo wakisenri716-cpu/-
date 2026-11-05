@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type Lending = { id: string; item: string; borrowerId: string | null; borrowerName: string; lentOn: string; dueOn: string | null; returnedOn: string | null; note: string | null; byName: string };
+type Lending = { id: string; item: string; borrowerId: string | null; borrowerName: string; lentOn: string; dueOn: string | null; returnedOn: string | null; remindedOn: string | null; note: string | null; byName: string };
 type Out = Lending & { overdueDays: number; days: number };
 type Data = { today: string; out: Out[]; overdue: number; returned: Lending[]; frequent: string[] };
 type Draft = { item: string; borrowerId: string | null; borrowerName: string; lentOn: string; dueOn: string | null; note: string | null };
@@ -62,6 +62,12 @@ export default function LendingsView({ initial, users }: { initial: Data; users:
   const extend = (r: Out, dueOn: string) =>
     run(r.id, async () => {
       await call(`/api/lendings/${r.id}`, "PATCH", { action: "extend", dueOn });
+      await load(q.trim());
+    });
+  const remind = (r: Out) =>
+    run(r.id, async () => {
+      const x = await call(`/api/lendings/${r.id}`, "PATCH", { action: "remind" });
+      setFlash(`${r.borrowerName}さんに返却のお願いを${x.mail ? "メール" : ""}${x.mail && x.push ? "と" : ""}${x.push ? "スマホの通知" : ""}${x.mail || x.push ? "で送りました" : "送ろうとしましたが、メールアドレスもスマホの通知もありません。直接伝えてください"}`);
       await load(q.trim());
     });
   const remove = (r: Lending) =>
@@ -145,7 +151,13 @@ export default function LendingsView({ initial, users }: { initial: Data; users:
                 </span>
                 {r.dueOn && <span className={`rounded-full px-2 py-0.5 text-xs ${r.overdueDays ? "bg-rose-100 text-rose-800" : "bg-slate-100 text-slate-700"}`}>{r.overdueDays ? `${md(r.dueOn)}まで(${r.overdueDays}日過ぎ)` : `${md(r.dueOn)}まで`}</span>}
                 {r.note && <span className="text-xs text-slate-500">{r.note}</span>}
+                {r.remindedOn && <span className="text-xs text-slate-500">{md(r.remindedOn)}にお願い済み</span>}
                 <span className="ml-auto flex items-center gap-2">
+                  {r.borrowerId && (r.overdueDays > 0 || r.dueOn === data.today) && r.remindedOn !== data.today && (
+                    <button onClick={() => remind(r)} disabled={busy === r.id} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs hover:bg-slate-50 disabled:opacity-50">
+                      返却のお願いを送る
+                    </button>
+                  )}
                   <input aria-label={`${r.item}の返す日を変える`} type="date" min={data.today} value="" onChange={(e) => e.target.value && extend(r, e.target.value)} className="w-8 rounded border border-slate-200 text-xs text-transparent" title="返す日を変える" />
                   <button onClick={() => back(r)} disabled={busy === r.id} className="rounded-md bg-vermilion-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-vermilion-700 disabled:opacity-50">
                     返してもらった

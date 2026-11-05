@@ -21,6 +21,7 @@ type Home = {
   surveys?: number;
   dutiesToday?: string[];
   swapAsks?: number;
+  lendingsDue?: { item: string; dueOn: string | null; overdue: boolean }[];
 };
 
 const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8))}`;
@@ -86,6 +87,11 @@ export default function StaffHome() {
           今日は{data.dutiesToday.join("・")}の当番です ›
         </Link>
       )}
+      {data.lendingsDue?.map((l) => (
+        <div key={l.item} className={`rounded-2xl border p-4 text-sm font-semibold shadow-sm ${l.overdue ? "border-rose-200 bg-rose-50 text-rose-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+          借りている「{l.item}」は{l.overdue ? `返す日(${l.dueOn ? md(l.dueOn) : ""})を過ぎています` : "今日が返す日です"}。総務に返してください
+        </div>
+      ))}
       {!!data.swapAsks && (
         <Link href="/staff/duties" className="block rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900 shadow-sm">
           当番を代わってほしいお願いが{data.swapAsks}件届いています ›
