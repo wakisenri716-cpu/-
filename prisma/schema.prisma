@@ -269,6 +269,7 @@ model Company {
   cardOrders    CardOrder[]
   shipments     Shipment[]
   lendings      Lending[]
+  phoneEntries  PhoneEntry[]
   changeNotices ChangeNotice[]
   staffLicenses StaffLicense[]
   applicants    Applicant[]
@@ -3055,4 +3056,22 @@ model Lending {
   updatedAt    DateTime @updatedAt
 
   @@index([companyId, returnedOn])
+}
+
+// 社内の電話帳(内線表)。人だけでなく「受付」「会議室A」「倉庫」のような場所も入れられる
+model PhoneEntry {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name       String // 人の名前か場所
+  userId     String? // 社内の人なら User.id
+  department String?
+  extension  String? // 内線
+  direct     String? // 直通の電話番号
+  mobile     String? // 社用の携帯
+  note       String? // 「昼は12-13時不在」など
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([companyId, name])
 }
