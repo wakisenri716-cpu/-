@@ -277,6 +277,23 @@ async function askSimple(companyId: string, question: string, userId = ""): Prom
       mode: "simple",
     };
   }
+  // 「今月の社内報は?」
+  if (/社内報/.test(q)) {
+    const r = (await run("get_newsletter")) as { month: string; published: boolean; birthdays: { name: string; day: number }[]; anniversaries: { name: string; day: number; years: number }[]; joiners: { name: string; day: number }[]; events: { title: string; date: string }[]; closures: { name: string; dates: string[] }[] };
+    const mo = Number(r.month.slice(5, 7));
+    const lines = [
+      r.joiners.length ? `・新しく入った人: ${r.joiners.map((j) => `${j.name}さん(${mo}/${j.day})`).join("、")}` : "",
+      r.events.length ? `・イベント: ${r.events.map((e) => `${e.title}(${mo}/${Number(e.date.slice(8))})`).join("、")}` : "",
+      r.closures.length ? `・お休み: ${r.closures.map((c) => c.name).join("、")}` : "",
+      r.birthdays.length ? `・お誕生日: ${r.birthdays.map((b) => `${b.name}さん(${mo}/${b.day})`).join("、")}` : "",
+      r.anniversaries.length ? `・入社の記念日: ${r.anniversaries.map((a) => `${a.name}さん ${a.years}年`).join("、")}` : "",
+    ].filter(Boolean);
+    return {
+      reply: [`${mo}月の社内報は${r.published ? "もう社内のお知らせに出しています。" : "まだ出していません。"}`, ...(lines.length ? ["今月の材料:", ...lines] : ["今月はお知らせするイベントや記念日はありません。"]), "[社内報の下書き](/newsletter)"].join("\n"),
+      tools: ["get_newsletter"],
+      mode: "simple",
+    };
+  }
   // 「経理の内線は?」「山田さんの携帯は?」「受付は何番?」
   const phoneQ = phoneQuestion(q);
   if (phoneQ !== null && !/伝言|折り返し/.test(q)) {
