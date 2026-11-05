@@ -84,6 +84,7 @@ import { getEntertainment, KIND_LABEL } from "@/lib/entertainment";
 import { getAnalysis } from "@/lib/accounting/analysis";
 import { templateExplanation } from "@/lib/analysisExplain";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
+import { listLendings } from "@/lib/lendings";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
 // 書き換えは利用者が画面で「実行する」を押したときだけ行う。
@@ -555,6 +556,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "get_staff_requests",
     description: "従業員からの名刺の注文と身上の変更の届け出(住所・電話・名前・緊急連絡先)。申し込み・確認待ちのもの(だれから・何の変更か・いつから)と、名刺の印刷中のものを返す(住所などの中身は返さない)。「名刺の申し込みは来てる?」「届け出は来てる?」などに使う。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_lendings",
+    description: "鍵・入館証・貸出品の貸し出し簿。query を入れると貸したもの・相手で探す。いま貸し出し中のもの(貸したもの・相手・貸した日・返す日・返す日を過ぎた日数)と、最近返してもらったものを返す。「会議室の鍵はだれが持ってる?」「返ってきていない貸し出しは?」などに使う。記録するのは /lendings を案内する。",
+    input_schema: { type: "object", properties: { query: { type: "string", description: "貸したもの・相手の名前" } }, additionalProperties: false },
   },
   {
     name: "get_mail_items",
@@ -1197,6 +1203,11 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         notices: notices.filter((n) => n.status === "REQUESTED").map((n) => ({ name: n.userName, kind: n.kindLabel, effectiveOn: n.effectiveOn })),
         links: { cards: "/cards", notices: "/change-notices" },
       };
+    }
+    case "get_lendings": {
+      const q = typeof input.query === "string" ? input.query.trim().slice(0, 40) : "";
+      const d = await listLendings(companyId, q || undefined);
+      return { today: d.today, query: q || null, out: d.out.slice(0, 30).map((r) => ({ item: r.item, borrower: r.borrowerName, lentOn: r.lentOn, dueOn: r.dueOn, overdueDays: r.overdueDays, note: r.note })), returned: d.returned.slice(0, 10).map((r) => ({ item: r.item, borrower: r.borrowerName, returnedOn: r.returnedOn })), link: "/lendings" };
     }
     case "get_mail_items": {
       const items = await waitingMailFor(companyId, input.mine === true && ctx.userId ? ctx.userId : null);

@@ -22,6 +22,7 @@ import { openSurveySummary } from "@/lib/surveys";
 import { upcomingCelebrations } from "@/lib/celebrations";
 import { countSealRequests } from "@/lib/sealUses";
 import { countLostTodos } from "@/lib/lostItems";
+import { listLendings } from "@/lib/lendings";
 import { daySummary as bentoDay } from "@/lib/bento";
 import { countCardRequests } from "@/lib/cardOrders";
 import { countNotices } from "@/lib/changeNotices";
@@ -35,7 +36,7 @@ const DAILY_LIMIT = Number(process.env.ASSISTANT_DAILY_LIMIT || 100);
 export async function officeFacts(companyId: string) {
   const today = jstDateKey(new Date());
   const soon = new Date(Date.parse(`${today}T00:00:00Z`) + 14 * 86_400_000).toISOString().slice(0, 10);
-  const [visitors, bookings, cars, missing, mail, memos, supplies, questions, events, licenses, applicants, vehicles, gifts, leaves, health, stock, safety, surveys, celebrations, seals, lost, bento, cardReq, notices] = await Promise.all([
+  const [visitors, bookings, cars, missing, mail, memos, supplies, questions, events, licenses, applicants, vehicles, gifts, leaves, health, stock, safety, surveys, celebrations, seals, lost, bento, cardReq, notices, lend] = await Promise.all([
     visitorsOn(companyId, today),
     listBookings(companyId, today, 1),
     carBookingsOn(companyId, today),
@@ -60,6 +61,7 @@ export async function officeFacts(companyId: string) {
     bentoDay(companyId),
     countCardRequests(companyId),
     countNotices(companyId),
+    listLendings(companyId),
   ]);
   return {
     today,
@@ -89,6 +91,8 @@ export async function officeFacts(companyId: string) {
     lostClaimed: lost.claimed,
     cardRequests: cardReq,
     changeNotices: notices,
+    lendingsOut: lend.out.length,
+    lendingsOverdue: lend.out.filter((r) => r.overdueDays > 0).map((r) => ({ item: r.item, borrower: r.borrowerName, days: r.overdueDays })),
     bento: bento.shops.map((s) => ({ name: s.name, count: s.count, closed: s.closed, sent: s.sent })),
     lostOverdue: lost.overdue,
     celebrations: celebrations.map((c) => ({ name: c.name, kind: c.kind, date: c.date, years: c.years, done: !!c.status })),
