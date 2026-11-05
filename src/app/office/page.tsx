@@ -121,6 +121,9 @@ export default async function OfficePage() {
         )}
         <Card href="/change-notices" title="身上の変更の届け出" count={`${f.changeNotices}件`} tone={f.changeNotices ? "amber" : "slate"} />
         <Card href="/cards" title="名刺の申し込み" count={`${f.cardRequests}件`} tone={f.cardRequests ? "amber" : "slate"} />
+        <Card href="/newsletter" title="今月の社内報" count={f.newsletter.published ? "出しました" : `材料 ${f.newsletter.items}件`} tone={f.newsletter.remind ? "amber" : "slate"}>
+          {!f.newsletter.published && f.newsletter.items > 0 && <p className="text-slate-600">誕生日・記念日・イベントなどから下書きを作れます</p>}
+        </Card>
         <Card href="/lendings" title="貸し出し中の鍵・貸出品" count={`${f.lendingsOut}件`} tone={f.lendingsOverdue.length ? "rose" : "slate"}>
           {f.lendingsOverdue.slice(0, 3).map((l) => (
             <p key={l.item} className="text-rose-700">

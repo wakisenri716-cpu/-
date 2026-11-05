@@ -23,6 +23,7 @@ import { upcomingCelebrations } from "@/lib/celebrations";
 import { countSealRequests } from "@/lib/sealUses";
 import { countLostTodos } from "@/lib/lostItems";
 import { listLendings } from "@/lib/lendings";
+import { newsletterStatus } from "@/lib/newsletter";
 import { daySummary as bentoDay } from "@/lib/bento";
 import { countCardRequests } from "@/lib/cardOrders";
 import { countNotices } from "@/lib/changeNotices";
@@ -36,7 +37,7 @@ const DAILY_LIMIT = Number(process.env.ASSISTANT_DAILY_LIMIT || 100);
 export async function officeFacts(companyId: string) {
   const today = jstDateKey(new Date());
   const soon = new Date(Date.parse(`${today}T00:00:00Z`) + 14 * 86_400_000).toISOString().slice(0, 10);
-  const [visitors, bookings, cars, missing, mail, memos, supplies, questions, events, licenses, applicants, vehicles, gifts, leaves, health, stock, safety, surveys, celebrations, seals, lost, bento, cardReq, notices, lend] = await Promise.all([
+  const [visitors, bookings, cars, missing, mail, memos, supplies, questions, events, licenses, applicants, vehicles, gifts, leaves, health, stock, safety, surveys, celebrations, seals, lost, bento, cardReq, notices, lend, news] = await Promise.all([
     visitorsOn(companyId, today),
     listBookings(companyId, today, 1),
     carBookingsOn(companyId, today),
@@ -62,6 +63,7 @@ export async function officeFacts(companyId: string) {
     countCardRequests(companyId),
     countNotices(companyId),
     listLendings(companyId),
+    newsletterStatus(companyId),
   ]);
   return {
     today,
@@ -92,6 +94,7 @@ export async function officeFacts(companyId: string) {
     cardRequests: cardReq,
     changeNotices: notices,
     lendingsOut: lend.out.length,
+    newsletter: { published: news.published, items: news.items, remind: news.remind },
     lendingsOverdue: lend.out.filter((r) => r.overdueDays > 0).map((r) => ({ item: r.item, borrower: r.borrowerName, days: r.overdueDays })),
     bento: bento.shops.map((s) => ({ name: s.name, count: s.count, closed: s.closed, sent: s.sent })),
     lostOverdue: lost.overdue,

@@ -86,6 +86,7 @@ import { templateExplanation } from "@/lib/analysisExplain";
 import { KIND_LABELS, hasCondition, parseSearch, runSearch } from "@/lib/globalSearch";
 import { listLendings } from "@/lib/lendings";
 import { findPhone } from "@/lib/phonebook";
+import { newsletterFacts, newsletterStatus } from "@/lib/newsletter";
 
 // AIアシスタントが使う道具。get_ の道具は会社のデータを読むだけ。propose_ の道具は下書きを作るだけで、
 // 書き換えは利用者が画面で「実行する」を押したときだけ行う。
@@ -556,6 +557,11 @@ export const ASSISTANT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_staff_requests",
     description: "従業員からの名刺の注文と身上の変更の届け出(住所・電話・名前・緊急連絡先)。申し込み・確認待ちのもの(だれから・何の変更か・いつから)と、名刺の印刷中のものを返す(住所などの中身は返さない)。「名刺の申し込みは来てる?」「届け出は来てる?」などに使う。",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_newsletter",
+    description: "今月の社内報の材料(誕生日・入社の記念日・新しく入った人・社内のイベント・会社のお休み)と、今月の社内報をもう社内のお知らせに出したかを返す。「今月の社内報は?」「今月誕生日の人は?」「今月入った人は?」などに使う。下書きを作って出すのは /newsletter を案内する。",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -1209,6 +1215,11 @@ export async function runAssistantTool(ctx: { companyId: string; userId: string;
         notices: notices.filter((n) => n.status === "REQUESTED").map((n) => ({ name: n.userName, kind: n.kindLabel, effectiveOn: n.effectiveOn })),
         links: { cards: "/cards", notices: "/change-notices" },
       };
+    }
+    case "get_newsletter": {
+      const st = await newsletterStatus(companyId);
+      const f = await newsletterFacts(companyId, st.month);
+      return { month: st.month, published: st.published, birthdays: f.birthdays, anniversaries: f.anniversaries, joiners: f.joiners, events: f.events, closures: f.closures, link: "/newsletter" };
     }
     case "find_phone": {
       const q = typeof input.query === "string" ? input.query.trim().slice(0, 40) : "";

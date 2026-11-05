@@ -135,3 +135,15 @@ export async function publishNewsletter(me: { id: string; name: string; companyI
   if (!canManage(me.role)) throw new UserError("社内報は管理者・経理担当が出します");
   return createAnnouncement({ id: me.id, name: me.name, companyId: me.companyId, role: me.role as "ADMIN" }, { title: raw.title, body: raw.body, pinned: false, notify: raw.notify === true }, request);
 }
+
+// 今月の社内報を出したか(件名に「○年○月の社内報」が入ったお知らせがあるか)と、今月の材料の数
+export async function newsletterStatus(companyId: string) {
+  const today = jstDateKey(new Date());
+  const month = today.slice(0, 7);
+  const title = `${Number(month.slice(0, 4))}年${Number(month.slice(5, 7))}月の社内報`;
+  const [published, facts] = await Promise.all([prisma.announcement.findFirst({ where: { companyId, title: { contains: title } }, select: { id: true, createdAt: true } }), newsletterFacts(companyId, month)]);
+  const counts = { birthdays: facts.birthdays.length, anniversaries: facts.anniversaries.length, joiners: facts.joiners.length, events: facts.events.length, closures: facts.closures.length };
+  const items = Object.values(counts).reduce((s, n) => s + n, 0);
+  // 月の初め(10日まで)で、まだ出していなくて、材料があるときに知らせる
+  return { month, title, published: !!published, counts, items, remind: !published && items > 0 && Number(today.slice(8, 10)) <= 10 };
+}
