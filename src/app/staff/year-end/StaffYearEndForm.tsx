@@ -18,11 +18,13 @@ type Form = {
   prevPay: string;
   prevSocial: string;
   prevTax: string;
+  oldSystemLife: boolean;
   note: string;
 };
 type Mine = { year: number; linked: boolean; name?: string; submission: { status: string; reply: string | null; data: Record<string, unknown> } | null };
-const EMPTY: Form = { spouse: false, spouseBirthYear: "", spouseIncome: "", dependents: [], lifeGeneral: "", lifeMedical: "", lifePension: "", earthquake: "", socialDeclared: "", ideco: "", housingLoan: "", prevPay: "", prevSocial: "", prevTax: "", note: "" };
+const EMPTY: Form = { spouse: false, spouseBirthYear: "", spouseIncome: "", dependents: [], lifeGeneral: "", lifeMedical: "", lifePension: "", earthquake: "", socialDeclared: "", ideco: "", housingLoan: "", prevPay: "", prevSocial: "", prevTax: "", oldSystemLife: false, note: "" };
 const STATUS: Record<string, string> = { SUBMITTED: "総務の確認待ち", APPLIED: "総務が年末調整に入れました", RETURNED: "総務から確かめてほしいことがあります" };
+const CERT_LABEL: Record<string, string> = { lifeGeneral: "生命保険料(一般)", lifeMedical: "介護医療保険料", lifePension: "個人年金保険料", earthquake: "地震保険料", socialDeclared: "国民年金など", ideco: "iDeCoなど" };
 const box = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm";
 const s = (v: unknown) => (v === null || v === undefined || v === 0 ? "" : String(v));
 
@@ -35,6 +37,7 @@ function fromData(d: Record<string, unknown>): Form {
     spouseIncome: s(d.spouseIncome),
     dependents: deps.map((x) => ({ name: String(x.name ?? ""), relation: String(x.relation ?? ""), birthYear: s(x.birthYear), income: s(x.income), livingTogether: x.livingTogether === true })),
     ...Object.fromEntries((["lifeGeneral", "lifeMedical", "lifePension", "earthquake", "socialDeclared", "ideco", "housingLoan", "prevPay", "prevSocial", "prevTax"] as const).map((k) => [k, s(d[k])])),
+    oldSystemLife: d.oldSystemLife === true,
     note: String(d.note ?? ""),
   };
 }
@@ -57,6 +60,8 @@ export function StaffYearEndForm() {
   const [f, setF] = useState<Form>(EMPTY);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [reading, setReading] = useState(false);
+  const [readMsg, setReadMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const load = () =>
     fetch("/api/staff-app/year-end")
       .then((r) => (r.ok ? r.json() : null))
@@ -70,6 +75,24 @@ export function StaffYearEndForm() {
   }, []);
   const set = (k: keyof Form, v: unknown) => setF({ ...f, [k]: v });
   const setDep = (i: number, k: keyof Dependent, v: unknown) => setF({ ...f, dependents: f.dependents.map((d, j) => (j === i ? { ...d, [k]: v } : d)) });
+  // 控除証明書の写真から読む: 読めた金額を、いま入っている金額に足す(証明書が何枚あってもよいように)
+  async function readCert(file: File) {
+    setReading(true);
+    setReadMsg(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/staff-app/year-end/read", { method: "POST", body: fd });
+    const json = await res.json().catch(() => ({}));
+    setReading(false);
+    if (!res.ok) return setReadMsg({ ok: false, text: json.error || "読み取れませんでした" });
+    const items = (json.items ?? []) as { field: keyof Form; amount: number; oldSystem: boolean }[];
+    if (!items.length) return setReadMsg({ ok: false, text: json.note || "読み取れませんでした" });
+    const next = { ...f };
+    for (const it of items) (next[it.field] as string) = String((Number(String(next[it.field] || "0").replace(/,/g, "")) || 0) + it.amount);
+    if (items.some((i) => i.oldSystem)) next.oldSystemLife = true;
+    setF(next);
+    setReadMsg({ ok: true, text: `${json.issuer ? `${json.issuer}: ` : ""}${items.map((i) => `${CERT_LABEL[i.field] ?? i.field} ${i.amount.toLocaleString()}円`).join("・")}を足しました。${json.note ?? ""}合っているか確かめてください。` });
+  }
   async function submit() {
     if (!mine) return;
     setBusy(true);
@@ -147,6 +170,11 @@ export function StaffYearEndForm() {
             <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <h2 className="font-semibold">今年払った保険料など</h2>
               <p className="text-xs text-slate-500">控除証明書に書いてある「今年払った額(見込み)」を入れてください。証明書は総務に渡してください。</p>
+              <label className={`block cursor-pointer rounded-xl border border-dashed border-indigo-300 bg-indigo-50 px-3 py-2 text-center text-sm text-indigo-800 ${reading ? "opacity-50" : ""}`}>
+                {reading ? "読み取っています…" : "控除証明書の写真から読み取る(AI)"}
+                <input type="file" accept="image/*,application/pdf" capture="environment" className="hidden" disabled={reading} onChange={(e) => (e.target.files?.[0] && readCert(e.target.files[0]), (e.target.value = ""))} />
+              </label>
+              {readMsg && <p className={`rounded-xl px-3 py-2 text-xs ${readMsg.ok ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>{readMsg.text}</p>}
               <Yen label="生命保険料(一般)" value={f.lifeGeneral} onChange={(v) => set("lifeGeneral", v)} />
               <Yen label="介護医療保険料" value={f.lifeMedical} onChange={(v) => set("lifeMedical", v)} />
               <Yen label="個人年金保険料" value={f.lifePension} onChange={(v) => set("lifePension", v)} />
